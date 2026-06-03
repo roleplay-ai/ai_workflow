@@ -8,6 +8,7 @@ import SlideZoom from "@/components/SlideZoom";
 import { parseMarkdownWorkflow } from "@/lib/parseMarkdown";
 import type { Profile, Activity, ActivityContent, UserProgress } from "@/lib/supabase/types";
 import type { Quiz } from "@/types";
+import panelStyles from "./activity-panel.module.css";
 
 type Props = {
   profile: Profile & { companies: { name: string } | null };
@@ -178,35 +179,89 @@ export default function ActivityViewClient({ profile, activity, progress: initPr
         padding: "0 24px", background: "rgba(255,255,255,.82)", borderBottom: "1px solid #E2E8F0",
         backdropFilter: "blur(18px)", zIndex: 10,
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 900, fontSize: 14, background: "linear-gradient(135deg,#2563EB,#14B8A6)", boxShadow: "0 10px 22px rgba(37,99,235,.22)" }}>G</div>
-          <div>
-            <div style={{ fontSize: 17, fontWeight: 900, letterSpacing: "-.03em" }}>{activity.title}</div>
-            <div style={{ fontSize: 11.5, color: "#64748B", fontWeight: 600 }}>{activity.level} · {activity.time_estimate_minutes}m</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 900, fontSize: 14, background: "linear-gradient(135deg,#2563EB,#14B8A6)", boxShadow: "0 10px 22px rgba(37,99,235,.22)", flexShrink: 0 }}>
+            {(activity.title?.trim()[0] ?? "A").toUpperCase()}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0 }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 17, fontWeight: 900, letterSpacing: "-.03em" }}>{activity.title}</div>
+              <div style={{ fontSize: 11.5, color: "#64748B", fontWeight: 600 }}>{activity.level} · {activity.time_estimate_minutes}m</div>
+            </div>
+            <a
+              href="/dashboard"
+              style={{
+                flexShrink: 0,
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                height: 32,
+                padding: "0 10px",
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 600,
+                color: "#334155",
+                background: "#F8FAFC",
+                border: "1px solid #CBD5E1",
+                textDecoration: "none",
+                transition: "border-color .15s, background .15s",
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = "#94A3B8";
+                e.currentTarget.style.background = "#F1F5F9";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = "#CBD5E1";
+                e.currentTarget.style.background = "#F8FAFC";
+              }}
+            >
+              ← Dashboard
+            </a>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, height: 34, padding: "0 12px", borderRadius: 999, fontSize: 12, fontWeight: 700, color: "#64748B", border: "1px solid #E2E8F0", background: "white", boxShadow: "0 8px 22px rgba(15,23,42,.08)" }}>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#14B8A6", boxShadow: "0 0 0 4px rgba(20,184,166,.16)" }} />
-            Claude Sonnet
+        {steps.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              {steps.map((_, i) => {
+                const done = i < current;
+                const active = i === current;
+                if (active) {
+                  return (
+                    <div
+                      key={i}
+                      style={{ width: 22, height: 8, borderRadius: 999, background: "#2563EB", flexShrink: 0 }}
+                    />
+                  );
+                }
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      flexShrink: 0,
+                      background: done ? "#22C55E" : "#E8E4DC",
+                    }}
+                  />
+                );
+              })}
+            </div>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#64748B", fontVariantNumeric: "tabular-nums" }}>
+              {current + 1}/{steps.length}
+            </span>
           </div>
-          <a href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 6, height: 34, padding: "0 12px", borderRadius: 999, fontSize: 12, fontWeight: 700, color: "#2563EB", background: "#EFF6FF", border: "1px solid #BFDBFE", textDecoration: "none" }}>
-            ← Dashboard
-          </a>
-        </div>
+        )}
       </header>
 
       {/* Main layout — narrower chat, bigger slide area */}
-      <div style={{ flex: 1, minHeight: 0, display: "grid", gap: 16, padding: 16, gridTemplateColumns: "300px 1fr" }}>
+      <div style={{ flex: 1, minHeight: 0, display: "grid", gap: 16, padding: 16, gridTemplateColumns: "360px 1fr" }}>
 
         {/* ── LEFT: AI Coach chat ─────────────────────────────────────────── */}
         <div style={{ display: "flex", flexDirection: "column", borderRadius: 24, overflow: "hidden", border: "1px solid #E2E8F0", background: "rgba(255,255,255,.92)", boxShadow: "0 18px 45px rgba(15,23,42,.10)", minHeight: 0 }}>
           {/* Chat header */}
           <div style={{ flexShrink: 0, height: 66, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px", borderBottom: "1px solid #E2E8F0", background: "linear-gradient(180deg,rgba(255,255,255,.94),rgba(248,250,252,.94))" }}>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 900, textTransform: "uppercase", letterSpacing: ".08em", color: "#2563EB", marginBottom: 2 }}>AI Coach</div>
-              <div style={{ fontSize: 15, fontWeight: 900, letterSpacing: "-.03em" }}>Step {current + 1}: {step?.title}</div>
-            </div>
+            <div style={{ fontSize: 15, fontWeight: 900, letterSpacing: "-.03em", color: "#0F172A" }}>AI Coach</div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, fontSize: 11, fontWeight: 900, color: "#1D4ED8", background: "#DBEAFE" }}>
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#2563EB" }} />
               Active
@@ -248,18 +303,18 @@ export default function ActivityViewClient({ profile, activity, progress: initPr
                 suppressHydrationWarning
                 style={{ flex: 1, height: 42, padding: "0 14px", borderRadius: 13, border: "1px solid #CBD5E1", fontSize: 13.5, background: "#F8FAFC", outline: "none", fontFamily: "inherit" }}
               />
-              <button onClick={sendMessage} disabled={loading} style={{ padding: "0 16px", height: 42, borderRadius: 13, border: 0, color: "white", fontSize: 13.5, fontWeight: 900, cursor: "pointer", background: "linear-gradient(135deg,#2563EB,#1D4ED8)", opacity: loading ? .6 : 1 }}>
+              <button onClick={sendMessage} disabled={loading} suppressHydrationWarning style={{ padding: "0 16px", height: 42, borderRadius: 13, border: 0, color: "white", fontSize: 13.5, fontWeight: 900, cursor: "pointer", background: "linear-gradient(135deg,#2563EB,#1D4ED8)", opacity: loading ? .6 : 1 }}>
                 Ask
               </button>
             </div>
             <div style={{ display: "flex", gap: 12, padding: 14, alignItems: "center" }}>
-              <button onClick={goPrev} disabled={current === 0} style={{ padding: "9px 16px", borderRadius: 13, fontSize: 13, fontWeight: 900, cursor: "pointer", border: "1px solid #E2E8F0", background: "#F8FAFC", color: "#64748B", opacity: current === 0 ? .4 : 1 }}>
+              <button onClick={goPrev} disabled={current === 0} suppressHydrationWarning style={{ padding: "9px 16px", borderRadius: 13, fontSize: 13, fontWeight: 900, cursor: "pointer", border: "1px solid #E2E8F0", background: "#F8FAFC", color: "#64748B", opacity: current === 0 ? .4 : 1 }}>
                 ← Prev
               </button>
               <div style={{ flex: 1, fontSize: 11.5, color: "#94A3B8", fontWeight: 600, textAlign: "center" }}>
                 {current < steps.length - 1 ? "Advance when ready" : "🎉 You've completed the workflow!"}
               </div>
-              <button onClick={goNext} style={{ padding: "9px 16px", borderRadius: 13, border: 0, fontSize: 13, fontWeight: 900, cursor: "pointer", color: "white", background: "linear-gradient(135deg,#2563EB,#1D4ED8)" }}>
+              <button onClick={goNext} suppressHydrationWarning style={{ padding: "9px 16px", borderRadius: 13, border: 0, fontSize: 13, fontWeight: 900, cursor: "pointer", color: "white", background: "linear-gradient(135deg,#2563EB,#1D4ED8)" }}>
                 {current < steps.length - 1 ? "Next →" : "Finish ✓"}
               </button>
             </div>
@@ -267,8 +322,7 @@ export default function ActivityViewClient({ profile, activity, progress: initPr
         </div>
 
         {/* ── RIGHT: Slide + step card ─────────────────────────────────────── */}
-        <div style={{ display: "flex", flexDirection: "column", borderRadius: 24, overflow: "hidden", border: "1px solid #E2E8F0", minHeight: 0, boxShadow: "0 18px 45px rgba(15,23,42,.10)", background: "linear-gradient(180deg,#F8FAFC,#F1F5F9)" }}>
-          <div style={{ flex: 1, minHeight: 0, display: "grid", gap: 16, padding: 16, gridTemplateColumns: "1fr 260px" }}>
+        <div style={{ flex: 1, minHeight: 0, display: "grid", gap: 16, gridTemplateColumns: "1fr 320px" }}>
             {/* Slide frame */}
             <div style={{ display: "flex", flexDirection: "column", borderRadius: 20, overflow: "hidden", border: "1px solid #E2E8F0", background: "white", boxShadow: "0 10px 28px rgba(15,23,42,.08)", minHeight: 0 }}>
               {/* Browser bar */}
@@ -292,10 +346,10 @@ export default function ActivityViewClient({ profile, activity, progress: initPr
             </div>
 
             {/* Right panel — matches prototype: activity info, access, steps checklist, downloads, prompts, progress */}
-            <div style={{ borderRadius: 20, border: "1px solid #E2E8F0", background: "rgba(255,255,255,.97)", boxShadow: "0 10px 28px rgba(15,23,42,.07)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div style={{ borderRadius: 20, border: "1px solid #E2E8F0", background: "rgba(255,255,255,.97)", boxShadow: "0 10px 28px rgba(15,23,42,.07)", display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0, height: "100%" }}>
 
               {/* Scrollable body */}
-              <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+              <div className={panelStyles.sidebarScroll}>
 
                 {/* Activity header */}
                 <div style={{ padding: "14px 16px 12px", borderBottom: "1px solid #E8EEF4" }}>
@@ -306,10 +360,25 @@ export default function ActivityViewClient({ profile, activity, progress: initPr
                   )}
                 </div>
 
+                {/* Goals */}
+                {content?.goals && content.goals.length > 0 && (
+                  <div style={{ padding: "12px 16px", borderBottom: "1px solid #E8EEF4" }}>
+                    <div style={sideHeading}>🎯 GOALS</div>
+                    <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 5 }}>
+                      {content.goals.map((g, i) => (
+                        <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: 7, fontSize: 12, lineHeight: 1.4, color: "#334155" }}>
+                          <span style={{ color: "#16A34A", flexShrink: 0, marginTop: 1 }}>✓</span>
+                          {g}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 {/* Access you'll need */}
                 {content?.access_needed && content.access_needed.length > 0 && (
                   <div style={{ padding: "12px 16px", borderBottom: "1px solid #E8EEF4" }}>
-                    <div style={sideLabel}>🔑 ACCESS YOU&apos;LL NEED</div>
+                    <div style={sideHeading}>🔑 ACCESS YOU&apos;LL NEED</div>
                     <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 5 }}>
                       {content.access_needed.map((a, i) => (
                         <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: 7, fontSize: 12, lineHeight: 1.4, color: "#334155" }}>
@@ -324,7 +393,7 @@ export default function ActivityViewClient({ profile, activity, progress: initPr
                 {/* Steps checklist */}
                 {steps.length > 0 && (
                   <div style={{ padding: "12px 16px", borderBottom: "1px solid #E8EEF4" }}>
-                    <div style={sideLabel}>STEPS</div>
+                    <div style={sideHeading}>STEPS</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                       {steps.map((s, i) => {
                         const done    = i < current;
@@ -355,7 +424,7 @@ export default function ActivityViewClient({ profile, activity, progress: initPr
                 {/* Downloads */}
                 {content?.downloads && content.downloads.length > 0 && (
                   <div style={{ padding: "12px 16px", borderBottom: "1px solid #E8EEF4" }}>
-                    <div style={sideLabel}>📥 DOWNLOADS</div>
+                    <div style={sideHeading}>📥 DOWNLOADS</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                       {content.downloads.map((d, i) => (
                         <a key={i} href={d.url} download target="_blank" rel="noreferrer"
@@ -377,7 +446,7 @@ export default function ActivityViewClient({ profile, activity, progress: initPr
                 {/* Copy prompts */}
                 {content?.prompts && content.prompts.length > 0 && (
                   <div style={{ padding: "12px 16px" }}>
-                    <div style={sideLabel}>💬 COPY PROMPTS</div>
+                    <div style={sideHeading}>💬 COPY PROMPTS</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                       {content.prompts.map((p, i) => (
                         <div key={i} style={{ border: "1px solid #E2E8F0", borderRadius: 9, overflow: "hidden" }}>
@@ -385,6 +454,7 @@ export default function ActivityViewClient({ profile, activity, progress: initPr
                             <span style={{ fontSize: 11.5, fontWeight: 700, color: "#334155" }}>{p.label}</span>
                             <button
                               onClick={() => { navigator.clipboard.writeText(p.text).then(() => { setCopiedIdx(i); setTimeout(() => setCopiedIdx(null), 2000); }); }}
+                              suppressHydrationWarning
                               style={{ border: "1px solid", borderColor: copiedIdx === i ? "rgba(35,206,104,.3)" : "#E2E8F0", background: copiedIdx === i ? "rgba(35,206,104,.08)" : "white", color: copiedIdx === i ? "#16A34A" : "#64748B", borderRadius: 999, padding: "2px 9px", fontSize: 11, fontWeight: 700, cursor: "pointer", transition: ".15s" }}>
                               {copiedIdx === i ? "✓ Copied" : "Copy"}
                             </button>
@@ -408,20 +478,6 @@ export default function ActivityViewClient({ profile, activity, progress: initPr
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Progress bar */}
-          <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 14, padding: "0 16px", height: 66, borderTop: "1px solid #E2E8F0", background: "rgba(255,255,255,.9)" }}>
-            <div style={{ fontSize: 11.5, fontWeight: 900, color: "#94A3B8", whiteSpace: "nowrap", minWidth: 100 }}>
-              Step {current + 1} of {steps.length}
-            </div>
-            <div style={{ flex: 1, height: 8, borderRadius: 999, overflow: "hidden", background: "#E2E8F0" }}>
-              <div style={{ height: "100%", borderRadius: 999, background: "linear-gradient(90deg,#2563EB,#14B8A6)", width: `${pct}%`, transition: "width .3s" }} />
-            </div>
-            <div style={{ fontSize: 11.5, fontWeight: 900, color: "#94A3B8", minWidth: 42, textAlign: "right" }}>
-              {Math.round(pct)}%
-            </div>
-          </div>
         </div>
       </div>
 
