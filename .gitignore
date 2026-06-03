@@ -1,8 +1,6 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
+# ── Dependencies ──────────────────────────────────────────────────────────────
+node_modules/
+.pnp
 .pnp.*
 .yarn/*
 !.yarn/patches
@@ -10,32 +8,56 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
+# ── Next.js ───────────────────────────────────────────────────────────────────
+.next/
+out/
+build/
 
-# next.js
-/.next/
-/out/
+# ── Environment variables (never commit secrets) ───────────────────────────────
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
 
-# production
-/build
+# ── Uploads / local media (use Supabase Storage instead) ──────────────────────
+public/uploads/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+# Keep favicon
+!app/favicon.ico
 
-# misc
-.DS_Store
-*.pem
+# ── TypeScript ────────────────────────────────────────────────────────────────
+*.tsbuildinfo
+next-env.d.ts
 
-# debug
+# ── Testing & coverage ────────────────────────────────────────────────────────
+coverage/
+.nyc_output/
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
 
-# env files (can opt-in for committing if needed)
-.env*
+# ── OS & editor noise ─────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.pem
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
 
-# vercel
+# ── Deployment ────────────────────────────────────────────────────────────────
 .vercel
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# ── Misc ──────────────────────────────────────────────────────────────────────
+*.tgz

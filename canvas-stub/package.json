@@ -1,0 +1,6 @@
+{
+  "name": "canvas",
+  "version": "2.11.2",
+  "description": "Stub — re-exports @napi-rs/canvas so pdfjs-dist can require('canvas')",
+  "main": "index.js"
+}
