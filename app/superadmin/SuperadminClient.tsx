@@ -3,225 +3,265 @@ import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import Topbar from "@/components/Topbar";
-import type { Profile, Company, Module } from "@/lib/supabase/types";
+import type { Profile, Company, Activity } from "@/lib/supabase/types";
+
+type ActivityRow = Activity & { activity_content: { id: string } | null };
 
 type Props = {
   profile: Profile & { companies: { name: string } | null };
-  companies: Company[];
-  modules: (Module & { activities: { id: string }[] })[];
-  allProfiles: { id: string; role: string; company_id: string | null }[];
+  companies: Pick<Company, "id" | "name" | "domain">[];
+  activities: ActivityRow[];
+  allAssignments: { activity_id: string; company_id: string }[];
 };
 
-export default function SuperadminClient({ profile, companies, modules, allProfiles }: Props) {
-  const [tab, setTab] = useState<"companies" | "modules">("companies");
+const CATEGORIES = ["chat", "build", "automate"];
+const TOOLS = ["claude","gemini","chatgpt","copilot","drive","sheets","gmail","calendar","vapi","wati","lovable","napkin","ai-studio","notebooklm"];
+
+export default function SuperadminClient({ profile, companies, activities: initActivities, allAssignments: initAssignments }: Props) {
+  const [activities,   setActivities]   = useState(initActivities);
+  const [assignments,  setAssignments]  = useState(initAssignments);
+  const [showForm,     setShowForm]     = useState(false);
   const supabase = createClient();
 
-  // Company form
-  const [companyName, setCompanyName] = useState("");
-  const [companyDomain, setCompanyDomain] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [companyError, setCompanyError] = useState("");
-
-  // Module form
-  const [modTitle, setModTitle] = useState("");
-  const [modDesc, setModDesc] = useState("");
-  const [modCats, setModCats] = useState<string[]>([]);
-  const [modSaving, setModSaving] = useState(false);
+  // Create form state
+  const [title,    setTitle]    = useState("");
+  const [desc,     setDesc]     = useState("");
+  const [level,    setLevel]    = useState<Activity["level"]>("Beginner");
+  const [time,     setTime]     = useState(15);
+  const [points,   setPoints]   = useState(50);
+  const [tools,    setTools]    = useState<string[]>([]);
+  const [category, setCategory] = useState("chat");
+  const [creating, setCreating] = useState(false);
 
   async function handleSignOut() {
     await supabase.auth.signOut();
     window.location.href = "/login";
   }
 
-  async function createCompany(e: React.FormEvent) {
+  async function createActivity(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true); setCompanyError("");
-    const { error } = await supabase.from("companies").insert({
-      name: companyName,
-      domain: companyDomain || null,
-      created_by: profile.id,
-    });
-    if (error) setCompanyError(error.message);
-    else { setCompanyName(""); setCompanyDomain(""); window.location.reload(); }
-    setSaving(false);
-  }
-
-  async function createModule(e: React.FormEvent) {
-    e.preventDefault();
-    setModSaving(true);
-    const { data, error } = await supabase.from("modules").insert({
-      title: modTitle,
-      description: modDesc,
-      categories: modCats,
-      published: false,
-      created_by: profile.id,
+    setCreating(true);
+    const { data, error } = await supabase.from("activities").insert({
+      title, description: desc, level, time_estimate_minutes: time,
+      points, tools, category, published: false, position: activities.length,
     }).select().single();
-    if (!error && data) window.location.href = `/superadmin/modules/${data.id}`;
-    setModSaving(false);
+    if (!error && data) {
+      setActivities(prev => [{ ...(data as any), activity_content: null }, ...prev]);
+      setTitle(""); setDesc(""); setTools([]); setShowForm(false);
+    }
+    setCreating(false);
   }
 
-  async function togglePublish(modId: string, current: boolean) {
-    await supabase.from("modules").update({ published: !current }).eq("id", modId);
-    window.location.reload();
+  async function togglePublish(act: ActivityRow) {
+    await supabase.from("activities").update({ published: !act.published }).eq("id", act.id);
+    setActivities(prev => prev.map(a => a.id === act.id ? { ...a, published: !a.published } : a));
   }
 
-  const cardStyle: React.CSSProperties = {
-    background: "white", border: "1px solid #E8E6DC", borderRadius: 20,
-    padding: 20, boxShadow: "0 2px 12px rgba(34,29,35,.07)",
-  };
+  async function deleteActivity(id: string) {
+    if (!confirm("Delete this activity?")) return;
+    await supabase.from("activities").delete().eq("id", id);
+    setActivities(prev => prev.filter(a => a.id !== id));
+  }
+
+  async function toggleAssignment(activityId: string, companyId: string) {
+    const exists = assignments.some(a => a.activity_id === activityId && a.company_id === companyId);
+    if (exists) {
+      await supabase.from("activity_companies")
+        .delete().eq("activity_id", activityId).eq("company_id", companyId);
+      setAssignments(prev => prev.filter(a => !(a.activity_id === activityId && a.company_id === companyId)));
+    } else {
+      await supabase.from("activity_companies").insert({ activity_id: activityId, company_id: companyId });
+      setAssignments(prev => [...prev, { activity_id: activityId, company_id: companyId }]);
+    }
+  }
+
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const catColor = (cat: string) => ({
+    chat:     { bg: "rgba(98,60,234,.08)",  color: "#5030C0" },
+    build:    { bg: "rgba(35,206,104,.08)", color: "#17A855" },
+    automate: { bg: "rgba(246,138,41,.08)", color: "#B05000" },
+  }[cat] ?? { bg: "#F0EEE8", color: "#6B6B6B" });
 
   return (
     <div style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
       <Topbar profile={profile} role="superadmin" onSignOut={handleSignOut} />
 
-      <main style={{ width: "min(1100px,calc(100% - 48px))", margin: "0 auto", padding: "32px 0 60px" }}>
-        <div style={{ marginBottom: 28 }}>
-          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 900, letterSpacing: "-.05em" }}>Superadmin</h1>
-          <p style={{ margin: "4px 0 0", color: "#6B6B6B", fontSize: 14 }}>Manage companies and learning content</p>
+      <main style={{ width: "min(1100px,calc(100% - 48px))", margin: "0 auto", padding: "28px 0 60px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
+          <div>
+            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, letterSpacing: "-.04em" }}>Activities</h1>
+            <p style={{ margin: "3px 0 0", color: "#6B6B6B", fontSize: 13 }}>{activities.length} total · create, edit content, assign to companies</p>
+          </div>
+          <button onClick={() => setShowForm(v => !v)} style={btnAmber}>+ New Activity</button>
         </div>
 
-        {/* Tabs */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
-          {[{ id: "companies", label: "🏢 Companies" }, { id: "modules", label: "📚 Modules" }].map(t => (
-            <button key={t.id} onClick={() => setTab(t.id as any)} style={{
-              padding: "9px 18px", borderRadius: 999, border: "1.5px solid",
-              borderColor: tab === t.id ? "#221D23" : "#E8E6DC",
-              background: tab === t.id ? "#221D23" : "white",
-              color: tab === t.id ? "white" : "#6B6B6B",
-              fontWeight: 700, fontSize: 13.5, cursor: "pointer",
-            }}>{t.label}</button>
-          ))}
-        </div>
-
-        {tab === "companies" && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 20, alignItems: "start" }}>
-            {/* Company list */}
-            <div style={cardStyle}>
-              <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 16 }}>All Companies ({companies.length})</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {companies.map(co => {
-                  const memberCount = allProfiles.filter(p => p.company_id === co.id).length;
-                  return (
-                    <div key={co.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", border: "1px solid #E8E6DC", borderRadius: 14, background: "#FAFAF8" }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 10, background: "#221D23", color: "white", display: "grid", placeItems: "center", fontWeight: 800, fontSize: 13, flexShrink: 0 }}>
-                        {co.name[0]}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 700, fontSize: 14 }}>{co.name}</div>
-                        <div style={{ fontSize: 12, color: "#6B6B6B" }}>{co.domain ?? "No domain (public)"} · {memberCount} users</div>
-                      </div>
-                    </div>
-                  );
-                })}
+        {/* Create form */}
+        {showForm && (
+          <div style={{ ...card, marginBottom: 18, borderColor: "#FFCE00" }}>
+            <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 14 }}>New Activity</div>
+            <form onSubmit={createActivity} style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+              <input value={title} onChange={e => setTitle(e.target.value)} required placeholder="Activity title" style={inp} />
+              <textarea value={desc} onChange={e => setDesc(e.target.value)} rows={2} placeholder="Short description shown on the dashboard card" style={{ ...inp, resize: "vertical" }} />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 10 }}>
+                <div>
+                  <label style={lbl}>Category</label>
+                  <select value={category} onChange={e => setCategory(e.target.value)} style={inp}>
+                    <option value="chat">✦ Chatbot</option>
+                    <option value="build">🛠 Vibe Coding</option>
+                    <option value="automate">⚡ Automation</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={lbl}>Level</label>
+                  <select value={level ?? "Beginner"} onChange={e => setLevel(e.target.value as any)} style={inp}>
+                    <option>Beginner</option><option>Intermediate</option><option>Advanced</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={lbl}>Time (min)</label>
+                  <input type="number" value={time} onChange={e => setTime(+e.target.value)} style={inp} min={1} />
+                </div>
+                <div>
+                  <label style={lbl}>Points</label>
+                  <input type="number" value={points} onChange={e => setPoints(+e.target.value)} style={inp} min={0} />
+                </div>
               </div>
-            </div>
-
-            {/* Create company */}
-            <div style={cardStyle}>
-              <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 16 }}>Create Company</div>
-              <form onSubmit={createCompany} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                <div>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#6B6B6B", marginBottom: 5 }}>Company Name *</label>
-                  <input value={companyName} onChange={e => setCompanyName(e.target.value)} required
-                    placeholder="e.g. Flipkart" style={inputStyle} />
+              <div>
+                <label style={lbl}>Tools</label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 5 }}>
+                  {TOOLS.map(t => (
+                    <label key={t} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, cursor: "pointer" }}>
+                      <input type="checkbox" checked={tools.includes(t)} onChange={e => setTools(p => e.target.checked ? [...p, t] : p.filter(x => x !== t))} />
+                      {t}
+                    </label>
+                  ))}
                 </div>
-                <div>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#6B6B6B", marginBottom: 5 }}>
-                    Email Domain <span style={{ fontWeight: 400 }}>(optional)</span>
-                  </label>
-                  <input value={companyDomain} onChange={e => setCompanyDomain(e.target.value)}
-                    placeholder="flipkart.com" style={inputStyle} />
-                  <div style={{ fontSize: 11, color: "#B0ABA5", marginTop: 4 }}>Users with this domain auto-join this company</div>
-                </div>
-                {companyError && <p style={{ color: "#EF4444", fontSize: 13, margin: 0 }}>{companyError}</p>}
-                <button type="submit" disabled={saving} style={btnStyle}>
-                  {saving ? "Creating…" : "Create Company"}
-                </button>
-              </form>
-            </div>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button type="submit" disabled={creating} style={btnAmber}>{creating ? "Creating…" : "Create Activity"}</button>
+                <button type="button" onClick={() => setShowForm(false)} style={btnGhost}>Cancel</button>
+              </div>
+            </form>
           </div>
         )}
 
-        {tab === "modules" && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 20, alignItems: "start" }}>
-            {/* Module list */}
-            <div style={cardStyle}>
-              <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 16 }}>All Modules ({modules.length})</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {modules.map(mod => (
-                  <div key={mod.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", border: "1px solid #E8E6DC", borderRadius: 14, background: "#FAFAF8" }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, fontSize: 14 }}>{mod.title}</div>
-                      <div style={{ fontSize: 12, color: "#6B6B6B", marginTop: 2 }}>
-                        {mod.activities.length} activities · {mod.categories?.join(", ") || "no categories"}
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button onClick={() => togglePublish(mod.id, mod.published)} style={{
-                        padding: "5px 12px", borderRadius: 999, border: "1px solid",
-                        borderColor: mod.published ? "rgba(35,206,104,.3)" : "#E8E6DC",
-                        background: mod.published ? "rgba(35,206,104,.08)" : "#F0EEE8",
-                        color: mod.published ? "#17A855" : "#6B6B6B",
-                        fontSize: 12, fontWeight: 700, cursor: "pointer",
-                      }}>{mod.published ? "Published" : "Draft"}</button>
-                      <Link href={`/superadmin/modules/${mod.id}`} style={{
-                        padding: "5px 12px", borderRadius: 999, border: "1px solid #E8E6DC",
-                        background: "white", color: "#221D23", fontSize: 12, fontWeight: 700,
-                        textDecoration: "none", display: "inline-block",
-                      }}>Edit</Link>
-                    </div>
-                  </div>
-                ))}
-                {modules.length === 0 && <p style={{ color: "#6B6B6B", fontSize: 13.5, textAlign: "center", padding: 24 }}>No modules yet</p>}
-              </div>
+        {/* Activity list */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {activities.length === 0 && (
+            <div style={{ ...card, textAlign: "center", color: "#B0ABA5", padding: 48 }}>
+              No activities yet. Create your first one above.
             </div>
+          )}
+          {activities.map(act => {
+            const expanded = expandedId === act.id;
+            const actAssignments = assignments.filter(a => a.activity_id === act.id);
+            const cc = catColor(act.category);
 
-            {/* Create module */}
-            <div style={cardStyle}>
-              <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 16 }}>Create Module</div>
-              <form onSubmit={createModule} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                <div>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#6B6B6B", marginBottom: 5 }}>Title *</label>
-                  <input value={modTitle} onChange={e => setModTitle(e.target.value)} required
-                    placeholder="e.g. Email Automation" style={inputStyle} />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#6B6B6B", marginBottom: 5 }}>Description</label>
-                  <textarea value={modDesc} onChange={e => setModDesc(e.target.value)} rows={3}
-                    placeholder="What will learners achieve?" style={{ ...inputStyle, resize: "vertical" }} />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#6B6B6B", marginBottom: 8 }}>Categories</label>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    {["chat", "build", "automate"].map(cat => (
-                      <label key={cat} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>
-                        <input type="checkbox" checked={modCats.includes(cat)}
-                          onChange={e => setModCats(prev => e.target.checked ? [...prev, cat] : prev.filter(c => c !== cat))} />
-                        {cat}
-                      </label>
-                    ))}
+            return (
+              <div key={act.id} style={{ ...card, padding: 0 }}>
+                {/* Row header */}
+                <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 18px", cursor: "pointer" }}
+                  onClick={() => setExpandedId(expanded ? null : act.id)}>
+                  {/* Category badge */}
+                  <span style={{ padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, background: cc.bg, color: cc.color, flexShrink: 0 }}>
+                    {act.category}
+                  </span>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14.5 }}>{act.title}</div>
+                    <div style={{ fontSize: 11.5, color: "#6B6B6B", marginTop: 2 }}>
+                      {act.level} · {act.time_estimate_minutes}m · {act.points}pts
+                      <span style={{ marginLeft: 8, color: act.activity_content ? "#17A855" : "#F68A29", fontWeight: 700 }}>
+                        {act.activity_content ? "✓ content" : "⚠ no content"}
+                      </span>
+                      {actAssignments.length > 0 && (
+                        <span style={{ marginLeft: 8, color: "#3696FC" }}>· {actAssignments.length} compan{actAssignments.length === 1 ? "y" : "ies"}</span>
+                      )}
+                    </div>
                   </div>
+
+                  <div style={{ display: "flex", gap: 8, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                    <button onClick={() => togglePublish(act)} style={{
+                      padding: "5px 12px", borderRadius: 999, border: "1px solid",
+                      borderColor: act.published ? "rgba(35,206,104,.3)" : "#E8E6DC",
+                      background: act.published ? "rgba(35,206,104,.08)" : "#F0EEE8",
+                      color: act.published ? "#17A855" : "#6B6B6B",
+                      fontSize: 12, fontWeight: 700, cursor: "pointer",
+                    }}>{act.published ? "Published" : "Draft"}</button>
+
+                    <Link href={`/superadmin/activity/${act.id}`} style={{
+                      padding: "5px 12px", borderRadius: 999, border: "1px solid #E8E6DC",
+                      background: "white", color: "#221D23", fontSize: 12, fontWeight: 700,
+                      textDecoration: "none",
+                    }}>Edit content</Link>
+
+                    <button onClick={() => deleteActivity(act.id)} style={{
+                      border: 0, background: "none", color: "#EF4444", cursor: "pointer", fontSize: 16,
+                    }}>×</button>
+                  </div>
+
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B0ABA5" strokeWidth="2.5"
+                    strokeLinecap="round" strokeLinejoin="round"
+                    style={{ transform: expanded ? "rotate(180deg)" : "rotate(0)", transition: ".15s", flexShrink: 0 }}>
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
                 </div>
-                <button type="submit" disabled={modSaving} style={btnStyle}>
-                  {modSaving ? "Creating…" : "Create & Add Activities →"}
-                </button>
-              </form>
-            </div>
-          </div>
-        )}
+
+                {/* Expanded: company assignment */}
+                {expanded && (
+                  <div style={{ padding: "0 18px 16px", borderTop: "1px solid #F0EEE8" }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#6B6B6B", margin: "12px 0 8px" }}>
+                      Assign to companies
+                      <span style={{ fontWeight: 400, marginLeft: 6 }}>
+                        {actAssignments.length === 0 ? "· no assignments = visible to everyone" : ""}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                      {companies.map(co => {
+                        const assigned = assignments.some(a => a.activity_id === act.id && a.company_id === co.id);
+                        return (
+                          <button key={co.id} onClick={() => toggleAssignment(act.id, co.id)} style={{
+                            display: "flex", alignItems: "center", gap: 7,
+                            padding: "6px 13px", borderRadius: 999, cursor: "pointer",
+                            border: "1.5px solid",
+                            borderColor: assigned ? "#FFCE00" : "#E8E6DC",
+                            background: assigned ? "#FFF6CF" : "white",
+                            fontWeight: 700, fontSize: 12.5, transition: ".12s",
+                          }}>
+                            <span style={{
+                              width: 16, height: 16, borderRadius: "50%",
+                              background: assigned ? "#FFCE00" : "#F0EEE8",
+                              display: "grid", placeItems: "center",
+                              fontSize: 9, fontWeight: 900,
+                              color: assigned ? "#221D23" : "transparent",
+                            }}>✓</span>
+                            {co.name}
+                            {co.domain && <span style={{ fontSize: 10.5, color: "#B0ABA5", fontWeight: 400 }}>{co.domain}</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </main>
     </div>
   );
 }
 
-const inputStyle: React.CSSProperties = {
-  padding: "10px 13px", borderRadius: 10, border: "1.5px solid #E8E6DC",
+const card: React.CSSProperties = {
+  background: "white", border: "1px solid #E8E6DC", borderRadius: 18,
+  boxShadow: "0 2px 12px rgba(34,29,35,.06)",
+};
+const inp: React.CSSProperties = {
+  padding: "9px 12px", borderRadius: 10, border: "1.5px solid #E8E6DC",
   fontSize: 13.5, outline: "none", width: "100%", boxSizing: "border-box",
   fontFamily: "inherit", background: "#FAFAF8",
 };
-
-const btnStyle: React.CSSProperties = {
-  padding: "11px 18px", borderRadius: 999, border: 0,
-  background: "#FFCE00", color: "#221D23", fontWeight: 800, fontSize: 13.5,
-  cursor: "pointer", marginTop: 4,
-};
+const lbl: React.CSSProperties = { display: "block", fontSize: 11.5, fontWeight: 700, color: "#6B6B6B", marginBottom: 4 };
+const btnAmber: React.CSSProperties = { padding: "9px 18px", borderRadius: 999, border: 0, background: "#FFCE00", color: "#221D23", fontWeight: 800, fontSize: 13, cursor: "pointer" };
+const btnGhost: React.CSSProperties = { padding: "9px 18px", borderRadius: 999, border: "1.5px solid #E8E6DC", background: "white", color: "#6B6B6B", fontWeight: 700, fontSize: 13, cursor: "pointer" };

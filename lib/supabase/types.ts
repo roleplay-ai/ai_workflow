@@ -30,7 +30,7 @@ export type Module = {
 
 export type Activity = {
   id: string;
-  module_id: string;
+  module_id: string | null;
   title: string;
   description: string | null;
   level: "Beginner" | "Intermediate" | "Advanced" | null;
@@ -38,7 +38,14 @@ export type Activity = {
   points: number;
   tools: string[];
   position: number;
+  published: boolean;
+  category: string;
   created_at: string;
+};
+
+export type ActivityCompany = {
+  activity_id: string;
+  company_id: string;
 };
 
 export type SlideImage = { url: string; caption?: string };
@@ -84,6 +91,11 @@ export type ActivityContent = {
   updated_at: string;
 };
 
+export type ModuleCompany = {
+  module_id: string;
+  company_id: string;
+};
+
 export type UserProgress = {
   id: string;
   user_id: string;
@@ -114,10 +126,20 @@ export type Database = {
         Insert: { title: string; description?: string | null; categories?: string[]; published?: boolean; created_by?: string | null };
         Update: { title?: string; description?: string | null; categories?: string[]; published?: boolean };
       };
+      module_companies: {
+        Row: ModuleCompany;
+        Insert: { module_id: string; company_id: string };
+        Update: never;
+      };
       activities: {
         Row: Activity;
-        Insert: { module_id: string; title: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; position?: number };
-        Update: { title?: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; position?: number };
+        Insert: { module_id?: string | null; title: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; position?: number; published?: boolean; category?: string };
+        Update: { title?: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; position?: number; published?: boolean; category?: string };
+      };
+      activity_companies: {
+        Row: ActivityCompany;
+        Insert: { activity_id: string; company_id: string };
+        Update: never;
       };
       activity_content: {
         Row: ActivityContent;

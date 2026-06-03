@@ -26,42 +26,20 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   const path = request.nextUrl.pathname;
 
-  // Public paths that don't need auth
-  const publicPaths = ["/login", "/auth/callback"];
-  if (publicPaths.some(p => path.startsWith(p))) {
-    if (user) {
-      // Already logged in — redirect to dashboard
-      return NextResponse.redirect(new URL("/dashboard", request.url));
-    }
+  // Always allow — auth callback needs to run to set the session cookie
+  if (path.startsWith("/auth/")) return supabaseResponse;
+
+  // Login page — always let through (user may want to switch accounts)
+  if (path.startsWith("/login")) {
     return supabaseResponse;
   }
 
-  // Legacy routes used by the old prototype — allow without auth
-  if (path === "/" || path.startsWith("/api/") || path.startsWith("/admin") && path !== "/admin") {
-    return supabaseResponse;
-  }
-
-  // Not logged in — send to login
+  // Not logged in → login page
   if (!user) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Role-based guards
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  const role = profile?.role ?? "user";
-
-  if (path.startsWith("/superadmin") && role !== "superadmin") {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
-  }
-  if (path === "/admin" && !["admin", "superadmin"].includes(role)) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
-  }
-
+  // Everything else: let the page handle its own role check
   return supabaseResponse;
 }
 

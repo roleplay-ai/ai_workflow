@@ -4,7 +4,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import Topbar from "@/components/Topbar";
 import type {
-  Profile, Module, Activity, ActivityContent,
+  Profile, Module, Activity, ActivityContent, Company,
   PromptTemplate, DownloadFile,
 } from "@/lib/supabase/types";
 
@@ -14,6 +14,8 @@ type Props = {
   profile: Profile & { companies: { name: string } | null };
   module: Module;
   activities: ActivityWithContent[];
+  companies: Pick<Company, "id" | "name" | "domain">[];
+  assignedCompanyIds: string[];
 };
 
 const TOOLS = [
@@ -32,11 +34,14 @@ const CONTENT_TABS: { id: ContentTab; label: string }[] = [
   { id: "downloads", label: "📥 Downloads"  },
 ];
 
-export default function ModuleEditClient({ profile, module: mod, activities: initActivities }: Props) {
-  const [activities, setActivities] = useState(initActivities);
-  const [showForm, setShowForm]     = useState(false);
-  const [selected, setSelected]     = useState<ActivityWithContent | null>(null);
-  const [contentTab, setContentTab] = useState<ContentTab>("slides");
+export default function ModuleEditClient({ profile, module: mod, activities: initActivities, companies, assignedCompanyIds: initAssigned }: Props) {
+  const [activities, setActivities]   = useState(initActivities);
+  const [showForm, setShowForm]       = useState(false);
+  const [selected, setSelected]       = useState<ActivityWithContent | null>(null);
+  const [contentTab, setContentTab]   = useState<ContentTab>("slides");
+  const [assignedIds, setAssignedIds] = useState<Set<string>>(new Set(initAssigned));
+  const [assignSaving, setAssignSaving] = useState(false);
+  const [assignMsg, setAssignMsg]     = useState("");
   const supabase = createClient();
 
   // ── Activity create form ──────────────────────────────────────────────────
@@ -49,7 +54,14 @@ export default function ModuleEditClient({ profile, module: mod, activities: ini
   const [creating, setCreating] = useState(false);
 
   // ── Content editor state ─────────────────────────────────────────────────
-  const [workflow,    setWorkflow]    = useState("");
+  const [pdfFile,     setPdfFile]     = useState<File | null>(null);
+  const [pdfConverting, setPdfConverting] = useState(false);
+  const [pdfProgress,   setPdfProgress]   = useState("");
+  const [workflow,      setWorkflow]      = useState("");
+  const [workflowFile,  setWorkflowFile]  = useState<File | null>(null);
+  const [quizMdFile,    setQuizMdFile]    = useState<File | null>(null);
+  const [quizParsing,   setQuizParsing]   = useState(false);
+  const [quizParseMsg,  setQuizParseMsg]  = useState("");
   const [quizJson,   setQuizJson]    = useState("[]");
   const [slideFiles, setSlideFiles]  = useState<FileList | null>(null);
 
@@ -76,6 +88,104 @@ export default function ModuleEditClient({ profile, module: mod, activities: ini
     window.location.href = "/login";
   }
 
+  // ── PDF → slides conversion ───────────────────────────────────────────────
+  async function convertPdf() {
+    if (!selected || !pdfFile) return;
+    setPdfConverting(true);
+    setPdfProgress(`Converting "${pdfFile.name}"…`);
+
+    const fd = new FormData();
+    fd.append("pdf", pdfFile);
+    fd.append("activityId", selected.id);
+
+    try {
+      const res  = await fetch("/api/pdf-to-slides", { method: "POST", body: fd });
+      const json = await res.json();
+
+      if (!res.ok || json.error) {
+        setPdfProgress(`Error: ${json.error ?? "conversion failed"}`);
+        return;
+      }
+
+      const newSlides: { url: string; caption: string }[] = json.slides;
+      setPdfProgress(`✓ ${newSlides.length} of ${json.total} page(s) converted`);
+
+      // Merge into selected activity content state
+      const updated = {
+        ...selected,
+        activity_content: {
+          ...(selected.activity_content ?? {}),
+          slide_images: newSlides,
+        } as any,
+      };
+      setSelected(updated);
+      setActivities(prev => prev.map(a => a.id === selected.id ? updated : a));
+      setPdfFile(null);
+    } catch (e: any) {
+      setPdfProgress(`Error: ${e?.message ?? "network error"}`);
+    } finally {
+      setPdfConverting(false);
+    }
+  }
+
+  // ── Load workflow .md file into textarea ─────────────────────────────────
+  async function loadWorkflowMd() {
+    if (!workflowFile) return;
+    const text = await workflowFile.text();
+    setWorkflow(text);
+    setWorkflowFile(null);
+  }
+
+  // ── Parse quiz .md with Claude ────────────────────────────────────────────
+  async function parseQuizMd() {
+    if (!quizMdFile) return;
+    setQuizParsing(true);
+    setQuizParseMsg("Sending to Claude…");
+
+    const fd = new FormData();
+    fd.append("file", quizMdFile);
+
+    try {
+      const res  = await fetch("/api/parse-quiz-md", { method: "POST", body: fd });
+      const json = await res.json();
+
+      if (!res.ok || json.error) {
+        setQuizParseMsg(`Error: ${json.error}`);
+        return;
+      }
+
+      setQuizJson(JSON.stringify(json.questions, null, 2));
+      setQuizParseMsg(`✓ ${json.total} question(s) extracted`);
+      setQuizMdFile(null);
+    } catch (e: any) {
+      setQuizParseMsg(`Error: ${e?.message ?? "network error"}`);
+    } finally {
+      setQuizParsing(false);
+    }
+  }
+
+  // ── Save company assignments ──────────────────────────────────────────────
+  async function saveAssignments() {
+    setAssignSaving(true); setAssignMsg("");
+    // Delete existing, re-insert selected
+    await supabase.from("module_companies").delete().eq("module_id", mod.id);
+    if (assignedIds.size > 0) {
+      const rows = Array.from(assignedIds).map(company_id => ({ module_id: mod.id, company_id }));
+      await supabase.from("module_companies").insert(rows);
+    }
+    setAssignMsg("✓ Saved");
+    setAssignSaving(false);
+    setTimeout(() => setAssignMsg(""), 3000);
+  }
+
+  function toggleCompany(id: string) {
+    setAssignedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
   // ── Open activity for editing ─────────────────────────────────────────────
   function openContent(act: ActivityWithContent) {
     setSelected(act);
@@ -90,6 +200,11 @@ export default function ModuleEditClient({ profile, module: mod, activities: ini
     setPrompts(c?.prompts ?? []);
     setDownloads(c?.downloads ?? []);
     setSlideFiles(null);
+    setPdfFile(null);
+    setPdfProgress("");
+    setWorkflowFile(null);
+    setQuizMdFile(null);
+    setQuizParseMsg("");
     setDlFiles(null);
     setDlLabel("");
   }
@@ -354,13 +469,60 @@ export default function ModuleEditClient({ profile, module: mod, activities: ini
 
               {/* ── Slides ──────────────────────────────────────────────────── */}
               {contentTab === "slides" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                  <div>
-                    <label style={lbl}>Upload slide images (PNG / JPG) — replaces all existing slides</label>
-                    <input type="file" accept="image/*" multiple
-                      onChange={e => setSlideFiles(e.target.files)}
-                      style={{ display: "block", marginTop: 8, fontSize: 13 }} />
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+                  {/* PDF upload (primary) */}
+                  <div style={{ border: "1.5px solid #E8E6DC", borderRadius: 14, overflow: "hidden" }}>
+                    <div style={{ padding: "12px 14px", background: "#FAFAF8", borderBottom: "1px solid #E8E6DC", display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 16 }}>📄</span>
+                      <span style={{ fontWeight: 700, fontSize: 13.5 }}>Upload PDF</span>
+                      <span style={{ fontSize: 11.5, color: "#B0ABA5" }}>Each page becomes a slide</span>
+                    </div>
+                    <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        onChange={e => { setPdfFile(e.target.files?.[0] ?? null); setPdfProgress(""); }}
+                        style={{ fontSize: 13 }}
+                      />
+                      {pdfFile && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <button
+                            onClick={convertPdf}
+                            disabled={pdfConverting}
+                            style={btnAmber}
+                          >
+                            {pdfConverting ? "Converting…" : `Convert "${pdfFile.name}"`}
+                          </button>
+                          {pdfProgress && (
+                            <span style={{ fontSize: 12.5, fontWeight: 700, color: pdfProgress.startsWith("✓") ? "#17A855" : pdfProgress.startsWith("Error") ? "#EF4444" : "#6B6B6B" }}>
+                              {pdfProgress}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Image upload (secondary) */}
+                  <div style={{ border: "1.5px solid #E8E6DC", borderRadius: 14, overflow: "hidden" }}>
+                    <div style={{ padding: "12px 14px", background: "#FAFAF8", borderBottom: "1px solid #E8E6DC", display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 16 }}>🖼</span>
+                      <span style={{ fontWeight: 700, fontSize: 13.5 }}>Upload images directly</span>
+                      <span style={{ fontSize: 11.5, color: "#B0ABA5" }}>PNG / JPG — replaces all existing</span>
+                    </div>
+                    <div style={{ padding: 14 }}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={e => setSlideFiles(e.target.files)}
+                        style={{ fontSize: 13 }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Current slides preview */}
                   {selected.activity_content?.slide_images?.length ? (
                     <div>
                       <div style={{ fontSize: 12, fontWeight: 700, color: "#6B6B6B", marginBottom: 8 }}>
@@ -368,14 +530,22 @@ export default function ModuleEditClient({ profile, module: mod, activities: ini
                       </div>
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                         {selected.activity_content.slide_images.map((s, i) => (
-                          <img key={i} src={s.url} alt={`Slide ${i + 1}`}
-                            style={{ width: 80, height: 56, objectFit: "cover", borderRadius: 8, border: "1px solid #E8E6DC" }} />
+                          <div key={i} style={{ position: "relative" }}>
+                            <img
+                              src={s.url}
+                              alt={`Slide ${i + 1}`}
+                              style={{ width: 90, height: 64, objectFit: "cover", borderRadius: 8, border: "1px solid #E8E6DC", display: "block" }}
+                            />
+                            <div style={{ position: "absolute", bottom: 3, right: 3, background: "rgba(0,0,0,.55)", color: "white", fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 4 }}>
+                              {i + 1}
+                            </div>
+                          </div>
                         ))}
                       </div>
                     </div>
                   ) : (
                     <div style={{ padding: 24, textAlign: "center", background: "#FAFAF8", borderRadius: 12, color: "#B0ABA5", fontSize: 13 }}>
-                      No slides uploaded yet
+                      No slides yet — upload a PDF or images above
                     </div>
                   )}
                 </div>
@@ -383,46 +553,133 @@ export default function ModuleEditClient({ profile, module: mod, activities: ini
 
               {/* ── Workflow ─────────────────────────────────────────────────── */}
               {contentTab === "workflow" && (
-                <div>
-                  <label style={lbl}>
-                    Workflow markdown — use <code style={{ background: "#F0EEE8", padding: "1px 5px", borderRadius: 4 }}>## Step title</code> to split into steps
-                  </label>
-                  <textarea
-                    value={workflow}
-                    onChange={e => setWorkflow(e.target.value)}
-                    rows={18}
-                    placeholder={"## Step 1: Open Gmail\nGo to mail.google.com and sign in.\n\n## Step 2: Compose\nClick Compose and fill in the recipient."}
-                    style={{ ...inp, resize: "vertical", fontFamily: "monospace", fontSize: 12.5, marginTop: 8, lineHeight: 1.6 }}
-                  />
-                  <div style={{ fontSize: 11.5, color: "#B0ABA5", marginTop: 6 }}>
-                    Parsed into {workflow.split(/\n##\s/).length} step(s). Each ## heading becomes a ticked step in the learner sidebar.
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {/* Upload .md file */}
+                  <div style={{ border: "1.5px solid #E8E6DC", borderRadius: 12, overflow: "hidden" }}>
+                    <div style={{ padding: "10px 14px", background: "#FAFAF8", borderBottom: "1px solid #E8E6DC", display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 15 }}>📝</span>
+                      <span style={{ fontWeight: 700, fontSize: 13 }}>Upload workflow .md file</span>
+                    </div>
+                    <div style={{ padding: 12, display: "flex", alignItems: "center", gap: 10 }}>
+                      <input
+                        type="file"
+                        accept=".md,.txt"
+                        onChange={e => setWorkflowFile(e.target.files?.[0] ?? null)}
+                        style={{ fontSize: 13, flex: 1 }}
+                      />
+                      <button
+                        onClick={loadWorkflowMd}
+                        disabled={!workflowFile}
+                        style={{ ...btnAmber, opacity: workflowFile ? 1 : .4 }}
+                      >
+                        Load
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Editable textarea */}
+                  <div>
+                    <label style={lbl}>
+                      Workflow markdown — use{" "}
+                      <code style={{ background: "#F0EEE8", padding: "1px 5px", borderRadius: 4 }}>## Step title</code>{" "}
+                      to split into steps
+                    </label>
+                    <textarea
+                      value={workflow}
+                      onChange={e => setWorkflow(e.target.value)}
+                      rows={16}
+                      placeholder={"## Step 1: Open Gmail\nGo to mail.google.com and sign in.\n\n## Step 2: Compose\nClick Compose and fill in the recipient."}
+                      style={{ ...inp, resize: "vertical", fontFamily: "monospace", fontSize: 12.5, marginTop: 6, lineHeight: 1.6 }}
+                    />
+                    <div style={{ fontSize: 11.5, color: "#B0ABA5", marginTop: 5 }}>
+                      {workflow.split(/\n##\s+/).filter(Boolean).length} step(s) detected — each ## heading becomes a ticked step in the learner view.
+                    </div>
                   </div>
                 </div>
               )}
 
               {/* ── Quiz ─────────────────────────────────────────────────────── */}
               {contentTab === "quiz" && (
-                <div>
-                  <label style={lbl}>Quiz questions — JSON array</label>
-                  <div style={{ fontSize: 11.5, color: "#B0ABA5", marginBottom: 8 }}>
-                    Format: <code style={{ background: "#F0EEE8", padding: "1px 5px", borderRadius: 4 }}>{`[{"question":"…","options":["A","B","C"],"correct_index":0}]`}</code>
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  {/* Upload quiz .md and auto-parse with Claude */}
+                  <div style={{ border: "1.5px solid #E8E6DC", borderRadius: 12, overflow: "hidden" }}>
+                    <div style={{ padding: "10px 14px", background: "#FAFAF8", borderBottom: "1px solid #E8E6DC", display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 15 }}>🤖</span>
+                      <span style={{ fontWeight: 700, fontSize: 13 }}>Upload quiz .md — Claude auto-extracts questions</span>
+                    </div>
+                    <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <input
+                          type="file"
+                          accept=".md,.txt"
+                          onChange={e => { setQuizMdFile(e.target.files?.[0] ?? null); setQuizParseMsg(""); }}
+                          style={{ fontSize: 13, flex: 1 }}
+                        />
+                        <button
+                          onClick={parseQuizMd}
+                          disabled={quizParsing || !quizMdFile}
+                          style={{ ...btnAmber, opacity: (!quizMdFile || quizParsing) ? .4 : 1 }}
+                        >
+                          {quizParsing ? "Parsing…" : "Parse with AI"}
+                        </button>
+                      </div>
+                      {quizParseMsg && (
+                        <div style={{ fontSize: 12.5, fontWeight: 700, color: quizParseMsg.startsWith("✓") ? "#17A855" : "#EF4444" }}>
+                          {quizParseMsg}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <textarea
-                    value={quizJson}
-                    onChange={e => setQuizJson(e.target.value)}
-                    rows={14}
-                    style={{ ...inp, resize: "vertical", fontFamily: "monospace", fontSize: 12 }}
-                  />
+
+                  {/* Parsed questions preview */}
                   {(() => {
                     try {
-                      const q = JSON.parse(quizJson);
-                      return Array.isArray(q)
-                        ? <div style={{ fontSize: 11.5, color: "#17A855", marginTop: 6 }}>✓ Valid JSON — {q.length} question(s)</div>
-                        : <div style={{ fontSize: 11.5, color: "#EF4444", marginTop: 6 }}>Must be an array</div>;
-                    } catch {
-                      return <div style={{ fontSize: 11.5, color: "#EF4444", marginTop: 6 }}>⚠ Invalid JSON</div>;
-                    }
+                      const questions = JSON.parse(quizJson);
+                      if (!Array.isArray(questions) || questions.length === 0) return null;
+                      return (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "#6B6B6B" }}>
+                            {questions.length} question(s) ready
+                          </div>
+                          {questions.map((q: any, i: number) => (
+                            <div key={i} style={{ border: "1px solid #E8E6DC", borderRadius: 11, padding: 12 }}>
+                              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>
+                                {i + 1}. {q.question}
+                              </div>
+                              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                {(q.options ?? []).map((opt: string, oi: number) => (
+                                  <div key={oi} style={{
+                                    fontSize: 12.5, padding: "5px 10px", borderRadius: 8,
+                                    background: oi === q.correct_index ? "rgba(35,206,104,.1)" : "#FAFAF8",
+                                    border: `1px solid ${oi === q.correct_index ? "rgba(35,206,104,.3)" : "#E8E6DC"}`,
+                                    color: oi === q.correct_index ? "#17A855" : "#444",
+                                    fontWeight: oi === q.correct_index ? 700 : 400,
+                                    display: "flex", alignItems: "center", gap: 6,
+                                  }}>
+                                    {oi === q.correct_index && <span>✓</span>}
+                                    {opt}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    } catch { return null; }
                   })()}
+
+                  {/* Manual JSON fallback */}
+                  <details>
+                    <summary style={{ fontSize: 12, color: "#B0ABA5", cursor: "pointer", fontWeight: 600 }}>
+                      Edit raw JSON manually
+                    </summary>
+                    <textarea
+                      value={quizJson}
+                      onChange={e => setQuizJson(e.target.value)}
+                      rows={10}
+                      style={{ ...inp, resize: "vertical", fontFamily: "monospace", fontSize: 11.5, marginTop: 8 }}
+                    />
+                  </details>
                 </div>
               )}
 
@@ -549,6 +806,55 @@ export default function ModuleEditClient({ profile, module: mod, activities: ini
               )}
             </div>
           )}
+        </div>
+
+        {/* ── Company assignment panel ──────────────────────────────────── */}
+        <div style={{ ...card, marginTop: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 15 }}>Assign to Companies</div>
+              <div style={{ fontSize: 12, color: "#6B6B6B", marginTop: 3 }}>
+                {assignedIds.size === 0
+                  ? "No companies selected — module is visible to everyone once published."
+                  : `Visible to ${assignedIds.size} selected company${assignedIds.size > 1 ? "ies" : ""} only.`}
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {assignMsg && <span style={{ fontSize: 12.5, fontWeight: 700, color: "#17A855" }}>{assignMsg}</span>}
+              <button onClick={saveAssignments} disabled={assignSaving} style={btnAmber}>
+                {assignSaving ? "Saving…" : "Save Assignments"}
+              </button>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {companies.map(co => {
+              const selected = assignedIds.has(co.id);
+              return (
+                <button
+                  key={co.id}
+                  onClick={() => toggleCompany(co.id)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "8px 14px", borderRadius: 999, cursor: "pointer",
+                    border: "1.5px solid",
+                    borderColor: selected ? "#FFCE00" : "#E8E6DC",
+                    background: selected ? "#FFF6CF" : "white",
+                    fontWeight: 700, fontSize: 13, transition: ".12s",
+                  }}
+                >
+                  <span style={{
+                    width: 18, height: 18, borderRadius: "50%", display: "grid", placeItems: "center",
+                    background: selected ? "#FFCE00" : "#F0EEE8",
+                    fontSize: 10, fontWeight: 900, color: selected ? "#221D23" : "#B0ABA5",
+                    flexShrink: 0, transition: ".12s",
+                  }}>{selected ? "✓" : ""}</span>
+                  <span>{co.name}</span>
+                  {co.domain && <span style={{ fontSize: 11, color: "#B0ABA5", fontWeight: 500 }}>{co.domain}</span>}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </main>
     </div>

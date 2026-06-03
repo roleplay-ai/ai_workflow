@@ -2,21 +2,34 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import ActivityViewClient from "./ActivityViewClient";
 
+export const dynamic = "force-dynamic";
+
 export default async function ActivityPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase.from("profiles").select("*, companies(name)").eq("id", user.id).single();
+  // Simple profile fetch — no join
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, email, role, company_id, full_name, avatar_url, created_at")
+    .eq("id", user.id)
+    .single();
 
-  const { data: activity } = await supabase
+  const { data: company } = profile?.company_id
+    ? await supabase.from("companies").select("name").eq("id", profile.company_id).single()
+    : { data: null };
+
+  const { data: activity, error: activityError } = await supabase
     .from("activities")
-    .select("*, modules(*), activity_content(*)")
+    .select("*, activity_content(*)")
     .eq("id", id)
     .single();
 
-  if (!activity) redirect("/dashboard");
+  if (activityError || !activity) {
+    redirect("/dashboard");
+  }
 
   const { data: progress } = await supabase
     .from("user_progress")
@@ -25,9 +38,11 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
     .eq("activity_id", id)
     .maybeSingle();
 
+  const fullProfile = profile ? { ...profile, companies: company } : null;
+
   return (
     <ActivityViewClient
-      profile={profile as any}
+      profile={fullProfile as any}
       activity={activity as any}
       progress={progress as any}
     />

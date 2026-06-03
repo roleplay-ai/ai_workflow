@@ -14,17 +14,23 @@ export default async function ModuleEditPage({ params }: { params: Promise<{ id:
   const { data: mod } = await supabase.from("modules").select("*").eq("id", id).single();
   if (!mod) redirect("/superadmin");
 
-  const { data: activities } = await supabase
-    .from("activities")
-    .select("*, activity_content(*)")
-    .eq("module_id", id)
-    .order("position");
+  const [
+    { data: activities },
+    { data: companies },
+    { data: assignments },
+  ] = await Promise.all([
+    supabase.from("activities").select("*, activity_content(*)").eq("module_id", id).order("position"),
+    supabase.from("companies").select("id, name, domain").order("name"),
+    supabase.from("module_companies").select("company_id").eq("module_id", id),
+  ]);
 
   return (
     <ModuleEditClient
       profile={profile as any}
       module={mod as any}
       activities={activities as any ?? []}
+      companies={companies as any ?? []}
+      assignedCompanyIds={(assignments ?? []).map((a: any) => a.company_id)}
     />
   );
 }

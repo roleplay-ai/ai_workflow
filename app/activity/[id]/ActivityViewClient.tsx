@@ -1,14 +1,17 @@
 "use client";
-import { useState, useMemo } from "react";
-import Link from "next/link";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Topbar from "@/components/Topbar";
-import { parseWorkflowSteps } from "@/lib/parseWorkflowSteps";
-import type { Profile, Activity, Module, ActivityContent, UserProgress } from "@/lib/supabase/types";
+import QuizModal from "@/components/QuizModal";
+import MdText from "@/components/MdText";
+import SlideZoom from "@/components/SlideZoom";
+import { parseMarkdownWorkflow } from "@/lib/parseMarkdown";
+import type { Profile, Activity, ActivityContent, UserProgress } from "@/lib/supabase/types";
+import type { Quiz } from "@/types";
 
 type Props = {
   profile: Profile & { companies: { name: string } | null };
-  activity: Activity & { modules: Module; activity_content: ActivityContent | null };
+  activity: Activity & { activity_content: ActivityContent | null };
   progress: UserProgress | null;
 };
 
@@ -16,510 +19,432 @@ export default function ActivityViewClient({ profile, activity, progress: initPr
   const supabase = createClient();
   const content  = activity.activity_content;
 
-  // ── Derived content ──────────────────────────────────────────────────────
-  const slides    = content?.slide_images  ?? [];
-  const quiz      = content?.quiz          ?? [];
-  const goals     = content?.goals         ?? [];
-  const access    = content?.access_needed ?? [];
-  const prompts   = content?.prompts       ?? [];
-  const downloads = content?.downloads     ?? [];
-  const steps     = useMemo(() => parseWorkflowSteps(content?.workflow_markdown ?? ""), [content?.workflow_markdown]);
+  // Parse workflow markdown into steps
+  const parsed = useMemo(() => {
+    if (!content?.workflow_markdown) return { title: activity.title, subtitle: "", steps: [] };
+    return parseMarkdownWorkflow(content.workflow_markdown);
+  }, [content?.workflow_markdown]);
 
-  // ── State ────────────────────────────────────────────────────────────────
-  const [progress,       setProgress]       = useState(initProgress);
-  const [completedSteps, setCompletedSteps] = useState<Set<number>>(
-    new Set(initProgress?.completed_steps ?? [])
-  );
-  const [currentSlide,   setCurrentSlide]   = useState(0);
-  const [quizAnswers,    setQuizAnswers]     = useState<number[]>([]);
-  const [quizSubmitted,  setQuizSubmitted]   = useState(false);
-  const [tab,            setTab]             = useState<"slides" | "workflow" | "quiz">("slides");
-  const [copiedIdx,      setCopiedIdx]       = useState<number | null>(null);
+  const steps  = parsed.steps;
+  const slides = content?.slide_images ?? [];
 
-  // ── Progress helpers ──────────────────────────────────────────────────────
-  async function upsertProgress(updates: Partial<UserProgress>) {
-    const base = {
-      user_id:    profile.id,
-      activity_id: activity.id,
-      updated_at: new Date().toISOString(),
-    };
-    if (progress) {
-      const { data } = await supabase
-        .from("user_progress")
-        .update({ ...base, ...updates })
-        .eq("id", progress.id)
-        .select()
-        .single();
-      if (data) setProgress(data as any);
-    } else {
-      const { data } = await supabase
-        .from("user_progress")
-        .insert({ ...base, status: "in_progress", completed_steps: [], ...updates })
-        .select()
-        .single();
-      if (data) setProgress(data as any);
-    }
-  }
-
-  async function toggleStep(idx: number) {
-    const next = new Set(completedSteps);
-    next.has(idx) ? next.delete(idx) : next.add(idx);
-    setCompletedSteps(next);
-
-    const completedArr = Array.from(next);
-    const allDone = steps.length > 0 && completedArr.length === steps.length;
-    await upsertProgress({
-      status: allDone ? "completed" : "in_progress",
-      completed_steps: completedArr,
-      ...(allDone ? { completed_at: new Date().toISOString() } : {}),
+  // Map quiz questions to steps (question[i] shows when leaving step[i])
+  const quizForStep = useMemo((): Record<number, Quiz> => {
+    const q = content?.quiz ?? [];
+    const map: Record<number, Quiz> = {};
+    q.forEach((question, i) => {
+      map[i] = {
+        question:   question.question,
+        options:    question.options,
+        correct:    question.correct_index,
+        successMsg: "Correct! Well done.",
+        wrongMsg:   "Review this step and try again.",
+        badge:      "✓ Got it",
+      };
     });
-  }
+    return map;
+  }, [content?.quiz]);
 
-  async function startActivity() {
-    await upsertProgress({ status: "in_progress", completed_steps: [] });
-  }
+  const [current,     setCurrent]     = useState(0);
+  type Msg = { role: "user" | "assistant"; content: string };
+  const [messages,    setMessages]    = useState<Msg[]>([
+    { role: "assistant", content: steps[0]?.aiMessage ?? `Welcome! Let's get started with "${activity.title}".` },
+  ]);
+  const [input,       setInput]       = useState("");
+  const [loading,     setLoading]     = useState(false);
+  const [showQuiz,    setShowQuiz]    = useState(false);
+  const [pendingQuiz, setPendingQuiz] = useState<Quiz | null>(null);
+  const [jumpToast,   setJumpToast]   = useState<string | null>(null);
+  const [progress,    setProgress]    = useState(initProgress);
+  const [copiedIdx,   setCopiedIdx]   = useState<number | null>(null);
+  const chatRef = useRef<HTMLDivElement>(null);
 
-  async function submitQuiz() {
-    if (!quiz.length) return;
-    const correct = quiz.filter((q, i) => quizAnswers[i] === q.correct_index).length;
-    const pct = Math.round((correct / quiz.length) * 100);
-    setQuizSubmitted(true);
-    if (pct >= 60) {
-      await upsertProgress({ status: "completed", quiz_score: pct, completed_at: new Date().toISOString() });
+  const step     = steps[current];
+  const slideUrl = step?.slideUrl ?? slides[step?.slideIndex ?? current]?.url ?? slides[current]?.url ?? slides[0]?.url ?? null;
+  const pct      = steps.length ? ((current + 1) / steps.length) * 100 : 0;
+
+  useEffect(() => {
+    chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages]);
+
+  // Mark progress on first load
+  useEffect(() => {
+    if (!progress) {
+      supabase.from("user_progress").insert({
+        user_id:     profile.id,
+        activity_id: activity.id,
+        status:      "in_progress",
+        completed_steps: [],
+        updated_at:  new Date().toISOString(),
+      }).select().single().then(({ data }) => { if (data) setProgress(data as any); });
     }
-  }
+  }, []);
+
+  const goNext = async () => {
+    if (current >= steps.length - 1) {
+      // Mark all steps done + completed status, then go to dashboard
+      const completedSteps = steps.map((_, i) => i);
+      const payload = {
+        status: "completed" as const,
+        completed_steps: completedSteps,
+        completed_at: new Date().toISOString(),
+        updated_at:   new Date().toISOString(),
+      };
+      if (progress) {
+        await supabase.from("user_progress").update(payload).eq("id", progress.id);
+      } else {
+        await supabase.from("user_progress").insert({
+          user_id:     profile.id,
+          activity_id: activity.id,
+          ...payload,
+        });
+      }
+      window.location.href = "/dashboard";
+      return;
+    }
+    const quiz = quizForStep[current];
+    if (quiz) { setPendingQuiz(quiz); setShowQuiz(true); }
+    const next = current + 1;
+    setCurrent(next);
+    setMessages(m => [...m, { role: "assistant", content: steps[next]?.aiMessage ?? steps[next]?.description ?? `Now on step ${next + 1}: ${steps[next]?.title}` }]);
+    // Save completed steps
+    const completedSteps = Array.from(new Set([...(progress?.completed_steps ?? []), current]));
+    if (progress) supabase.from("user_progress").update({ completed_steps: completedSteps, updated_at: new Date().toISOString() }).eq("id", progress.id);
+  };
+
+  const goPrev = () => {
+    if (current <= 0) return;
+    setCurrent(c => c - 1);
+  };
+
+  const sendMessage = async () => {
+    if (!input.trim() || loading) return;
+    const userMsg = input.trim();
+    setInput("");
+    setMessages(m => [...m, { role: "user", content: userMsg }]);
+    setLoading(true);
+    try {
+      const res  = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message:          userMsg,
+          stepIndex:        current,
+          activityTitle:    activity.title,
+          workflowMarkdown: content?.workflow_markdown ?? "",
+          steps:            steps.map(s => ({ title: s.title, description: s.description })),
+        }),
+      });
+      const data = await res.json();
+      if (data.reply) setMessages(m => [...m, { role: "assistant", content: data.reply }]);
+      if (typeof data.goToStep === "number") {
+        setCurrent(data.goToStep);
+        const title = steps[data.goToStep]?.title ?? `Step ${data.goToStep + 1}`;
+        setJumpToast(`↗ Jumped to Step ${data.goToStep + 1}: ${title}`);
+        setTimeout(() => setJumpToast(null), 3500);
+      }
+    } catch {
+      setMessages(m => [...m, { role: "assistant", content: "Sorry, I had trouble connecting. Please try again." }]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   async function handleSignOut() {
     await supabase.auth.signOut();
     window.location.href = "/login";
   }
 
-  function copyPrompt(text: string, idx: number) {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopiedIdx(idx);
-      setTimeout(() => setCopiedIdx(null), 2000);
-    });
+  // If no workflow, show simple content view
+  if (steps.length === 0) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
+        <Topbar profile={profile} role={profile.role} onSignOut={handleSignOut} />
+        <div style={{ maxWidth: 720, margin: "60px auto", padding: "0 24px", textAlign: "center", color: "#6B6B6B" }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🚧</div>
+          <h2 style={{ fontWeight: 900, fontSize: 22, color: "#221D23", marginBottom: 8 }}>{activity.title}</h2>
+          <p>Content for this activity hasn't been uploaded yet. Check back soon.</p>
+          <a href="/dashboard" style={{ display: "inline-block", marginTop: 24, padding: "10px 24px", borderRadius: 999, background: "#FFCE00", color: "#221D23", fontWeight: 800, textDecoration: "none" }}>← Back to dashboard</a>
+        </div>
+      </div>
+    );
   }
 
-  // ── Computed values ───────────────────────────────────────────────────────
-  const quizScore = quizSubmitted
-    ? quiz.filter((q, i) => quizAnswers[i] === q.correct_index).length
-    : 0;
-  const isCompleted = progress?.status === "completed";
-  const isStarted   = !!progress;
-  const stepPct     = steps.length ? (completedSteps.size / steps.length) * 100 : 0;
-
-  const tabBtn = (active: boolean): React.CSSProperties => ({
-    padding: "8px 16px", borderRadius: 999, border: "1.5px solid",
-    borderColor: active ? "#221D23" : "#E8E6DC",
-    background: active ? "#221D23" : "white",
-    color: active ? "white" : "#6B6B6B",
-    fontWeight: 700, fontSize: 13, cursor: "pointer", transition: ".12s",
-  });
-
   return (
-    <div style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif", color: "#221D23" }}>
-      <Topbar profile={profile} role={profile.role} onSignOut={handleSignOut} />
-
-      <main style={{ width: "min(1200px,calc(100% - 48px))", margin: "0 auto", padding: "26px 0 60px" }}>
-        {/* Breadcrumb */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18, fontSize: 13, color: "#6B6B6B" }}>
-          <Link href="/dashboard" style={{ color: "#6B6B6B", textDecoration: "none" }}>Dashboard</Link>
-          <span>/</span>
-          <span style={{ color: "#221D23", fontWeight: 600 }}>{activity.title}</span>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 22, alignItems: "start" }}>
-
-          {/* ── Main content area ────────────────────────────────────────── */}
+    <div style={{ height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
+      {/* Topbar */}
+      <header style={{
+        height: 68, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "0 24px", background: "rgba(255,255,255,.82)", borderBottom: "1px solid #E2E8F0",
+        backdropFilter: "blur(18px)", zIndex: 10,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 900, fontSize: 14, background: "linear-gradient(135deg,#2563EB,#14B8A6)", boxShadow: "0 10px 22px rgba(37,99,235,.22)" }}>G</div>
           <div>
-            <div style={{ background: "white", border: "1px solid #E8E6DC", borderRadius: 22, overflow: "hidden", boxShadow: "0 2px 16px rgba(34,29,35,.07)" }}>
-              {/* Header */}
-              <div style={{ padding: "22px 22px 0" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  {[activity.level, `${activity.time_estimate_minutes}m`, `${activity.points} pts`].filter(Boolean).map(tag => (
-                    <span key={tag} style={{ padding: "3px 10px", borderRadius: 999, background: "#F0EEE8", fontSize: 11.5, fontWeight: 700, color: "#6B6B6B" }}>{tag}</span>
-                  ))}
-                </div>
-                <h1 style={{ margin: "0 0 6px", fontSize: 22, fontWeight: 900, letterSpacing: "-.04em" }}>{activity.title}</h1>
-                {activity.description && (
-                  <p style={{ margin: "0 0 18px", color: "#6B6B6B", fontSize: 13.5, lineHeight: 1.5 }}>{activity.description}</p>
-                )}
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button style={tabBtn(tab === "slides")}   onClick={() => setTab("slides")}>📸 Slides</button>
-                  <button style={tabBtn(tab === "workflow")} onClick={() => setTab("workflow")}>📋 Workflow</button>
-                  <button style={tabBtn(tab === "quiz")}     onClick={() => setTab("quiz")}>✓ Quiz</button>
-                </div>
-              </div>
+            <div style={{ fontSize: 17, fontWeight: 900, letterSpacing: "-.03em" }}>{activity.title}</div>
+            <div style={{ fontSize: 11.5, color: "#64748B", fontWeight: 600 }}>{activity.level} · {activity.time_estimate_minutes}m</div>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, height: 34, padding: "0 12px", borderRadius: 999, fontSize: 12, fontWeight: 700, color: "#64748B", border: "1px solid #E2E8F0", background: "white", boxShadow: "0 8px 22px rgba(15,23,42,.08)" }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#14B8A6", boxShadow: "0 0 0 4px rgba(20,184,166,.16)" }} />
+            Claude Sonnet
+          </div>
+          <a href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 6, height: 34, padding: "0 12px", borderRadius: 999, fontSize: 12, fontWeight: 700, color: "#2563EB", background: "#EFF6FF", border: "1px solid #BFDBFE", textDecoration: "none" }}>
+            ← Dashboard
+          </a>
+        </div>
+      </header>
 
-              {/* ── Slides ──────────────────────────────────────────────── */}
-              {tab === "slides" && (
-                <div style={{ padding: 22 }}>
-                  {slides.length === 0 ? (
-                    <EmptyState>No slides uploaded for this activity yet.</EmptyState>
-                  ) : (
-                    <>
-                      <div style={{ borderRadius: 14, overflow: "hidden", background: "#111", marginBottom: 12, minHeight: 340, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <img
-                          src={slides[currentSlide]?.url}
-                          alt={`Slide ${currentSlide + 1}`}
-                          style={{ maxWidth: "100%", maxHeight: 520, objectFit: "contain", display: "block" }}
-                        />
-                      </div>
-                      {slides[currentSlide]?.caption && (
-                        <p style={{ textAlign: "center", fontSize: 12.5, color: "#6B6B6B", marginBottom: 12 }}>
-                          {slides[currentSlide].caption}
-                        </p>
-                      )}
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                        <button onClick={() => setCurrentSlide(s => Math.max(0, s - 1))} disabled={currentSlide === 0} style={navBtn}>
-                          ← Prev
-                        </button>
-                        <span style={{ fontSize: 13, color: "#6B6B6B", fontWeight: 600 }}>
-                          {currentSlide + 1} / {slides.length}
-                        </span>
-                        <button onClick={() => setCurrentSlide(s => Math.min(slides.length - 1, s + 1))} disabled={currentSlide === slides.length - 1} style={navBtn}>
-                          Next →
-                        </button>
-                      </div>
-                      <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
-                        {slides.map((s, i) => (
-                          <img key={i} src={s.url} alt={`Thumb ${i + 1}`}
-                            onClick={() => setCurrentSlide(i)}
-                            style={{ width: 64, height: 44, objectFit: "cover", borderRadius: 7, cursor: "pointer", flexShrink: 0, border: i === currentSlide ? "2.5px solid #FFCE00" : "2.5px solid transparent", transition: ".1s" }} />
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
+      {/* Main layout — narrower chat, bigger slide area */}
+      <div style={{ flex: 1, minHeight: 0, display: "grid", gap: 16, padding: 16, gridTemplateColumns: "300px 1fr" }}>
 
-              {/* ── Workflow ─────────────────────────────────────────────── */}
-              {tab === "workflow" && (
-                <div style={{ padding: 22 }}>
-                  {!content?.workflow_markdown ? (
-                    <EmptyState>No workflow added for this activity yet.</EmptyState>
-                  ) : steps.length > 0 ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                      {steps.map((step, i) => (
-                        <div key={i} style={{
-                          borderRadius: 14, border: `1.5px solid ${completedSteps.has(i) ? "rgba(35,206,104,.3)" : "#E8E6DC"}`,
-                          background: completedSteps.has(i) ? "rgba(35,206,104,.04)" : "white",
-                          overflow: "hidden", transition: ".15s",
-                        }}>
-                          <div
-                            style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", cursor: "pointer" }}
-                            onClick={() => isStarted && toggleStep(i)}
-                          >
-                            <div style={{
-                              width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
-                              display: "grid", placeItems: "center",
-                              background: completedSteps.has(i) ? "#23CE68" : "#F0EEE8",
-                              color: completedSteps.has(i) ? "white" : "#B0ABA5",
-                              fontSize: completedSteps.has(i) ? 14 : 12, fontWeight: 900,
-                              border: completedSteps.has(i) ? "none" : "2px solid #E8E6DC",
-                              transition: ".15s",
-                            }}>
-                              {completedSteps.has(i) ? "✓" : i + 1}
-                            </div>
-                            <span style={{ fontWeight: 700, fontSize: 14.5, flex: 1 }}>{step.title}</span>
-                          </div>
-                          {step.body && (
-                            <div style={{ padding: "0 16px 14px 56px", fontSize: 13.5, lineHeight: 1.65, color: "#444", whiteSpace: "pre-wrap" }}>
-                              {step.body}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                      {!isStarted && (
-                        <p style={{ textAlign: "center", color: "#B0ABA5", fontSize: 13 }}>
-                          Start the activity to tick off steps
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <pre style={{ fontFamily: "inherit", fontSize: 13.5, lineHeight: 1.7, whiteSpace: "pre-wrap", margin: 0 }}>
-                      {content.workflow_markdown}
-                    </pre>
-                  )}
-                </div>
-              )}
-
-              {/* ── Quiz ─────────────────────────────────────────────────── */}
-              {tab === "quiz" && (
-                <div style={{ padding: 22 }}>
-                  {quiz.length === 0 ? (
-                    <EmptyState>No quiz added for this activity yet.</EmptyState>
-                  ) : quizSubmitted ? (
-                    <div style={{ textAlign: "center", padding: "32px 16px" }}>
-                      <div style={{ fontSize: 56, marginBottom: 12 }}>
-                        {quizScore / quiz.length >= 0.6 ? "🎉" : "💪"}
-                      </div>
-                      <div style={{ fontSize: 26, fontWeight: 900, marginBottom: 6 }}>
-                        {quizScore} / {quiz.length} correct
-                      </div>
-                      <div style={{ fontSize: 14, color: "#6B6B6B", marginBottom: 24, lineHeight: 1.5 }}>
-                        {quizScore / quiz.length >= 0.6
-                          ? "Great job! This activity is now marked complete."
-                          : "Keep going — you need 60% to pass. Review the workflow and try again."}
-                      </div>
-                      {quizScore / quiz.length < 0.6 && (
-                        <button onClick={() => { setQuizAnswers([]); setQuizSubmitted(false); }} style={primaryBtn}>
-                          Try Again
-                        </button>
-                      )}
-                    </div>
-                  ) : (
-                    <>
-                      {quiz.map((q, qi) => (
-                        <div key={qi} style={{ marginBottom: 24 }}>
-                          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 10 }}>
-                            {qi + 1}. {q.question}
-                          </div>
-                          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                            {q.options.map((opt, oi) => (
-                              <label key={oi} style={{
-                                display: "flex", alignItems: "center", gap: 11, padding: "11px 15px",
-                                border: "1.5px solid", borderRadius: 12, cursor: "pointer",
-                                borderColor: quizAnswers[qi] === oi ? "#FFCE00" : "#E8E6DC",
-                                background: quizAnswers[qi] === oi ? "#FFF6CF" : "white",
-                                transition: ".12s",
-                              }}>
-                                <input type="radio" name={`q${qi}`}
-                                  checked={quizAnswers[qi] === oi}
-                                  onChange={() => setQuizAnswers(prev => { const n = [...prev]; n[qi] = oi; return n; })} />
-                                <span style={{ fontSize: 14 }}>{opt}</span>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                      <button
-                        onClick={submitQuiz}
-                        disabled={quizAnswers.filter(a => a !== undefined).length < quiz.length}
-                        style={{ ...primaryBtn, opacity: quizAnswers.filter(a => a !== undefined).length < quiz.length ? .5 : 1 }}>
-                        Submit Quiz
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
+        {/* ── LEFT: AI Coach chat ─────────────────────────────────────────── */}
+        <div style={{ display: "flex", flexDirection: "column", borderRadius: 24, overflow: "hidden", border: "1px solid #E2E8F0", background: "rgba(255,255,255,.92)", boxShadow: "0 18px 45px rgba(15,23,42,.10)", minHeight: 0 }}>
+          {/* Chat header */}
+          <div style={{ flexShrink: 0, height: 66, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px", borderBottom: "1px solid #E2E8F0", background: "linear-gradient(180deg,rgba(255,255,255,.94),rgba(248,250,252,.94))" }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 900, textTransform: "uppercase", letterSpacing: ".08em", color: "#2563EB", marginBottom: 2 }}>AI Coach</div>
+              <div style={{ fontSize: 15, fontWeight: 900, letterSpacing: "-.03em" }}>Step {current + 1}: {step?.title}</div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, fontSize: 11, fontWeight: 900, color: "#1D4ED8", background: "#DBEAFE" }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#2563EB" }} />
+              Active
             </div>
           </div>
 
-          {/* ── Right sidebar ────────────────────────────────────────────── */}
-          <aside style={{ position: "sticky", top: 82, display: "flex", flexDirection: "column", gap: 14 }}>
-
-            {/* Status / CTA */}
-            <div style={sideCard}>
-              {isCompleted ? (
-                <div style={{ padding: "12px 14px", borderRadius: 14, background: "rgba(35,206,104,.08)", border: "1px solid rgba(35,206,104,.25)", textAlign: "center" }}>
-                  <div style={{ fontSize: 22, marginBottom: 4 }}>🎉</div>
-                  <div style={{ fontWeight: 800, fontSize: 14, color: "#17A855" }}>Activity completed!</div>
-                  <div style={{ fontSize: 12, color: "#6B6B6B", marginTop: 3 }}>{activity.points} pts earned</div>
+          {/* Messages */}
+          <div ref={chatRef} style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+            {messages.map((m, i) => (
+              <div key={i} style={{ display: "flex", gap: 10, maxWidth: "95%", alignSelf: m.role === "user" ? "flex-end" : "flex-start", flexDirection: m.role === "user" ? "row-reverse" : "row" }}>
+                <div style={{ width: 32, height: 32, flexShrink: 0, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900, marginTop: 2, color: "white", background: m.role === "user" ? "#CBD5E1" : "linear-gradient(135deg,#2563EB,#14B8A6)" }}>
+                  {m.role === "user" ? <span style={{ color: "#475569" }}>U</span> : "AI"}
                 </div>
-              ) : (
-                <button
-                  onClick={startActivity}
-                  style={{ ...primaryBtn, width: "100%", fontSize: 14 }}>
-                  {isStarted ? "↻ Resume" : "▶ Start Activity"}
-                </button>
-              )}
-
-              {/* Step progress bar */}
-              {steps.length > 0 && (
-                <div style={{ marginTop: 14 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, fontWeight: 700, marginBottom: 6, color: "#6B6B6B" }}>
-                    <span>Steps</span>
-                    <span>{completedSteps.size} / {steps.length}</span>
-                  </div>
-                  <div style={{ height: 6, background: "#F0EEE8", borderRadius: 999, overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${stepPct}%`, background: "linear-gradient(90deg,#23CE68,#3696FC)", borderRadius: 999, transition: ".3s" }} />
-                  </div>
+                <div style={{ borderRadius: 18, padding: "10px 14px", border: "1px solid", fontSize: 13.5, lineHeight: 1.5,
+                  ...(m.role === "user"
+                    ? { background: "#2563EB", borderColor: "#2563EB", color: "white", borderTopRightRadius: 4 }
+                    : { background: "white", borderColor: "#E2E8F0", color: "#1E293B", borderTopLeftRadius: 4 })
+                }}>
+                  {m.role === "user" ? m.content : <MdText text={m.content} />}
                 </div>
-              )}
+              </div>
+            ))}
+            {loading && (
+              <div style={{ display: "flex", gap: 10, alignSelf: "flex-start" }}>
+                <div style={{ width: 32, height: 32, flexShrink: 0, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900, color: "white", background: "linear-gradient(135deg,#2563EB,#14B8A6)" }}>AI</div>
+                <div style={{ borderRadius: 18, borderTopLeftRadius: 4, padding: "10px 14px", background: "white", border: "1px solid #E2E8F0", color: "#94A3B8", fontSize: 13.5 }}>Thinking…</div>
+              </div>
+            )}
+          </div>
+
+          {/* Input + nav */}
+          <div style={{ flexShrink: 0, borderTop: "1px solid #E2E8F0", background: "rgba(255,255,255,.96)" }}>
+            <div style={{ display: "flex", gap: 10, padding: 14, borderBottom: "1px solid #E2E8F0" }}>
+              <input
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendMessage()}
+                placeholder="Ask the AI coach anything…"
+                suppressHydrationWarning
+                style={{ flex: 1, height: 42, padding: "0 14px", borderRadius: 13, border: "1px solid #CBD5E1", fontSize: 13.5, background: "#F8FAFC", outline: "none", fontFamily: "inherit" }}
+              />
+              <button onClick={sendMessage} disabled={loading} style={{ padding: "0 16px", height: 42, borderRadius: 13, border: 0, color: "white", fontSize: 13.5, fontWeight: 900, cursor: "pointer", background: "linear-gradient(135deg,#2563EB,#1D4ED8)", opacity: loading ? .6 : 1 }}>
+                Ask
+              </button>
+            </div>
+            <div style={{ display: "flex", gap: 12, padding: 14, alignItems: "center" }}>
+              <button onClick={goPrev} disabled={current === 0} style={{ padding: "9px 16px", borderRadius: 13, fontSize: 13, fontWeight: 900, cursor: "pointer", border: "1px solid #E2E8F0", background: "#F8FAFC", color: "#64748B", opacity: current === 0 ? .4 : 1 }}>
+                ← Prev
+              </button>
+              <div style={{ flex: 1, fontSize: 11.5, color: "#94A3B8", fontWeight: 600, textAlign: "center" }}>
+                {current < steps.length - 1 ? "Advance when ready" : "🎉 You've completed the workflow!"}
+              </div>
+              <button onClick={goNext} style={{ padding: "9px 16px", borderRadius: 13, border: 0, fontSize: 13, fontWeight: 900, cursor: "pointer", color: "white", background: "linear-gradient(135deg,#2563EB,#1D4ED8)" }}>
+                {current < steps.length - 1 ? "Next →" : "Finish ✓"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── RIGHT: Slide + step card ─────────────────────────────────────── */}
+        <div style={{ display: "flex", flexDirection: "column", borderRadius: 24, overflow: "hidden", border: "1px solid #E2E8F0", minHeight: 0, boxShadow: "0 18px 45px rgba(15,23,42,.10)", background: "linear-gradient(180deg,#F8FAFC,#F1F5F9)" }}>
+          <div style={{ flex: 1, minHeight: 0, display: "grid", gap: 16, padding: 16, gridTemplateColumns: "1fr 260px" }}>
+            {/* Slide frame */}
+            <div style={{ display: "flex", flexDirection: "column", borderRadius: 20, overflow: "hidden", border: "1px solid #E2E8F0", background: "white", boxShadow: "0 10px 28px rgba(15,23,42,.08)", minHeight: 0 }}>
+              {/* Browser bar */}
+              <div style={{ flexShrink: 0, height: 36, display: "flex", alignItems: "center", gap: 8, padding: "0 12px", borderBottom: "1px solid #E2E8F0", background: "#F8FAFC", fontSize: 11.5, fontWeight: 700, color: "#94A3B8" }}>
+                <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#FCA5A5" }} />
+                <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#FDE68A" }} />
+                <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#A7F3D0" }} />
+                <span style={{ marginLeft: 8 }}>Step {current + 1} — {step?.title}</span>
+              </div>
+              {/* Slide */}
+              <div style={{ flex: 1, minHeight: 0, overflow: "hidden", position: "relative", background: "#F1F5F9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {slideUrl ? (
+                  <SlideZoom src={slideUrl} alt={`Step ${current + 1}`} />
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, color: "#94A3B8", fontSize: 13.5, fontWeight: 600 }}>
+                    <div style={{ fontSize: 40 }}>🖼️</div>
+                    <div>No slide for this step</div>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Goals */}
-            {goals.length > 0 && (
-              <div style={sideCard}>
-                <SideSection icon="🎯" title="Goals">
-                  <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
-                    {goals.map((g, i) => (
-                      <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: 9, fontSize: 13, lineHeight: 1.45 }}>
-                        <span style={{ width: 18, height: 18, borderRadius: "50%", background: "rgba(255,206,0,.2)", display: "grid", placeItems: "center", fontSize: 10, flexShrink: 0, marginTop: 1, fontWeight: 900, color: "#7A5F00" }}>✓</span>
-                        {g}
-                      </li>
-                    ))}
-                  </ul>
-                </SideSection>
-              </div>
-            )}
+            {/* Right panel — matches prototype: activity info, access, steps checklist, downloads, prompts, progress */}
+            <div style={{ borderRadius: 20, border: "1px solid #E2E8F0", background: "rgba(255,255,255,.97)", boxShadow: "0 10px 28px rgba(15,23,42,.07)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
-            {/* Access you'll need */}
-            {access.length > 0 && (
-              <div style={sideCard}>
-                <SideSection icon="🔑" title="Access you'll need">
-                  <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 7 }}>
-                    {access.map((a, i) => (
-                      <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: 9, fontSize: 13, lineHeight: 1.45 }}>
-                        <span style={{ color: "#3696FC", fontWeight: 900, flexShrink: 0, marginTop: 2, fontSize: 11 }}>→</span>
-                        {a}
-                      </li>
-                    ))}
-                  </ul>
-                </SideSection>
-              </div>
-            )}
+              {/* Scrollable body */}
+              <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
 
-            {/* Steps checklist */}
-            {steps.length > 0 && (
-              <div style={sideCard}>
-                <SideSection icon="📋" title="Steps">
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    {steps.map((step, i) => (
-                      <button
-                        key={i}
-                        disabled={!isStarted}
-                        onClick={() => isStarted && toggleStep(i)}
-                        style={{
-                          display: "flex", alignItems: "center", gap: 9,
-                          padding: "7px 0", background: "none", border: "none",
-                          cursor: isStarted ? "pointer" : "default", textAlign: "left",
-                          width: "100%", borderBottom: i < steps.length - 1 ? "1px solid #F0EEE8" : "none",
-                          paddingBottom: i < steps.length - 1 ? 10 : 0,
-                        }}>
-                        <span style={{
-                          width: 20, height: 20, borderRadius: "50%", flexShrink: 0,
-                          display: "grid", placeItems: "center",
-                          background: completedSteps.has(i) ? "#23CE68" : "white",
-                          border: completedSteps.has(i) ? "none" : "2px solid #D5D0C8",
-                          color: completedSteps.has(i) ? "white" : "transparent",
-                          fontSize: 11, fontWeight: 900, transition: ".15s",
-                        }}>✓</span>
-                        <span style={{
-                          fontSize: 12.5, fontWeight: completedSteps.has(i) ? 600 : 500,
-                          color: completedSteps.has(i) ? "#17A855" : "#221D23",
-                          textDecoration: completedSteps.has(i) ? "line-through" : "none",
-                          lineHeight: 1.35,
-                        }}>{step.title}</span>
-                      </button>
-                    ))}
+                {/* Activity header */}
+                <div style={{ padding: "14px 16px 12px", borderBottom: "1px solid #E8EEF4" }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".1em", color: "#94A3B8", marginBottom: 4 }}>ACTIVITY</div>
+                  <div style={{ fontSize: 15, fontWeight: 900, letterSpacing: "-.03em", color: "#0F172A", lineHeight: 1.2 }}>{activity.title}</div>
+                  {activity.description && (
+                    <div style={{ fontSize: 12, color: "#64748B", marginTop: 5, lineHeight: 1.4 }}>{activity.description}</div>
+                  )}
+                </div>
+
+                {/* Access you'll need */}
+                {content?.access_needed && content.access_needed.length > 0 && (
+                  <div style={{ padding: "12px 16px", borderBottom: "1px solid #E8EEF4" }}>
+                    <div style={sideLabel}>🔑 ACCESS YOU&apos;LL NEED</div>
+                    <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 5 }}>
+                      {content.access_needed.map((a, i) => (
+                        <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: 7, fontSize: 12, lineHeight: 1.4, color: "#334155" }}>
+                          <span style={{ color: "#64748B", flexShrink: 0, marginTop: 1 }}>·</span>
+                          {a}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                </SideSection>
-              </div>
-            )}
+                )}
 
-            {/* Downloads */}
-            {downloads.length > 0 && (
-              <div style={sideCard}>
-                <SideSection icon="📥" title="Downloads">
-                  <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                    {downloads.map((d, i) => (
-                      <a
-                        key={i}
-                        href={d.url}
-                        download
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{
-                          display: "flex", alignItems: "center", gap: 10, padding: "9px 12px",
-                          borderRadius: 10, border: "1px solid #E8E6DC", background: "#FAFAF8",
-                          textDecoration: "none", color: "#221D23", transition: ".12s",
-                        }}
-                        onMouseEnter={e => (e.currentTarget.style.borderColor = "#FFCE00")}
-                        onMouseLeave={e => (e.currentTarget.style.borderColor = "#E8E6DC")}
-                      >
-                        <span style={{ fontSize: 18 }}>{dlIcon(d.type)}</span>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 12.5, fontWeight: 700, lineHeight: 1.2 }}>{d.label}</div>
-                          <div style={{ fontSize: 10.5, color: "#B0ABA5", textTransform: "uppercase" }}>{d.type}</div>
-                        </div>
-                        <span style={{ fontSize: 12, color: "#B0ABA5" }}>↓</span>
-                      </a>
-                    ))}
-                  </div>
-                </SideSection>
-              </div>
-            )}
-
-            {/* Copy prompts */}
-            {prompts.length > 0 && (
-              <div style={sideCard}>
-                <SideSection icon="💬" title="Copy prompts">
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    {prompts.map((p, i) => (
-                      <div key={i} style={{ border: "1px solid #E8E6DC", borderRadius: 10, overflow: "hidden" }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: "#FAFAF8", borderBottom: "1px solid #E8E6DC" }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: "#221D23" }}>{p.label}</span>
-                          <button
-                            onClick={() => copyPrompt(p.text, i)}
-                            style={{
-                              border: "1px solid",
-                              borderColor: copiedIdx === i ? "rgba(35,206,104,.3)" : "#E8E6DC",
-                              background: copiedIdx === i ? "rgba(35,206,104,.08)" : "white",
-                              color: copiedIdx === i ? "#17A855" : "#6B6B6B",
-                              borderRadius: 999, padding: "3px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer", transition: ".15s",
+                {/* Steps checklist */}
+                {steps.length > 0 && (
+                  <div style={{ padding: "12px 16px", borderBottom: "1px solid #E8EEF4" }}>
+                    <div style={sideLabel}>STEPS</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                      {steps.map((s, i) => {
+                        const done    = i < current;
+                        const active  = i === current;
+                        return (
+                          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderRadius: 8, background: active ? "#EFF6FF" : "transparent", paddingLeft: active ? 8 : 0, paddingRight: active ? 8 : 0, margin: active ? "0 -8px" : 0, transition: ".15s" }}>
+                            {/* Circle */}
+                            <div style={{
+                              width: 22, height: 22, borderRadius: "50%", flexShrink: 0,
+                              display: "grid", placeItems: "center",
+                              fontSize: done ? 11 : 11, fontWeight: 800,
+                              background: done ? "#22C55E" : active ? "#2563EB" : "#E2E8F0",
+                              color: done || active ? "white" : "#94A3B8",
+                              transition: ".2s",
                             }}>
-                            {copiedIdx === i ? "✓ Copied" : "Copy"}
-                          </button>
-                        </div>
-                        <pre style={{
-                          margin: 0, padding: "10px 12px", fontSize: 11.5, fontFamily: "monospace",
-                          whiteSpace: "pre-wrap", lineHeight: 1.5, color: "#444",
-                          maxHeight: 120, overflow: "auto", background: "white",
-                        }}>{p.text}</pre>
-                      </div>
-                    ))}
+                              {done ? "✓" : i + 1}
+                            </div>
+                            <span style={{ fontSize: 12.5, fontWeight: active ? 700 : 500, color: done ? "#16A34A" : active ? "#1D4ED8" : "#64748B", lineHeight: 1.3, flex: 1 }}>
+                              {s.title}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </SideSection>
+                )}
+
+                {/* Downloads */}
+                {content?.downloads && content.downloads.length > 0 && (
+                  <div style={{ padding: "12px 16px", borderBottom: "1px solid #E8EEF4" }}>
+                    <div style={sideLabel}>📥 DOWNLOADS</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                      {content.downloads.map((d, i) => (
+                        <a key={i} href={d.url} download target="_blank" rel="noreferrer"
+                          style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 9, border: "1px solid #E2E8F0", background: "#F8FAFC", textDecoration: "none", color: "#0F172A", transition: ".12s" }}
+                          onMouseEnter={e => (e.currentTarget.style.borderColor = "#2563EB")}
+                          onMouseLeave={e => (e.currentTarget.style.borderColor = "#E2E8F0")}>
+                          <span style={{ fontSize: 15 }}>{dlIcon(d.type)}</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{d.label}</div>
+                            <div style={{ fontSize: 10, color: "#94A3B8", textTransform: "uppercase" }}>{d.type}</div>
+                          </div>
+                          <span style={{ fontSize: 11, color: "#94A3B8" }}>↓</span>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Copy prompts */}
+                {content?.prompts && content.prompts.length > 0 && (
+                  <div style={{ padding: "12px 16px" }}>
+                    <div style={sideLabel}>💬 COPY PROMPTS</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                      {content.prompts.map((p, i) => (
+                        <div key={i} style={{ border: "1px solid #E2E8F0", borderRadius: 9, overflow: "hidden" }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 10px", background: "#F8FAFC", borderBottom: "1px solid #E2E8F0" }}>
+                            <span style={{ fontSize: 11.5, fontWeight: 700, color: "#334155" }}>{p.label}</span>
+                            <button
+                              onClick={() => { navigator.clipboard.writeText(p.text).then(() => { setCopiedIdx(i); setTimeout(() => setCopiedIdx(null), 2000); }); }}
+                              style={{ border: "1px solid", borderColor: copiedIdx === i ? "rgba(35,206,104,.3)" : "#E2E8F0", background: copiedIdx === i ? "rgba(35,206,104,.08)" : "white", color: copiedIdx === i ? "#16A34A" : "#64748B", borderRadius: 999, padding: "2px 9px", fontSize: 11, fontWeight: 700, cursor: "pointer", transition: ".15s" }}>
+                              {copiedIdx === i ? "✓ Copied" : "Copy"}
+                            </button>
+                          </div>
+                          <pre style={{ margin: 0, padding: "7px 10px", fontSize: 11, fontFamily: "monospace", whiteSpace: "pre-wrap", lineHeight: 1.5, color: "#475569", maxHeight: 88, overflowY: "auto", background: "white" }}>{p.text}</pre>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
 
-          </aside>
+              {/* Bottom: progress + XP */}
+              <div style={{ flexShrink: 0, padding: "10px 16px", borderTop: "1px solid #E8EEF4", background: "#FAFBFC" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#64748B" }}>{current} of {steps.length} done</span>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: "#2563EB" }}>+{activity.points} XP</span>
+                </div>
+                <div style={{ height: 6, background: "#E2E8F0", borderRadius: 999, overflow: "hidden" }}>
+                  <div style={{ height: "100%", borderRadius: 999, background: "linear-gradient(90deg,#22C55E,#14B8A6)", width: `${pct}%`, transition: "width .3s" }} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Progress bar */}
+          <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 14, padding: "0 16px", height: 66, borderTop: "1px solid #E2E8F0", background: "rgba(255,255,255,.9)" }}>
+            <div style={{ fontSize: 11.5, fontWeight: 900, color: "#94A3B8", whiteSpace: "nowrap", minWidth: 100 }}>
+              Step {current + 1} of {steps.length}
+            </div>
+            <div style={{ flex: 1, height: 8, borderRadius: 999, overflow: "hidden", background: "#E2E8F0" }}>
+              <div style={{ height: "100%", borderRadius: 999, background: "linear-gradient(90deg,#2563EB,#14B8A6)", width: `${pct}%`, transition: "width .3s" }} />
+            </div>
+            <div style={{ fontSize: 11.5, fontWeight: 900, color: "#94A3B8", minWidth: 42, textAlign: "right" }}>
+              {Math.round(pct)}%
+            </div>
+          </div>
         </div>
-      </main>
-    </div>
-  );
-}
-
-// ── Small helpers ─────────────────────────────────────────────────────────────
-
-function EmptyState({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ padding: 48, textAlign: "center", color: "#B0ABA5", background: "#FAFAF8", borderRadius: 14, fontSize: 13.5 }}>
-      {children}
-    </div>
-  );
-}
-
-function SideSection({ icon, title, children }: { icon: string; title: string; children: React.ReactNode }) {
-  return (
-    <>
-      <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 12 }}>
-        <span style={{ fontSize: 15 }}>{icon}</span>
-        <span style={{ fontWeight: 800, fontSize: 13.5 }}>{title}</span>
       </div>
-      {children}
-    </>
+
+      {/* Quiz modal */}
+      {showQuiz && pendingQuiz && (
+        <QuizModal quiz={pendingQuiz} onClose={() => { setShowQuiz(false); setPendingQuiz(null); }} />
+      )}
+
+      {/* Jump toast */}
+      {jumpToast && (
+        <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", zIndex: 50, display: "flex", alignItems: "center", gap: 10, padding: "12px 20px", borderRadius: 16, color: "white", fontSize: 13.5, fontWeight: 700, background: "linear-gradient(135deg,#2563EB,#14B8A6)", boxShadow: "0 12px 32px rgba(37,99,235,.35)" }}>
+          ↗ {jumpToast.replace("↗ ", "")}
+        </div>
+      )}
+    </div>
   );
 }
 
-function dlIcon(type: string) {
+const sideHeading: React.CSSProperties = {
+  fontSize: 11.5, fontWeight: 800, color: "#475569", marginBottom: 8,
+  display: "flex", alignItems: "center", gap: 5,
+};
+
+function dlIcon(type: string): string {
   return ({ pdf: "📄", ppt: "📊", xlsx: "📗", doc: "📝", other: "📎" } as Record<string, string>)[type] ?? "📎";
 }
-
-// ── Style tokens ──────────────────────────────────────────────────────────────
-const sideCard: React.CSSProperties = {
-  background: "white", border: "1px solid #E8E6DC", borderRadius: 18,
-  padding: 16, boxShadow: "0 2px 12px rgba(34,29,35,.06)",
-};
-const primaryBtn: React.CSSProperties = {
-  padding: "11px 22px", borderRadius: 999, border: 0,
-  background: "#FFCE00", color: "#221D23", fontWeight: 800, fontSize: 13.5,
-  cursor: "pointer", display: "block",
-};
-const navBtn: React.CSSProperties = {
-  padding: "7px 16px", borderRadius: 999, border: "1px solid #E8E6DC",
-  background: "white", cursor: "pointer", fontWeight: 700, fontSize: 13,
-};
