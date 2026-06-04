@@ -10,10 +10,10 @@ type Props = {
   activity: Activity & { activity_content: ActivityContent | null };
 };
 
-type Tab = "slides" | "workflow" | "quiz" | "goals" | "prompts" | "downloads";
+type Tab = "slides" | "steps" | "quiz" | "goals" | "prompts" | "downloads";
 const TABS: { id: Tab; label: string }[] = [
   { id: "slides",    label: "📸 Slides"    },
-  { id: "workflow",  label: "📋 Workflow"  },
+  { id: "steps",     label: "📋 Steps"     },
   { id: "quiz",      label: "✓ Quiz"      },
   { id: "goals",     label: "🎯 Goals"    },
   { id: "prompts",   label: "💬 Prompts"  },
@@ -34,9 +34,10 @@ export default function ActivityEditClient({ profile, activity }: Props) {
   const [pdfProgress,   setPdfProgress]   = useState("");
   const [savedSlides,   setSavedSlides]   = useState<ActivityContent["slide_images"]>(content?.slide_images ?? []);
 
-  // Workflow
-  const [workflow,     setWorkflow]     = useState(content?.workflow_markdown ?? "");
-  const [workflowFile, setWorkflowFile] = useState<File | null>(null);
+  // Steps (structured JSON)
+  const [parsedSteps,   setParsedSteps]   = useState<any[]>([]);
+  const [stepsMsg,      setStepsMsg]      = useState("");
+  const [savingSteps,   setSavingSteps]   = useState(false);
 
   // Quiz
   const [quizJson,    setQuizJson]    = useState(JSON.stringify(content?.quiz ?? [], null, 2));
@@ -100,11 +101,54 @@ export default function ActivityEditClient({ profile, activity }: Props) {
     return imgs;
   }
 
-  // ── Load workflow .md ────────────────────────────────────────────────────
-  async function loadWorkflowMd() {
-    if (!workflowFile) return;
-    setWorkflow(await workflowFile.text());
-    setWorkflowFile(null);
+  // ── Steps JSON upload ────────────────────────────────────────────────────
+  async function handleStepsJsonUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+      const steps = json.steps ?? [];
+      if (!Array.isArray(steps) || steps.length === 0) {
+        setStepsMsg("Error: No 'steps' array found in JSON.");
+        return;
+      }
+      setParsedSteps(steps);
+      setStepsMsg(`Loaded ${steps.length} step(s) from "${file.name}" — click Save Steps to apply.`);
+    } catch {
+      setStepsMsg("Error: Invalid JSON file.");
+      setParsedSteps([]);
+    }
+  }
+
+  async function saveSteps() {
+    if (!parsedSteps.length) return;
+    setSavingSteps(true);
+    setStepsMsg("");
+    try {
+      await supabase.from("activity_steps").delete().eq("activity_id", activity.id);
+      const rows = parsedSteps.map((s: any) => ({
+        activity_id:       activity.id,
+        step_number:       Number(s.step_number),
+        slide_number:      Number(s.slide_number ?? s.step_number),
+        title:             s.title             ?? "",
+        what_learner_sees: s.what_learner_sees ?? "Not specified in this slide.",
+        what_this_means:   s.what_this_means   ?? "Not specified in this slide.",
+        what_to_do:        Array.isArray(s.what_to_do) ? s.what_to_do : [],
+        if_stuck:          s.if_stuck          ?? "Not specified in this slide.",
+        callout:           s.callout           ?? "",
+        coach_next:        s.coach_next        ?? "",
+      }));
+      const { error } = await supabase.from("activity_steps").insert(rows);
+      if (error) throw error;
+      setStepsMsg(`✓ ${rows.length} steps saved`);
+      setParsedSteps([]);
+    } catch (e: any) {
+      setStepsMsg(`Error: ${e?.message}`);
+    } finally {
+      setSavingSteps(false);
+      setTimeout(() => setStepsMsg(""), 5000);
+    }
   }
 
   // ── Parse quiz .md with Claude ────────────────────────────────────────────
@@ -149,15 +193,14 @@ export default function ActivityEditClient({ profile, activity }: Props) {
     try { quiz = JSON.parse(quizJson); } catch {}
 
     const payload = {
-      activity_id:      activity.id,
-      slide_images:     slides,
-      workflow_markdown: workflow || null,
+      activity_id:   activity.id,
+      slide_images:  slides,
       quiz,
-      goals:            goalsText.split("\n").map(s => s.trim()).filter(Boolean),
-      access_needed:    accessText.split("\n").map(s => s.trim()).filter(Boolean),
+      goals:         goalsText.split("\n").map(s => s.trim()).filter(Boolean),
+      access_needed: accessText.split("\n").map(s => s.trim()).filter(Boolean),
       prompts,
       downloads,
-      updated_at:       new Date().toISOString(),
+      updated_at:    new Date().toISOString(),
     };
 
     if (content) {
@@ -170,8 +213,6 @@ export default function ActivityEditClient({ profile, activity }: Props) {
     setSaving(false);
     setTimeout(() => setSaveMsg(""), 3000);
   }
-
-  const stepCount = workflow.split(/\n##\s+/).filter(Boolean).length;
 
   return (
     <div style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
@@ -260,25 +301,59 @@ export default function ActivityEditClient({ profile, activity }: Props) {
             </div>
           )}
 
-          {/* ── Workflow ──────────────────────────────────────────────────────── */}
-          {tab === "workflow" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {/* ── Steps ─────────────────────────────────────────────────────────── */}
+          {tab === "steps" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div style={sectionBox}>
-                <div style={sectionHead}><span>📝</span><b>Upload workflow .md file</b></div>
-                <div style={{ padding: 12, display: "flex", alignItems: "center", gap: 10 }}>
-                  <input type="file" accept=".md,.txt" onChange={e => setWorkflowFile(e.target.files?.[0] ?? null)} style={{ fontSize: 13, flex: 1 }} />
-                  <button onClick={loadWorkflowMd} disabled={!workflowFile} style={{ ...btnAmber, opacity: workflowFile ? 1 : .4 }}>Load</button>
+                <div style={sectionHead}>
+                  <span>📋</span>
+                  <b>Upload activity JSON from Claude</b>
+                  <span style={{ color: "#B0ABA5", fontWeight: 400, fontSize: 12 }}>The _activity.json file generated by the PPTX skill</span>
+                </div>
+                <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+                  <input type="file" accept=".json" onChange={handleStepsJsonUpload} style={{ fontSize: 13 }} />
+                  {stepsMsg && (
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: stepsMsg.startsWith("✓") || stepsMsg.startsWith("Loaded") ? "#17A855" : "#EF4444" }}>
+                      {stepsMsg}
+                    </div>
+                  )}
                 </div>
               </div>
-              <div>
-                <label style={lbl}>Workflow markdown — use <code style={{ background: "#F0EEE8", padding: "1px 5px", borderRadius: 4 }}>## Step title</code> headings</label>
-                <textarea value={workflow} onChange={e => setWorkflow(e.target.value)} rows={18}
-                  placeholder={"## Step 1: Open Gmail\nGo to mail.google.com and sign in.\n\n## Step 2: Compose\nClick Compose."}
-                  style={{ ...inp, resize: "vertical", fontFamily: "monospace", fontSize: 12.5, marginTop: 6, lineHeight: 1.6 }} />
-                <div style={{ fontSize: 11.5, color: "#B0ABA5", marginTop: 5 }}>
-                  {stepCount} step(s) detected — each ## heading becomes a step in the learner view
+
+              {parsedSteps.length > 0 && (
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#6B6B6B" }}>{parsedSteps.length} step(s) ready to save</div>
+                    <button onClick={saveSteps} disabled={savingSteps} style={{ ...btnAmber, opacity: savingSteps ? .5 : 1 }}>
+                      {savingSteps ? "Saving…" : "Save Steps"}
+                    </button>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {parsedSteps.map((s: any, i: number) => (
+                      <div key={i} style={{ border: "1px solid #E8E6DC", borderRadius: 11, padding: "10px 14px" }}>
+                        <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 3 }}>
+                          Step {s.step_number}: {s.title}
+                        </div>
+                        <div style={{ fontSize: 11.5, color: "#6B6B6B", marginBottom: 4 }}>
+                          {(s.what_to_do ?? []).length} action(s) · Slide {s.slide_number ?? "?"}
+                          {s.callout ? ` · 💡 ${String(s.callout).slice(0, 50)}` : ""}
+                        </div>
+                        <div style={{ fontSize: 11, color: "#94A3B8" }}>
+                          Coach: {(s.coach_what_to_do ?? []).length} action bullet(s)
+                          {s.coach_next ? ` · "${String(s.coach_next).slice(0, 60)}"` : ""}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {parsedSteps.length === 0 && !stepsMsg && (
+                <div style={emptyState}>
+                  Upload a JSON file above to replace steps for this activity.
+                  Saving will delete existing steps and insert the new ones.
+                </div>
+              )}
             </div>
           )}
 

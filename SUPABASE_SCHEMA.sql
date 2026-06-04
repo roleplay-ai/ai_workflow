@@ -26,30 +26,9 @@ create table public.profiles (
   created_at timestamptz default now()
 );
 
--- 3. Modules
-create table public.modules (
-  id          uuid primary key default gen_random_uuid(),
-  title       text not null,
-  description text,
-  categories  text[] default '{}',
-  published   boolean default false,
-  created_by  uuid references auth.users(id),
-  created_at  timestamptz default now()
-);
-
--- 3a. Module → Company assignments (many-to-many)
--- No rows = visible to ALL companies once published
--- Has rows  = visible only to listed companies
-create table public.module_companies (
-  module_id  uuid not null references public.modules(id) on delete cascade,
-  company_id uuid not null references public.companies(id) on delete cascade,
-  primary key (module_id, company_id)
-);
-
--- 4. Activities
+-- 3. Activities (standalone — no module layer)
 create table public.activities (
   id                    uuid primary key default gen_random_uuid(),
-  module_id             uuid references public.modules(id) on delete cascade,
   title                 text not null,
   description           text,
   level                 text check (level in ('Beginner','Intermediate','Advanced')),
@@ -57,24 +36,51 @@ create table public.activities (
   points                int default 0,
   tools                 text[] default '{}',
   position              int default 0,
+  published             boolean not null default false,
+  category              text not null default 'chat',
   created_at            timestamptz default now()
+);
+
+-- 4. Activity → Company assignments (many-to-many)
+-- No rows = visible to ALL authenticated users when published
+-- Has rows  = visible only to listed companies when published
+create table public.activity_companies (
+  activity_id uuid not null references public.activities(id) on delete cascade,
+  company_id  uuid not null references public.companies(id) on delete cascade,
+  primary key (activity_id, company_id)
 );
 
 -- 5. Activity content
 create table public.activity_content (
-  id                uuid primary key default gen_random_uuid(),
-  activity_id       uuid references public.activities(id) on delete cascade unique,
-  workflow_markdown text,
-  slide_images      jsonb not null default '[]',
-  quiz              jsonb not null default '[]',
-  goals             jsonb not null default '[]',
-  access_needed     jsonb not null default '[]',
-  prompts           jsonb not null default '[]',
-  downloads         jsonb not null default '[]',
-  updated_at        timestamptz default now()
+  id            uuid primary key default gen_random_uuid(),
+  activity_id   uuid references public.activities(id) on delete cascade unique,
+  slide_images  jsonb not null default '[]',
+  quiz          jsonb not null default '[]',
+  goals         jsonb not null default '[]',
+  access_needed jsonb not null default '[]',
+  prompts       jsonb not null default '[]',
+  downloads     jsonb not null default '[]',
+  updated_at    timestamptz default now()
 );
 
--- 6. User progress
+-- 6. Activity steps (structured step-by-step content)
+create table public.activity_steps (
+  id                uuid primary key default gen_random_uuid(),
+  activity_id       uuid not null references public.activities(id) on delete cascade,
+  step_number       int  not null,
+  slide_number      int  not null default 1,
+  title             text not null,
+  what_learner_sees text not null default 'Not specified in this slide.',
+  what_this_means   text not null default 'Not specified in this slide.',
+  what_to_do        jsonb not null default '[]',
+  if_stuck          text not null default 'Not specified in this slide.',
+  callout           text not null default '',
+  coach_next        text not null default '',
+  created_at        timestamptz default now(),
+  unique (activity_id, step_number)
+);
+
+-- 7. User progress
 create table public.user_progress (
   id              uuid primary key default gen_random_uuid(),
   user_id         uuid references auth.users(id) on delete cascade,
@@ -126,14 +132,15 @@ create trigger on_auth_user_created
 -- Row Level Security
 -- ============================================================
 
-alter table public.companies        enable row level security;
-alter table public.profiles         enable row level security;
-alter table public.modules          enable row level security;
-alter table public.activities       enable row level security;
-alter table public.activity_content enable row level security;
-alter table public.user_progress    enable row level security;
+alter table public.companies         enable row level security;
+alter table public.profiles          enable row level security;
+alter table public.activities        enable row level security;
+alter table public.activity_companies enable row level security;
+alter table public.activity_content  enable row level security;
+alter table public.activity_steps    enable row level security;
+alter table public.user_progress     enable row level security;
 
--- Helper functions (security definer = bypass RLS, preventing recursion)
+-- Helper functions
 create or replace function public.get_my_role()
 returns text
 language sql security definer stable set search_path = public
@@ -144,206 +151,146 @@ returns uuid
 language sql security definer stable set search_path = public
 as $$ select company_id from public.profiles where id = auth.uid() $$;
 
--- ── Profiles ─────────────────────────────────────────────────────────────────
+-- ── Profiles ──────────────────────────────────────────────────────────────────
 create policy "profiles: own select"
-  on public.profiles for select
-  using (auth.uid() = id);
+  on public.profiles for select using (auth.uid() = id);
 
 create policy "profiles: admin select"
   on public.profiles for select
   using (
     public.get_my_role() = 'superadmin'
-    or (
-      public.get_my_role() = 'admin'
-      and company_id = public.get_my_company_id()
-    )
+    or (public.get_my_role() = 'admin' and company_id = public.get_my_company_id())
   );
 
 create policy "profiles: own update"
-  on public.profiles for update
-  using (auth.uid() = id);
+  on public.profiles for update using (auth.uid() = id);
 
 create policy "profiles: admin update"
   on public.profiles for update
   using (
     public.get_my_role() = 'superadmin'
-    or (
-      public.get_my_role() = 'admin'
-      and company_id = public.get_my_company_id()
-    )
+    or (public.get_my_role() = 'admin' and company_id = public.get_my_company_id())
   );
 
 -- ── Companies ─────────────────────────────────────────────────────────────────
 create policy "companies: authenticated select"
-  on public.companies for select
-  using (auth.uid() is not null);
+  on public.companies for select using (auth.uid() is not null);
 
 create policy "companies: superadmin insert"
   on public.companies for insert
-  with check (exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'
-  ));
+  with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'));
 
 create policy "companies: superadmin update"
   on public.companies for update
-  using (exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'
-  ));
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'));
 
 create policy "companies: superadmin delete"
   on public.companies for delete
-  using (exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'
-  ));
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'));
 
--- ── Module companies RLS ──────────────────────────────────────────────────────
-alter table public.module_companies enable row level security;
+-- ── Activity companies ────────────────────────────────────────────────────────
+create policy "activity_companies: superadmin all"
+  on public.activity_companies for select
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'));
 
-create policy "module_companies: superadmin all"
-  on public.module_companies for select
-  using (exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'
-  ));
-create policy "module_companies: superadmin insert"
-  on public.module_companies for insert
-  with check (exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'
-  ));
-create policy "module_companies: superadmin delete"
-  on public.module_companies for delete
-  using (exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'
-  ));
+create policy "activity_companies: superadmin insert"
+  on public.activity_companies for insert
+  with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'));
 
--- ── Modules ───────────────────────────────────────────────────────────────────
--- Published + (no company restriction OR user's company is in the list)
-create policy "modules: published select"
-  on public.modules for select
-  using (
-    published = true
-    and auth.uid() is not null
-    and (
-      -- no specific companies assigned → visible to everyone
-      not exists (
-        select 1 from public.module_companies mc where mc.module_id = modules.id
-      )
-      or
-      -- user's company is in the assignment list
-      exists (
-        select 1 from public.module_companies mc
-        join public.profiles p on p.company_id = mc.company_id
-        where mc.module_id = modules.id and p.id = auth.uid()
-      )
-    )
-  );
-
-create policy "modules: superadmin select"
-  on public.modules for select
-  using (exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'
-  ));
-
-create policy "modules: superadmin insert"
-  on public.modules for insert
-  with check (exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'
-  ));
-
-create policy "modules: superadmin update"
-  on public.modules for update
-  using (exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'
-  ));
-
-create policy "modules: superadmin delete"
-  on public.modules for delete
-  using (exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'
-  ));
+create policy "activity_companies: superadmin delete"
+  on public.activity_companies for delete
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'));
 
 -- ── Activities ────────────────────────────────────────────────────────────────
+-- Learner: published = true AND (no company restriction OR user's company is assigned)
 create policy "activities: published select"
   on public.activities for select
   using (
-    auth.uid() is not null and
-    exists (
-      select 1 from public.modules m
-      where m.id = activities.module_id and m.published = true
+    auth.uid() is not null
+    and activities.published = true
+    and (
+      not exists (select 1 from public.activity_companies ac where ac.activity_id = activities.id)
+      or exists (
+        select 1 from public.activity_companies ac
+        join public.profiles p on p.company_id = ac.company_id
+        where ac.activity_id = activities.id and p.id = auth.uid()
+      )
     )
   );
 
 create policy "activities: superadmin select"
   on public.activities for select
-  using (exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'
-  ));
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'));
 
 create policy "activities: superadmin insert"
   on public.activities for insert
-  with check (exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'
-  ));
+  with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'));
 
 create policy "activities: superadmin update"
   on public.activities for update
-  using (exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'
-  ));
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'));
 
 create policy "activities: superadmin delete"
   on public.activities for delete
-  using (exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'
-  ));
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'));
 
 -- ── Activity content ──────────────────────────────────────────────────────────
 create policy "activity_content: published select"
   on public.activity_content for select
   using (
-    auth.uid() is not null and
-    exists (
-      select 1 from public.activities a
-      join public.modules m on m.id = a.module_id
-      where a.id = activity_content.activity_id and m.published = true
-    )
+    auth.uid() is not null
+    and exists (select 1 from public.activities a where a.id = activity_content.activity_id and a.published = true)
   );
 
 create policy "activity_content: superadmin select"
   on public.activity_content for select
-  using (exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'
-  ));
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'));
 
 create policy "activity_content: superadmin insert"
   on public.activity_content for insert
-  with check (exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'
-  ));
+  with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'));
 
 create policy "activity_content: superadmin update"
   on public.activity_content for update
-  using (exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'
-  ));
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'));
 
 create policy "activity_content: superadmin delete"
   on public.activity_content for delete
-  using (exists (
-    select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'
-  ));
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'));
+
+-- ── Activity steps ────────────────────────────────────────────────────────────
+create policy "activity_steps: published select"
+  on public.activity_steps for select
+  using (
+    auth.uid() is not null
+    and exists (select 1 from public.activities a where a.id = activity_steps.activity_id and a.published = true)
+  );
+
+create policy "activity_steps: superadmin select"
+  on public.activity_steps for select
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'));
+
+create policy "activity_steps: superadmin insert"
+  on public.activity_steps for insert
+  with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'));
+
+create policy "activity_steps: superadmin update"
+  on public.activity_steps for update
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'));
+
+create policy "activity_steps: superadmin delete"
+  on public.activity_steps for delete
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin'));
 
 -- ── User progress ─────────────────────────────────────────────────────────────
 create policy "user_progress: own select"
-  on public.user_progress for select
-  using (auth.uid() = user_id);
+  on public.user_progress for select using (auth.uid() = user_id);
 
 create policy "user_progress: own insert"
-  on public.user_progress for insert
-  with check (auth.uid() = user_id);
+  on public.user_progress for insert with check (auth.uid() = user_id);
 
 create policy "user_progress: own update"
-  on public.user_progress for update
-  using (auth.uid() = user_id);
+  on public.user_progress for update using (auth.uid() = user_id);
 
 create policy "user_progress: admin select"
   on public.user_progress for select
@@ -367,10 +314,8 @@ insert into storage.buckets (id, name, public)
   values ('activity-downloads', 'activity-downloads', true)
   on conflict (id) do nothing;
 
--- Slides
 create policy "slides: public select"
-  on storage.objects for select
-  using (bucket_id = 'activity-slides');
+  on storage.objects for select using (bucket_id = 'activity-slides');
 
 create policy "slides: superadmin insert"
   on storage.objects for insert
@@ -386,10 +331,8 @@ create policy "slides: superadmin delete"
     exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'superadmin')
   );
 
--- Downloads
 create policy "downloads: public select"
-  on storage.objects for select
-  using (bucket_id = 'activity-downloads');
+  on storage.objects for select using (bucket_id = 'activity-downloads');
 
 create policy "downloads: superadmin insert"
   on storage.objects for insert

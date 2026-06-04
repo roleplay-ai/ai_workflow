@@ -1,23 +1,39 @@
 import { NextResponse } from "next/server";
 import { anthropic } from "@/lib/anthropic";
 
+type StepContext = {
+  title: string;
+  what_learner_sees: string;
+  what_this_means: string;
+  what_to_do: string[];
+  if_stuck: string;
+};
+
 export async function POST(req: Request) {
-  const { message, stepIndex, activityTitle, workflowMarkdown, steps } = await req.json();
+  const { message, stepIndex, activityTitle, steps } = await req.json();
 
   if (!message?.trim()) {
     return NextResponse.json({ error: "Empty message" }, { status: 400 });
   }
 
-  const stepList = (steps as { title: string }[])
+  const stepList = (steps as StepContext[])
     .map((s, i) => `[STEP_NUMBER:${i + 1}] ${s.title}`)
     .join("\n");
 
-  const cleanMarkdown = (workflowMarkdown as string ?? "")
-    .replace(/^\*\*Slide:\*\*.*$/gm, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  const currentStep = (steps as StepContext[])[stepIndex];
 
-  const currentStep = steps[stepIndex] as { title: string; description: string } | undefined;
+  const stepContext = currentStep ? `
+## Currently on Step ${stepIndex + 1}: ${currentStep.title}
+
+**What the learner sees:** ${currentStep.what_learner_sees}
+
+**What this means:** ${currentStep.what_this_means}
+
+**What to do:**
+${(currentStep.what_to_do ?? []).map(a => `• ${a}`).join("\n")}
+
+**If stuck:** ${currentStep.if_stuck}
+`.trim() : "";
 
   const systemPrompt = `You are a friendly, sharp AI learning coach. You guide users through workflows step by step.
 
@@ -26,11 +42,7 @@ export async function POST(req: Request) {
 ## Step Navigation Reference — use ONLY these numbers for GOTO_STEP
 ${stepList}
 
-## Full Workflow Content
-${cleanMarkdown}
-
-## Currently on Step ${stepIndex + 1}: ${currentStep?.title ?? ""}
-${currentStep?.description ?? ""}
+${stepContext}
 
 ## Communication rules:
 - Short: max 4-5 lines. No essays.

@@ -18,19 +18,8 @@ export type Profile = {
   created_at: string;
 };
 
-export type Module = {
-  id: string;
-  title: string;
-  description: string | null;
-  categories: string[];
-  published: boolean;
-  created_by: string | null;
-  created_at: string;
-};
-
 export type Activity = {
   id: string;
-  module_id: string | null;
   title: string;
   description: string | null;
   level: "Beginner" | "Intermediate" | "Advanced" | null;
@@ -48,6 +37,8 @@ export type ActivityCompany = {
   company_id: string;
 };
 
+
+
 export type SlideImage = { url: string; caption?: string };
 
 export type QuizQuestion = {
@@ -56,9 +47,19 @@ export type QuizQuestion = {
   correct_index: number;
 };
 
-export type WorkflowStep = {
+export type ActivityStep = {
+  id: string;
+  activity_id: string;
+  step_number: number;
+  slide_number: number;
   title: string;
-  body: string; // markdown body of that step
+  what_learner_sees: string;
+  what_this_means: string;
+  what_to_do: string[];
+  if_stuck: string;
+  callout: string;
+  coach_next: string;
+  created_at: string;
 };
 
 export type PromptTemplate = {
@@ -91,10 +92,6 @@ export type ActivityContent = {
   updated_at: string;
 };
 
-export type ModuleCompany = {
-  module_id: string;
-  company_id: string;
-};
 
 export type UserProgress = {
   id: string;
@@ -121,19 +118,9 @@ export type Database = {
         Insert: { id: string; email?: string | null; full_name?: string | null; avatar_url?: string | null; company_id?: string | null; role?: Role };
         Update: { email?: string | null; full_name?: string | null; avatar_url?: string | null; company_id?: string | null; role?: Role };
       };
-      modules: {
-        Row: Module;
-        Insert: { title: string; description?: string | null; categories?: string[]; published?: boolean; created_by?: string | null };
-        Update: { title?: string; description?: string | null; categories?: string[]; published?: boolean };
-      };
-      module_companies: {
-        Row: ModuleCompany;
-        Insert: { module_id: string; company_id: string };
-        Update: never;
-      };
       activities: {
         Row: Activity;
-        Insert: { module_id?: string | null; title: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; position?: number; published?: boolean; category?: string };
+        Insert: { title: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; position?: number; published?: boolean; category?: string };
         Update: { title?: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; position?: number; published?: boolean; category?: string };
       };
       activity_companies: {
@@ -145,6 +132,11 @@ export type Database = {
         Row: ActivityContent;
         Insert: Omit<ActivityContent, "id">;
         Update: Partial<Omit<ActivityContent, "id" | "activity_id">>;
+      };
+      activity_steps: {
+        Row: ActivityStep;
+        Insert: Omit<ActivityStep, "id" | "created_at">;
+        Update: Partial<Omit<ActivityStep, "id" | "activity_id" | "created_at">>;
       };
       user_progress: {
         Row: UserProgress;

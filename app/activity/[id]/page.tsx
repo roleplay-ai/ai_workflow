@@ -10,7 +10,6 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Simple profile fetch — no join
   const { data: profile } = await supabase
     .from("profiles")
     .select("id, email, role, company_id, full_name, avatar_url, created_at")
@@ -27,9 +26,13 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
     .eq("id", id)
     .single();
 
-  if (activityError || !activity) {
-    redirect("/dashboard");
-  }
+  if (activityError || !activity) redirect("/dashboard");
+
+  const { data: activitySteps } = await supabase
+    .from("activity_steps")
+    .select("*")
+    .eq("activity_id", id)
+    .order("step_number", { ascending: true });
 
   const { data: progress } = await supabase
     .from("user_progress")
@@ -38,12 +41,11 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
     .eq("activity_id", id)
     .maybeSingle();
 
-  const fullProfile = profile ? { ...profile, companies: company } : null;
-
   return (
     <ActivityViewClient
-      profile={fullProfile as any}
+      profile={{ ...(profile as any), companies: company }}
       activity={activity as any}
+      activitySteps={(activitySteps ?? []) as any}
       progress={progress as any}
     />
   );
