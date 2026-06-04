@@ -3,11 +3,19 @@ import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import Topbar from "@/components/Topbar";
-import type { Profile, Activity, ActivityContent, PromptTemplate, DownloadFile } from "@/lib/supabase/types";
+import type { Profile, Activity, ActivityContent, ActivityStep, PromptTemplate, DownloadFile } from "@/lib/supabase/types";
 
 type Props = {
   profile: Profile & { companies: { name: string } | null };
   activity: Activity & { activity_content: ActivityContent | null };
+  activitySteps: ActivityStep[];
+};
+
+type EditableStep = Omit<ActivityStep, "created_at"> & {
+  isNew: boolean;
+  isDirty: boolean;
+  isSaving: boolean;
+  what_to_do_text: string;
 };
 
 type Tab = "slides" | "steps" | "quiz" | "goals" | "prompts" | "downloads";
@@ -20,7 +28,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "downloads", label: "📥 Downloads"},
 ];
 
-export default function ActivityEditClient({ profile, activity }: Props) {
+export default function ActivityEditClient({ profile, activity, activitySteps: initSteps }: Props) {
   const supabase   = createClient();
   const content    = activity.activity_content;
   const [tab, setTab] = useState<Tab>("slides");
@@ -59,6 +67,76 @@ export default function ActivityEditClient({ profile, activity }: Props) {
   const [dlFile,      setDlFile]      = useState<File | null>(null);
   const [dlLabel,     setDlLabel]     = useState("");
   const [uploadingDl, setUploadingDl] = useState(false);
+
+  // Steps inline edit
+  const [editSteps, setEditSteps] = useState<EditableStep[]>(() =>
+    initSteps.map(s => ({ ...s, isNew: false, isDirty: false, isSaving: false, what_to_do_text: s.what_to_do.join("\n") }))
+  );
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [stepSaveMsg, setStepSaveMsg] = useState<Record<string, string>>({});
+
+  function toggleExpand(id: string) {
+    setExpandedIds(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
+  }
+
+  function updateStepField(id: string, field: string, value: string | number) {
+    setEditSteps(prev => prev.map(s => s.id === id ? { ...s, [field]: value, isDirty: true } : s));
+  }
+
+  function addStep() {
+    const maxNum = editSteps.length > 0 ? Math.max(...editSteps.map(s => s.step_number)) : 0;
+    const tempId = `new-${Date.now()}`;
+    const blank: EditableStep = {
+      id: tempId, activity_id: activity.id, step_number: maxNum + 1, slide_number: maxNum + 1,
+      title: "", what_learner_sees: "", what_this_means: "", what_to_do: [], what_to_do_text: "",
+      if_stuck: "", callout: "", coach_next: "", isNew: true, isDirty: true, isSaving: false,
+    };
+    setEditSteps(prev => [...prev, blank]);
+    setExpandedIds(prev => new Set([...prev, tempId]));
+  }
+
+  async function saveStep(stepId: string) {
+    const step = editSteps.find(s => s.id === stepId);
+    if (!step) return;
+    setEditSteps(prev => prev.map(s => s.id === stepId ? { ...s, isSaving: true } : s));
+    const what_to_do = step.what_to_do_text.split("\n").map(l => l.trim()).filter(Boolean);
+    const payload = {
+      activity_id: activity.id,
+      step_number: step.step_number,
+      slide_number: step.slide_number,
+      title: step.title,
+      what_learner_sees: step.what_learner_sees,
+      what_this_means: step.what_this_means,
+      what_to_do,
+      if_stuck: step.if_stuck,
+      callout: step.callout,
+      coach_next: step.coach_next,
+    };
+    if (step.isNew) {
+      const { data, error } = await supabase.from("activity_steps").insert(payload).select().single();
+      if (!error && data) {
+        setEditSteps(prev => prev.map(s => s.id === stepId ? { ...s, id: data.id, what_to_do, isNew: false, isDirty: false, isSaving: false } : s));
+        setExpandedIds(prev => { const next = new Set(prev); next.delete(stepId); next.add(data.id); return next; });
+        setStepSaveMsg(m => ({ ...m, [data.id]: "✓ Saved" }));
+        setTimeout(() => setStepSaveMsg(m => { const n = { ...m }; delete n[data.id]; return n; }), 2500);
+      }
+    } else {
+      const { error } = await supabase.from("activity_steps").update(payload).eq("id", stepId);
+      if (!error) {
+        setEditSteps(prev => prev.map(s => s.id === stepId ? { ...s, what_to_do, isDirty: false, isSaving: false } : s));
+        setStepSaveMsg(m => ({ ...m, [stepId]: "✓ Saved" }));
+        setTimeout(() => setStepSaveMsg(m => { const n = { ...m }; delete n[stepId]; return n; }), 2500);
+      }
+    }
+  }
+
+  async function deleteStep(stepId: string) {
+    const step = editSteps.find(s => s.id === stepId);
+    if (!step) return;
+    if (!step.isNew) await supabase.from("activity_steps").delete().eq("id", stepId);
+    setEditSteps(prev => prev.filter(s => s.id !== stepId));
+    setExpandedIds(prev => { const next = new Set(prev); next.delete(stepId); return next; });
+  }
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -143,6 +221,9 @@ export default function ActivityEditClient({ profile, activity }: Props) {
       if (error) throw error;
       setStepsMsg(`✓ ${rows.length} steps saved`);
       setParsedSteps([]);
+      // Reload editable steps from DB after JSON import
+      const { data: fresh } = await supabase.from("activity_steps").select("*").eq("activity_id", activity.id).order("step_number", { ascending: true });
+      setEditSteps((fresh ?? []).map(s => ({ ...s, isNew: false, isDirty: false, isSaving: false, what_to_do_text: s.what_to_do.join("\n") })));
     } catch (e: any) {
       setStepsMsg(`Error: ${e?.message}`);
     } finally {
@@ -304,56 +385,154 @@ export default function ActivityEditClient({ profile, activity }: Props) {
           {/* ── Steps ─────────────────────────────────────────────────────────── */}
           {tab === "steps" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div style={sectionBox}>
-                <div style={sectionHead}>
-                  <span>📋</span>
-                  <b>Upload activity JSON from Claude</b>
-                  <span style={{ color: "#B0ABA5", fontWeight: 400, fontSize: 12 }}>The _activity.json file generated by the PPTX skill</span>
+
+              {/* Header row */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#6B6B6B" }}>
+                  {editSteps.length} step{editSteps.length !== 1 ? "s" : ""}
                 </div>
-                <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+                <button onClick={addStep} style={btnAmber}>+ Add Step</button>
+              </div>
+
+              {/* Existing steps */}
+              {editSteps.length === 0 && (
+                <div style={emptyState}>No steps yet — add one above or import JSON below.</div>
+              )}
+
+              {editSteps.map(step => {
+                const expanded = expandedIds.has(step.id);
+                return (
+                  <div key={step.id} style={{ border: `1.5px solid ${step.isDirty ? "#FBBF24" : "#E8E6DC"}`, borderRadius: 12, overflow: "hidden", transition: "border-color .15s" }}>
+                    {/* Step header */}
+                    <div
+                      onClick={() => toggleExpand(step.id)}
+                      style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "#FAFAF8", cursor: "pointer", userSelect: "none" }}
+                    >
+                      <div style={{ width: 26, height: 26, borderRadius: "50%", flexShrink: 0, display: "grid", placeItems: "center", fontSize: 11, fontWeight: 800, background: step.isNew ? "#E2E8F0" : "#221D23", color: "white" }}>
+                        {step.isNew ? "+" : step.step_number}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "#221D23", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {step.title || <span style={{ color: "#B0ABA5" }}>Untitled step</span>}
+                        </div>
+                        <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 1 }}>
+                          Slide {step.slide_number} · {step.what_to_do_text.split("\n").filter(Boolean).length} action(s)
+                          {step.callout ? ` · 💡 ${step.callout.slice(0, 40)}` : ""}
+                        </div>
+                      </div>
+                      {stepSaveMsg[step.id] && (
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#17A855", flexShrink: 0 }}>{stepSaveMsg[step.id]}</span>
+                      )}
+                      {step.isDirty && !stepSaveMsg[step.id] && (
+                        <span style={{ fontSize: 11, fontWeight: 700, color: "#F59E0B", flexShrink: 0 }}>unsaved</span>
+                      )}
+                      <span style={{ fontSize: 13, color: "#B0ABA5", flexShrink: 0 }}>{expanded ? "▲" : "▼"}</span>
+                    </div>
+
+                    {/* Expanded edit form */}
+                    {expanded && (
+                      <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 12, borderTop: "1px solid #E8E6DC", background: "white" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                          <div>
+                            <label style={lbl}>Step #</label>
+                            <input type="number" value={step.step_number} min={1}
+                              onChange={e => updateStepField(step.id, "step_number", parseInt(e.target.value) || 1)}
+                              style={{ ...inp, marginTop: 4 }} />
+                          </div>
+                          <div>
+                            <label style={lbl}>Slide #</label>
+                            <input type="number" value={step.slide_number} min={1}
+                              onChange={e => updateStepField(step.id, "slide_number", parseInt(e.target.value) || 1)}
+                              style={{ ...inp, marginTop: 4 }} />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label style={lbl}>Title</label>
+                          <input value={step.title} onChange={e => updateStepField(step.id, "title", e.target.value)}
+                            placeholder="Step title…" style={{ ...inp, marginTop: 4 }} />
+                        </div>
+
+                        <div>
+                          <label style={lbl}>What the learner sees</label>
+                          <textarea value={step.what_learner_sees} rows={2}
+                            onChange={e => updateStepField(step.id, "what_learner_sees", e.target.value)}
+                            style={{ ...inp, marginTop: 4, resize: "vertical" }} />
+                        </div>
+
+                        <div>
+                          <label style={lbl}>What this means</label>
+                          <textarea value={step.what_this_means} rows={2}
+                            onChange={e => updateStepField(step.id, "what_this_means", e.target.value)}
+                            style={{ ...inp, marginTop: 4, resize: "vertical" }} />
+                        </div>
+
+                        <div>
+                          <label style={lbl}>What to do <span style={{ fontWeight: 400, color: "#B0ABA5" }}>(one action per line)</span></label>
+                          <textarea value={step.what_to_do_text} rows={4}
+                            onChange={e => updateStepField(step.id, "what_to_do_text", e.target.value)}
+                            placeholder={"Click the + New button\nEnter a name\nClick Save"}
+                            style={{ ...inp, marginTop: 4, resize: "vertical", fontFamily: "monospace", fontSize: 12 }} />
+                        </div>
+
+                        <div>
+                          <label style={lbl}>If stuck</label>
+                          <textarea value={step.if_stuck} rows={2}
+                            onChange={e => updateStepField(step.id, "if_stuck", e.target.value)}
+                            style={{ ...inp, marginTop: 4, resize: "vertical" }} />
+                        </div>
+
+                        <div>
+                          <label style={lbl}>Callout (💡 insight shown in coach panel)</label>
+                          <input value={step.callout} onChange={e => updateStepField(step.id, "callout", e.target.value)}
+                            placeholder="Key insight for this step…" style={{ ...inp, marginTop: 4 }} />
+                        </div>
+
+                        <div>
+                          <label style={lbl}>Coach next message</label>
+                          <input value={step.coach_next} onChange={e => updateStepField(step.id, "coach_next", e.target.value)}
+                            placeholder="What the AI says when learner proceeds…" style={{ ...inp, marginTop: 4 }} />
+                        </div>
+
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
+                          <button
+                            onClick={() => { if (confirm("Delete this step?")) deleteStep(step.id); }}
+                            style={{ border: "1px solid #FCA5A5", background: "white", color: "#EF4444", borderRadius: 8, padding: "6px 14px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
+                            Delete
+                          </button>
+                          <button onClick={() => saveStep(step.id)} disabled={step.isSaving}
+                            style={{ ...btnAmber, opacity: step.isSaving ? .5 : 1 }}>
+                            {step.isSaving ? "Saving…" : "Save Step"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* JSON import (collapsed by default) */}
+              <details style={{ border: "1.5px dashed #E8E6DC", borderRadius: 12 }}>
+                <summary style={{ padding: "10px 14px", fontSize: 12.5, fontWeight: 700, color: "#6B6B6B", cursor: "pointer", listStyle: "none", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span>📋</span> Import from JSON (replaces all steps)
+                </summary>
+                <div style={{ padding: "0 14px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
                   <input type="file" accept=".json" onChange={handleStepsJsonUpload} style={{ fontSize: 13 }} />
                   {stepsMsg && (
                     <div style={{ fontSize: 12.5, fontWeight: 700, color: stepsMsg.startsWith("✓") || stepsMsg.startsWith("Loaded") ? "#17A855" : "#EF4444" }}>
                       {stepsMsg}
                     </div>
                   )}
+                  {parsedSteps.length > 0 && (
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 12, color: "#6B6B6B" }}>{parsedSteps.length} step(s) ready</span>
+                      <button onClick={saveSteps} disabled={savingSteps} style={{ ...btnAmber, opacity: savingSteps ? .5 : 1 }}>
+                        {savingSteps ? "Saving…" : "Replace All Steps"}
+                      </button>
+                    </div>
+                  )}
                 </div>
-              </div>
-
-              {parsedSteps.length > 0 && (
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: "#6B6B6B" }}>{parsedSteps.length} step(s) ready to save</div>
-                    <button onClick={saveSteps} disabled={savingSteps} style={{ ...btnAmber, opacity: savingSteps ? .5 : 1 }}>
-                      {savingSteps ? "Saving…" : "Save Steps"}
-                    </button>
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {parsedSteps.map((s: any, i: number) => (
-                      <div key={i} style={{ border: "1px solid #E8E6DC", borderRadius: 11, padding: "10px 14px" }}>
-                        <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 3 }}>
-                          Step {s.step_number}: {s.title}
-                        </div>
-                        <div style={{ fontSize: 11.5, color: "#6B6B6B", marginBottom: 4 }}>
-                          {(s.what_to_do ?? []).length} action(s) · Slide {s.slide_number ?? "?"}
-                          {s.callout ? ` · 💡 ${String(s.callout).slice(0, 50)}` : ""}
-                        </div>
-                        <div style={{ fontSize: 11, color: "#94A3B8" }}>
-                          Coach: {(s.coach_what_to_do ?? []).length} action bullet(s)
-                          {s.coach_next ? ` · "${String(s.coach_next).slice(0, 60)}"` : ""}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {parsedSteps.length === 0 && !stepsMsg && (
-                <div style={emptyState}>
-                  Upload a JSON file above to replace steps for this activity.
-                  Saving will delete existing steps and insert the new ones.
-                </div>
-              )}
+              </details>
             </div>
           )}
 

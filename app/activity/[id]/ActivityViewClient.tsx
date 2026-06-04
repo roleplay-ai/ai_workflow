@@ -150,6 +150,17 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
     }
   };
 
+  const hasInput = !!input.trim();
+  const navBtnStyle = (enabled: boolean): React.CSSProperties => ({
+    flexShrink: 0, width: 32, height: 32, borderRadius: 10, border: 0,
+    display: "flex", alignItems: "center", justifyContent: "center",
+    color: "white", cursor: enabled ? "pointer" : "default",
+    background: enabled ? "linear-gradient(135deg,#2563EB,#1D4ED8)" : "#CBD5E1",
+    opacity: loading ? .6 : 1, transition: "background .15s",
+  });
+  const prevEnabled = !hasInput && current > 0 && !loading && !initializing;
+  const nextEnabled = !hasInput && !loading && !initializing;
+
   const goNext = async () => {
     if (current >= steps.length - 1) {
       const completedSteps = steps.map((_, i) => i);
@@ -168,7 +179,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
       return;
     }
 
-    if (loading || initializing) return;
+    if (loading || initializing || hasInput) return;
 
     const quiz = quizForStep[current];
     if (quiz) { setPendingQuiz(quiz); setShowQuiz(true); }
@@ -183,7 +194,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
   };
 
   const goPrev = () => {
-    if (current <= 0 || loading || initializing) return;
+    if (current <= 0 || loading || initializing || hasInput) return;
     setSlideOpen(false);
     const msg = "go back to previous step";
     setMessages(m => [...m, { role: "user", content: msg }]);
@@ -327,35 +338,41 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
             <div style={{ padding: 14 }}>
               <div style={{
                 display: "flex", alignItems: "center", gap: 8,
-                height: 44, padding: "0 6px 0 14px", borderRadius: 14,
+                height: 44, padding: "0 6px 0 6px", borderRadius: 14,
                 border: "1px solid #CBD5E1", background: "#F8FAFC",
               }}>
+                <button
+                  type="button"
+                  onClick={goPrev}
+                  disabled={!prevEnabled}
+                  title="Previous step"
+                  aria-label="Previous step"
+                  suppressHydrationWarning
+                  style={navBtnStyle(prevEnabled)}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <polyline points="15 18 9 12 15 6" />
+                  </svg>
+                </button>
                 <input
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendMessage()}
                   placeholder="Ask the AI coach anything…"
                   suppressHydrationWarning
-                  style={{ flex: 1, minWidth: 0, height: "100%", border: 0, background: "transparent", fontSize: 13.5, outline: "none", fontFamily: "inherit" }}
+                  style={{ flex: 1, minWidth: 0, height: "100%", border: 0, background: "transparent", fontSize: 13.5, outline: "none", fontFamily: "inherit", padding: "0 8px" }}
                 />
                 <button
                   type="button"
-                  onClick={sendMessage}
-                  disabled={loading || !input.trim()}
-                  title="Send"
-                  aria-label="Send message"
+                  onClick={goNext}
+                  disabled={!nextEnabled}
+                  title={current < steps.length - 1 ? "Next step" : "Finish activity"}
+                  aria-label={current < steps.length - 1 ? "Next step" : "Finish activity"}
                   suppressHydrationWarning
-                  style={{
-                    flexShrink: 0, width: 32, height: 32, borderRadius: 10, border: 0,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    color: "white", cursor: input.trim() && !loading ? "pointer" : "default",
-                    background: input.trim() && !loading ? "linear-gradient(135deg,#2563EB,#1D4ED8)" : "#CBD5E1",
-                    opacity: loading ? .6 : 1, transition: "background .15s",
-                  }}
+                  style={navBtnStyle(nextEnabled)}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <line x1="12" y1="19" x2="12" y2="5" />
-                    <polyline points="5 12 12 5 19 12" />
+                    <polyline points="9 18 15 12 9 6" />
                   </svg>
                 </button>
               </div>
@@ -526,26 +543,11 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
 
             {/* Progress bar + navigation */}
             <div style={{ flexShrink: 0, padding: "10px 16px", borderTop: "1px solid #E8EEF4", background: "#FAFBFC" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                <button onClick={goPrev} disabled={current === 0 || loading || initializing} suppressHydrationWarning
-                  style={{ padding: "7px 14px", borderRadius: 10, fontSize: 12.5, fontWeight: 800, cursor: "pointer", border: "1px solid #E2E8F0", background: "#F8FAFC", color: "#64748B", flexShrink: 0, opacity: current === 0 || loading || initializing ? .4 : 1 }}>
-                  ← Prev
-                </button>
-                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: "#64748B" }}>{current} of {steps.length} done</span>
-                    {progress?.status === "completed" && (
-                      <span style={{ fontSize: 11, fontWeight: 800, color: "#2563EB" }}>+{activity.points} XP</span>
-                    )}
-                  </div>
-                  {/* <div style={{ height: 6, background: "#E2E8F0", borderRadius: 999, overflow: "hidden" }}>
-                    <div style={{ height: "100%", borderRadius: 999, background: "linear-gradient(90deg,#22C55E,#14B8A6)", width: `${pct}%`, transition: "width .3s" }} />
-                  </div> */}
-                </div>
-                <button onClick={goNext} suppressHydrationWarning
-                  style={{ padding: "7px 14px", borderRadius: 10, border: 0, fontSize: 12.5, fontWeight: 800, cursor: "pointer", color: "white", flexShrink: 0, background: "linear-gradient(135deg,#2563EB,#1D4ED8)" }}>
-                  {current < steps.length - 1 ? "Next →" : "Finish ✓"}
-                </button>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#64748B" }}>{current} of {steps.length} done</span>
+                {progress?.status === "completed" && (
+                  <span style={{ fontSize: 11, fontWeight: 800, color: "#2563EB" }}>+{activity.points} XP</span>
+                )}
               </div>
             </div>
           </div>

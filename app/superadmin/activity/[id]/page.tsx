@@ -20,10 +20,17 @@ export default async function ActivityEditPage({ params }: { params: Promise<{ i
   const { data: activity } = await supabase.from("activities").select("*, activity_content(*)").eq("id", id).single();
   if (!activity) redirect("/superadmin");
 
+  const { data: activitySteps } = await supabase
+    .from("activity_steps")
+    .select("*")
+    .eq("activity_id", id)
+    .order("step_number", { ascending: true });
+
   return (
     <ActivityEditClient
       profile={{ ...profile!, companies: company } as any}
       activity={activity as any}
+      activitySteps={activitySteps ?? []}
     />
   );
 }
