@@ -18,13 +18,14 @@ type EditableStep = Omit<ActivityStep, "created_at"> & {
   what_to_do_text: string;
 };
 
-type Tab = "slides" | "steps" | "quiz" | "goals" | "prompts" | "downloads";
+type Tab = "slides" | "steps" | "quiz" | "goals" | "prompts" | "downloads" | "video";
 const TABS: { id: Tab; label: string }[] = [
   { id: "slides",    label: "📸 Slides"    },
   { id: "steps",     label: "📋 Steps"     },
   { id: "quiz",      label: "✓ Quiz"      },
   { id: "goals",     label: "🎯 Goals"    },
   { id: "prompts",   label: "💬 Prompts"  },
+  { id: "video",     label: "🎬 Video"    },
   { id: "downloads", label: "📥 Downloads"},
 ];
 
@@ -67,6 +68,79 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
   const [dlFile,      setDlFile]      = useState<File | null>(null);
   const [dlLabel,     setDlLabel]     = useState("");
   const [uploadingDl, setUploadingDl] = useState(false);
+
+  // Video
+  const [videoUrl,       setVideoUrl]       = useState<string>(content?.video_url ?? "");
+  const [videoPasteUrl,  setVideoPasteUrl]  = useState("");
+  const [videoFile,      setVideoFile]      = useState<File | null>(null);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [videoMsg,       setVideoMsg]       = useState("");
+
+  async function uploadVideo() {
+    if (!videoFile) return;
+    setUploadingVideo(true);
+    setVideoMsg(`Uploading "${videoFile.name}"…`);
+
+    try {
+      // Upload directly to Supabase Storage (same pattern as slides / downloads)
+      const safeName = videoFile.name.replace(/[^\w.\-]/g, "_");
+      const path     = `${activity.id}/${Date.now()}_${safeName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("activity-videos")
+        .upload(path, videoFile, { upsert: true, contentType: videoFile.type });
+
+      if (uploadError) {
+        setVideoMsg(`Upload error: ${uploadError.message}`);
+        return;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("activity-videos")
+        .getPublicUrl(path);
+
+      // Persist the URL to the DB immediately — don't make the admin click Save All
+      if (content) {
+        await supabase
+          .from("activity_content")
+          .update({ video_url: publicUrl, updated_at: new Date().toISOString() })
+          .eq("activity_id", activity.id);
+      } else {
+        await supabase.from("activity_content").insert({
+          activity_id:   activity.id,
+          video_url:     publicUrl,
+          slide_images:  [],
+          quiz:          [],
+          goals:         [],
+          access_needed: [],
+          prompts:       [],
+          downloads:     [],
+          updated_at:    new Date().toISOString(),
+        });
+      }
+
+      setVideoUrl(publicUrl);
+      setVideoFile(null);
+      setVideoMsg("✓ Video saved");
+    } catch (err: any) {
+      setVideoMsg(`Error: ${err?.message ?? "Upload failed"}`);
+    } finally {
+      setUploadingVideo(false);
+    }
+  }
+
+  function applyPastedUrl() {
+    const trimmed = videoPasteUrl.trim();
+    if (!trimmed) return;
+    setVideoUrl(trimmed);
+    setVideoPasteUrl("");
+    setVideoMsg("✓ URL set — click Save All to apply");
+  }
+
+  function removeVideo() {
+    setVideoUrl("");
+    setVideoMsg("Video removed — click Save All to apply");
+  }
 
   // Steps inline edit
   const [editSteps, setEditSteps] = useState<EditableStep[]>(() =>
@@ -281,6 +355,7 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
       access_needed: accessText.split("\n").map(s => s.trim()).filter(Boolean),
       prompts,
       downloads,
+      video_url:     videoUrl || null,
       updated_at:    new Date().toISOString(),
     };
 
@@ -626,6 +701,90 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
                   placeholder="Act as a professional email writer…" style={{ ...inp, resize: "vertical", fontFamily: "monospace", fontSize: 12 }} />
                 <button onClick={() => { if (!newPromptLabel.trim() || !newPromptText.trim()) return; setPrompts(p => [...p, { label: newPromptLabel.trim(), text: newPromptText.trim() }]); setNewPromptLabel(""); setNewPromptText(""); }} style={btnAmber}>Add Prompt</button>
               </div>
+            </div>
+          )}
+
+          {/* ── Video ────────────────────────────────────────────────────────── */}
+          {tab === "video" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+              {/* Current video preview */}
+              {videoUrl && (
+                <div style={sectionBox}>
+                  <div style={sectionHead}><span>▶️</span><b>Current video</b></div>
+                  <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+                    <div style={{ fontSize: 12, color: "#6B6B6B", wordBreak: "break-all", padding: "8px 10px", background: "#F8F8F6", borderRadius: 8, border: "1px solid #E8E6DC" }}>
+                      {videoUrl}
+                    </div>
+                    {/* Preview player */}
+                    {/youtube\.com|youtu\.be/.test(videoUrl) || /vimeo\.com/.test(videoUrl) ? (
+                      <div style={{ borderRadius: 10, overflow: "hidden", aspectRatio: "16/9", background: "#000" }}>
+                        <iframe
+                          src={/youtu/.test(videoUrl)
+                            ? `https://www.youtube.com/embed/${videoUrl.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1] ?? ""}`
+                            : `https://player.vimeo.com/video/${videoUrl.match(/vimeo\.com\/(\d+)/)?.[1] ?? ""}`}
+                          allow="autoplay; fullscreen"
+                          allowFullScreen
+                          style={{ width: "100%", height: "100%", border: 0 }}
+                          title="Video preview"
+                        />
+                      </div>
+                    ) : (
+                      <video src={videoUrl} controls style={{ width: "100%", borderRadius: 10, background: "#000", maxHeight: 260 }} />
+                    )}
+                    <button onClick={removeVideo} style={{ border: "1px solid #FCA5A5", background: "white", color: "#EF4444", borderRadius: 8, padding: "6px 16px", fontSize: 12.5, fontWeight: 700, cursor: "pointer", alignSelf: "flex-start" }}>
+                      Remove video
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Paste URL */}
+              <div style={sectionBox}>
+                <div style={sectionHead}><span>🔗</span><b>Paste a video URL</b><span style={{ color: "#B0ABA5", fontWeight: 400, fontSize: 12 }}>YouTube, Vimeo, or any direct .mp4 link</span></div>
+                <div style={{ padding: 14, display: "flex", gap: 8 }}>
+                  <input value={videoPasteUrl} onChange={e => setVideoPasteUrl(e.target.value)} placeholder="https://youtube.com/watch?v=…" style={{ ...inp, flex: 1 }} />
+                  <button onClick={applyPastedUrl} disabled={!videoPasteUrl.trim()} style={{ ...btnAmber, opacity: !videoPasteUrl.trim() ? .4 : 1, flexShrink: 0 }}>Set URL</button>
+                </div>
+              </div>
+
+              {/* Upload file */}
+              <div style={sectionBox}>
+                <div style={sectionHead}><span>📤</span><b>Upload video file</b><span style={{ color: "#B0ABA5", fontWeight: 400, fontSize: 12 }}>MP4, MOV, WebM — saved directly to Supabase Storage</span></div>
+                <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+                  <input
+                    type="file"
+                    accept="video/*"
+                    disabled={uploadingVideo}
+                    onChange={e => { setVideoFile(e.target.files?.[0] ?? null); setVideoMsg(""); }}
+                    style={{ fontSize: 13 }}
+                  />
+                  {videoFile && !uploadingVideo && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <button onClick={uploadVideo} style={btnAmber}>
+                        Upload &ldquo;{videoFile.name}&rdquo;
+                      </button>
+                      <span style={{ fontSize: 12, color: "#B0ABA5" }}>
+                        {(videoFile.size / 1024 / 1024).toFixed(1)} MB
+                      </span>
+                    </div>
+                  )}
+                  {uploadingVideo && (
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: "#6B6B6B" }}>{videoMsg}</div>
+                  )}
+                </div>
+              </div>
+
+              {/* status message (shown only when not in the middle of uploading, to avoid duplication) */}
+              {videoMsg && !uploadingVideo && (
+                <div style={{ fontSize: 13, fontWeight: 700, color: videoMsg.startsWith("✓") ? "#17A855" : "#EF4444" }}>
+                  {videoMsg}
+                </div>
+              )}
+
+              {!videoUrl && !videoMsg && (
+                <div style={emptyState}>No video yet — paste a URL or upload a file above, then Save All</div>
+              )}
             </div>
           )}
 

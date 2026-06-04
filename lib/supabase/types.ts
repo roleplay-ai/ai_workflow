@@ -95,6 +95,8 @@ export type ActivityContent = {
   prompts: PromptTemplate[];
   // Downloads tab — files uploaded to storage
   downloads: DownloadFile[];
+  // Video tab — optional activity walkthrough video
+  video_url?: string | null;
   updated_at: string;
 };
 
@@ -108,6 +110,7 @@ export type UserProgress = {
   quiz_score: number | null;
   completed_at: string | null;
   updated_at: string;
+  video_watched?: boolean;    // true once learner has watched ≥80% of the video
 };
 
 // Supabase generic Database type
@@ -152,7 +155,7 @@ export type Database = {
       user_progress: {
         Row: UserProgress;
         Insert: { user_id: string; activity_id: string; status?: UserProgress["status"]; completed_steps?: number[]; quiz_score?: number | null; completed_at?: string | null; updated_at?: string };
-        Update: { status?: UserProgress["status"]; completed_steps?: number[]; quiz_score?: number | null; completed_at?: string | null; updated_at?: string };
+        Update: { status?: UserProgress["status"]; completed_steps?: number[]; quiz_score?: number | null; completed_at?: string | null; updated_at?: string; video_watched?: boolean };
       };
     };
     Views: Record<string, never>;

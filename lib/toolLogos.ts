@@ -9,11 +9,3 @@ export function rowsToToolLogoMap(rows: ToolLogoRow[] | null | undefined): ToolL
   }
   return map;
 }
-
-/** First activity tool that has an uploaded logo (for activity header). */
-export function activityHeaderTool(tools: string[], logos: ToolLogoMap): string | null {
-  for (const tool of tools) {
-    if (logos[tool.toLowerCase()]) return tool;
-  }
-  return null;
-}

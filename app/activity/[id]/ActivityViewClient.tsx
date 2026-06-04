@@ -4,8 +4,9 @@ import { createClient } from "@/lib/supabase/client";
 import Topbar from "@/components/Topbar";
 import QuizModal from "@/components/QuizModal";
 import CelebrationModal from "@/components/CelebrationModal";
+import VideoModal from "@/components/VideoModal";
 import ToolIcon from "@/components/ToolIcon";
-import { activityHeaderTool, type ToolLogoMap } from "@/lib/toolLogos";
+import type { ToolLogoMap } from "@/lib/toolLogos";
 import MdText from "@/components/MdText";
 import SlideZoom from "@/components/SlideZoom";
 import type { WorkflowStep, Quiz } from "@/types";
@@ -77,6 +78,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
   const [showQuiz, setShowQuiz] = useState(false);
   const [pendingQuiz, setPendingQuiz] = useState<Quiz | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [showVideo,       setShowVideo]       = useState(false);
   const finishPendingRef = useRef(false);
   const [jumpToast, setJumpToast] = useState<string | null>(null);
   const [progress, setProgress] = useState(initProgress);
@@ -87,8 +89,8 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
 
   const step = steps[current];
   const slideUrl = step?.slideUrl ?? null;
-  const headerTool = activityHeaderTool(activity.tools ?? [], toolLogos);
   const activityTools = activity.tools ?? [];
+  const primaryTool = activityTools[0] ?? null;
   const pct = steps.length ? ((current + 1) / steps.length) * 100 : 0;
 
   useEffect(() => {
@@ -187,6 +189,27 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
     setShowCelebration(true);
   };
 
+  // Called by VideoModal when learner hits 80% watch threshold or clicks "Mark as watched"
+  const handleVideoCompleted = async () => {
+    setShowVideo(false);
+    const payload = {
+      status: "completed" as const,
+      video_watched: true,
+      completed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    if (progress) {
+      const { data } = await supabase.from("user_progress").update(payload).eq("id", progress.id).select().single();
+      if (data) setProgress(data as UserProgress);
+    } else {
+      const { data } = await supabase.from("user_progress")
+        .insert({ user_id: profile.id, activity_id: activity.id, ...payload })
+        .select().single();
+      if (data) setProgress(data as UserProgress);
+    }
+    setShowCelebration(true);
+  };
+
   const handleQuizClose = () => {
     setShowQuiz(false);
     setPendingQuiz(null);
@@ -275,8 +298,8 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
         backdropFilter: "blur(18px)", zIndex: 10,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-          {headerTool ? (
-            <ToolIcon tool={headerTool} size={36} logos={toolLogos} insetScale={0.9} />
+          {primaryTool ? (
+            <ToolIcon tool={primaryTool} size={36} logos={toolLogos} insetScale={0.9} />
           ) : (
             <div style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 900, fontSize: 14, background: "linear-gradient(135deg,#2563EB,#14B8A6)", boxShadow: "0 10px 22px rgba(37,99,235,.22)", flexShrink: 0 }}>
               {(activity.title?.trim()[0] ?? "A").toUpperCase()}
@@ -466,32 +489,30 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
 
               {/* Activity header */}
               <div style={{ padding: "14px 16px 12px", borderBottom: "1px solid #E8EEF4" }}>
-                <div style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".1em", color: "#94A3B8", marginBottom: 4 }}>ACTIVITY</div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".1em", color: "#94A3B8" }}>ACTIVITY</div>
+                  {primaryTool && (
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 5,
+                        height: 26,
+                        padding: "0 8px 0 4px",
+                        borderRadius: 999,
+                        border: "1px solid #E2E8F0",
+                        background: "white",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <ToolIcon tool={primaryTool} size={18} logos={toolLogos} insetScale={0.9} />
+                      <span style={{ fontSize: 10.5, fontWeight: 700, color: "#475569", textTransform: "capitalize" }}>{primaryTool}</span>
+                    </span>
+                  )}
+                </div>
                 <div style={{ fontSize: 15, fontWeight: 900, letterSpacing: "-.03em", color: "#0F172A", lineHeight: 1.2 }}>{activity.title}</div>
                 {activity.description && (
                   <div style={{ fontSize: 12, color: "#64748B", marginTop: 5, lineHeight: 1.4 }}>{activity.description}</div>
-                )}
-                {activityTools.length > 0 && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
-                    {activityTools.map(t => (
-                      <span
-                        key={t}
-                        style={{
-                          height: 26,
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 5,
-                          padding: "0 8px 0 4px",
-                          border: "1px solid #E2E8F0",
-                          background: "white",
-                          borderRadius: 999,
-                        }}
-                      >
-                        <ToolIcon tool={t} size={18} logos={toolLogos} />
-                        <span style={{ fontSize: 11, color: "#475569", fontWeight: 700 }}>{t}</span>
-                      </span>
-                    ))}
-                  </div>
                 )}
               </div>
 
@@ -602,7 +623,57 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
             </div>
 
             {/* Progress bar + navigation */}
-            <div style={{ flexShrink: 0, padding: "10px 16px", borderTop: "1px solid #E8EEF4", background: "#FAFBFC" }}>
+            <div style={{ flexShrink: 0, padding: "10px 16px", borderTop: "1px solid #E8EEF4", background: "#FAFBFC", display: "flex", flexDirection: "column", gap: 8 }}>
+
+              {/* ── Watch Video button ── always visible, state changes based on video availability */}
+              {content?.video_url ? (
+                /* Video exists — active button */
+                <button
+                  onClick={() => setShowVideo(true)}
+                  style={{
+                    width: "100%", padding: "9px 0", borderRadius: 12, border: 0,
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                    background: progress?.video_watched
+                      ? "linear-gradient(135deg,#22C55E,#14B8A6)"
+                      : "linear-gradient(135deg,#7C3AED,#2563EB)",
+                    color: "white", fontSize: 13, fontWeight: 800, cursor: "pointer",
+                    boxShadow: progress?.video_watched
+                      ? "0 4px 14px rgba(34,197,94,.3)"
+                      : "0 4px 14px rgba(124,58,237,.35)",
+                    transition: "opacity .15s",
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.opacity = ".88")}
+                  onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
+                >
+                  {progress?.video_watched ? (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      Video Watched
+                    </>
+                  ) : (
+                    <>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                      Watch Video
+                      <span style={{ fontSize: 10, fontWeight: 900, padding: "2px 7px", borderRadius: 999, background: "rgba(255,255,255,.22)" }}>AI Feature</span>
+                    </>
+                  )}
+                </button>
+              ) : (
+                /* No video uploaded yet — muted placeholder */
+                <div style={{
+                  width: "100%", padding: "9px 0", borderRadius: 12,
+                  border: "1.5px dashed #E2E8F0",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  color: "#CBD5E1", fontSize: 13, fontWeight: 700,
+                  background: "#F8FAFC",
+                }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style={{ opacity: .5 }}><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  Watch Video
+                  <span style={{ fontSize: 10, fontWeight: 900, padding: "2px 7px", borderRadius: 999, background: "#EEF2FF", color: "#A5B4FC" }}>AI Feature</span>
+                </div>
+              )}
+
+              {/* Steps done + XP */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: "#64748B" }}>{current} of {steps.length} done</span>
                 {progress?.status === "completed" && (
@@ -624,6 +695,17 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
           activityTitle={activity.title}
           points={activity.points}
           onContinue={() => { window.location.href = "/dashboard"; }}
+        />
+      )}
+
+      {/* Video modal */}
+      {showVideo && content?.video_url && (
+        <VideoModal
+          src={content.video_url}
+          activityTitle={activity.title}
+          alreadyWatched={!!progress?.video_watched}
+          onClose={() => setShowVideo(false)}
+          onCompleted={handleVideoCompleted}
         />
       )}
 
