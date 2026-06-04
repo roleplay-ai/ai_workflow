@@ -78,7 +78,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
   const [showQuiz, setShowQuiz] = useState(false);
   const [pendingQuiz, setPendingQuiz] = useState<Quiz | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
-  const [showVideo,       setShowVideo]       = useState(false);
+  const [showVideo, setShowVideo] = useState(false);
   const finishPendingRef = useRef(false);
   const [jumpToast, setJumpToast] = useState<string | null>(null);
   const [progress, setProgress] = useState(initProgress);
@@ -322,7 +322,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             {steps.map((_, i) => {
-              const done   = i < current;
+              const done = i < current;
               const active = i === current;
               return (
                 <div key={i} style={{
@@ -473,10 +473,10 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
                   }}
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="15 3 21 3 21 9"/>
-                    <polyline points="9 21 3 21 3 15"/>
-                    <line x1="21" y1="3" x2="14" y2="10"/>
-                    <line x1="3" y1="21" x2="10" y2="14"/>
+                    <polyline points="15 3 21 3 21 9" />
+                    <polyline points="9 21 3 21 3 15" />
+                    <line x1="21" y1="3" x2="14" y2="10" />
+                    <line x1="3" y1="21" x2="10" y2="14" />
                   </svg>
                 </button>
               )}
@@ -647,12 +647,12 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
                 >
                   {progress?.video_watched ? (
                     <>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                       Video Watched
                     </>
                   ) : (
                     <>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3" /></svg>
                       Watch Video
                       <span style={{ fontSize: 10, fontWeight: 900, padding: "2px 7px", borderRadius: 999, background: "rgba(255,255,255,.22)" }}>AI Feature</span>
                     </>
@@ -667,7 +667,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
                   color: "#CBD5E1", fontSize: 13, fontWeight: 700,
                   background: "#F8FAFC",
                 }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style={{ opacity: .5 }}><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style={{ opacity: .5 }}><polygon points="5 3 19 12 5 21 5 3" /></svg>
                   Watch Video
                   <span style={{ fontSize: 10, fontWeight: 900, padding: "2px 7px", borderRadius: 999, background: "#EEF2FF", color: "#A5B4FC" }}>AI Feature</span>
                 </div>
