@@ -1,3 +1,36 @@
+.chatScroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 #f1f5f9;
+}
+
+.chatScroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chatScroll::-webkit-scrollbar-track {
+  margin: 10px 0;
+  background: #f1f5f9;
+  border-radius: 999px;
+}
+
+.chatScroll::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 999px;
+  border: 2px solid #f1f5f9;
+}
+
+.chatScroll::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
 .sidebarScroll {
   flex: 1;
   min-height: 0;

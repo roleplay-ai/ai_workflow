@@ -19,23 +19,23 @@ type Props = {
 
 export default function ActivityViewClient({ profile, activity, activitySteps, progress: initProgress }: Props) {
   const supabase = createClient();
-  const content  = activity.activity_content;
+  const content = activity.activity_content;
 
   // Map DB rows → WorkflowStep (resolve slide URL from slide_images)
   const steps = useMemo((): WorkflowStep[] => {
     const slideImages = content?.slide_images ?? [];
     return activitySteps.map(s => ({
-      id:                s.id,
-      step_number:       s.step_number,
-      slide_number:      s.slide_number,
-      title:             s.title,
+      id: s.id,
+      step_number: s.step_number,
+      slide_number: s.slide_number,
+      title: s.title,
       what_learner_sees: s.what_learner_sees,
-      what_this_means:   s.what_this_means,
-      what_to_do:        s.what_to_do,
-      if_stuck:          s.if_stuck,
-      callout:           s.callout,
-      coach_next:        s.coach_next,
-      slideUrl:          slideImages[s.slide_number - 1]?.url ?? undefined,
+      what_this_means: s.what_this_means,
+      what_to_do: s.what_to_do,
+      if_stuck: s.if_stuck,
+      callout: s.callout,
+      coach_next: s.coach_next,
+      slideUrl: slideImages[s.slide_number - 1]?.url ?? undefined,
     }));
   }, [activitySteps, content?.slide_images]);
 
@@ -45,12 +45,12 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
     const map: Record<number, Quiz> = {};
     q.forEach((question, i) => {
       map[i] = {
-        question:   question.question,
-        options:    question.options,
-        correct:    question.correct_index,
+        question: question.question,
+        options: question.options,
+        correct: question.correct_index,
         successMsg: "Correct! Well done.",
-        wrongMsg:   "Review this step and try again.",
-        badge:      "✓ Got it",
+        wrongMsg: "Review this step and try again.",
+        badge: "✓ Got it",
       };
     });
     return map;
@@ -58,23 +58,24 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
 
   type Msg = { role: "user" | "assistant"; content: string };
 
-  const [current,     setCurrent]     = useState(0);
-  const [messages,    setMessages]    = useState<Msg[]>(() => {
+  const [current, setCurrent] = useState(0);
+  const [messages, setMessages] = useState<Msg[]>(() => {
     const first = activitySteps[0];
     return [{ role: "assistant", content: first ? buildCoachMessage(first) : `Welcome! Let's get started with "${activity.title}".` }];
   });
-  const [input,       setInput]       = useState("");
-  const [loading,     setLoading]     = useState(false);
-  const [showQuiz,    setShowQuiz]    = useState(false);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showQuiz, setShowQuiz] = useState(false);
   const [pendingQuiz, setPendingQuiz] = useState<Quiz | null>(null);
-  const [jumpToast,   setJumpToast]   = useState<string | null>(null);
-  const [progress,    setProgress]    = useState(initProgress);
-  const [copiedIdx,   setCopiedIdx]   = useState<number | null>(null);
+  const [jumpToast, setJumpToast] = useState<string | null>(null);
+  const [progress, setProgress] = useState(initProgress);
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const [slideOpen, setSlideOpen] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
 
-  const step     = steps[current];
+  const step = steps[current];
   const slideUrl = step?.slideUrl ?? null;
-  const pct      = steps.length ? ((current + 1) / steps.length) * 100 : 0;
+  const pct = steps.length ? ((current + 1) / steps.length) * 100 : 0;
 
   useEffect(() => {
     chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" });
@@ -84,11 +85,11 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
   useEffect(() => {
     if (!progress) {
       supabase.from("user_progress").insert({
-        user_id:         profile.id,
-        activity_id:     activity.id,
-        status:          "in_progress",
+        user_id: profile.id,
+        activity_id: activity.id,
+        status: "in_progress",
         completed_steps: [],
-        updated_at:      new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       }).select().single().then(({ data }) => { if (data) setProgress(data as any); });
     }
   }, []);
@@ -97,10 +98,10 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
     if (current >= steps.length - 1) {
       const completedSteps = steps.map((_, i) => i);
       const payload = {
-        status:          "completed" as const,
+        status: "completed" as const,
         completed_steps: completedSteps,
-        completed_at:    new Date().toISOString(),
-        updated_at:      new Date().toISOString(),
+        completed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
       if (progress) {
         await supabase.from("user_progress").update(payload).eq("id", progress.id);
@@ -115,6 +116,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
     if (quiz) { setPendingQuiz(quiz); setShowQuiz(true); }
 
     const next = current + 1;
+    setSlideOpen(false);
     setCurrent(next);
     setMessages(m => [...m, { role: "assistant", content: buildCoachMessage(steps[next]) }]);
 
@@ -124,6 +126,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
 
   const goPrev = () => {
     if (current <= 0) return;
+    setSlideOpen(false);
     setCurrent(c => c - 1);
   };
 
@@ -138,15 +141,15 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message:       userMsg,
-          stepIndex:     current,
+          message: userMsg,
+          stepIndex: current,
           activityTitle: activity.title,
           steps: steps.map(s => ({
-            title:             s.title,
+            title: s.title,
             what_learner_sees: s.what_learner_sees,
-            what_this_means:   s.what_this_means,
-            what_to_do:        s.what_to_do,
-            if_stuck:          s.if_stuck,
+            what_this_means: s.what_this_means,
+            what_to_do: s.what_to_do,
+            if_stuck: s.if_stuck,
           })),
         }),
       });
@@ -230,33 +233,40 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
       </header>
 
       {/* Main layout */}
-      <div style={{ flex: 1, minHeight: 0, display: "grid", gap: 16, padding: 16, gridTemplateColumns: "360px 1fr" }}>
+      <div style={{ flex: 1, minHeight: 0, display: "grid", gap: 16, padding: 16, gridTemplateColumns: "420px 1fr" }}>
 
         {/* ── LEFT: AI Coach chat ──────────────────────────────────────────── */}
         <div style={{ display: "flex", flexDirection: "column", borderRadius: 24, overflow: "hidden", border: "1px solid #E2E8F0", background: "rgba(255,255,255,.92)", boxShadow: "0 18px 45px rgba(15,23,42,.10)", minHeight: 0 }}>
-          {/* Chat header */}
-          <div style={{ flexShrink: 0, height: 66, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px", borderBottom: "1px solid #E2E8F0", background: "linear-gradient(180deg,rgba(255,255,255,.94),rgba(248,250,252,.94))" }}>
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".1em", color: "#2563EB", marginBottom: 2 }}>AI Coach</div>
-              <div style={{ fontSize: 15, fontWeight: 900, letterSpacing: "-.03em", color: "#0F172A" }}>Step {current + 1}: {step?.title}</div>
+          {/* Chat header + insight callout */}
+          <div style={{ flexShrink: 0, borderBottom: "1px solid #E2E8F0", background: "linear-gradient(180deg,rgba(255,255,255,.94),rgba(248,250,252,.94))" }}>
+            <div style={{ height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px" }}>
+              <div style={{ fontSize: 15, fontWeight: 900, letterSpacing: "-.03em", color: "#0F172A" }}>AI Coach</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, fontSize: 11, fontWeight: 900, color: "#1D4ED8", background: "#DBEAFE" }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#2563EB" }} />
+                Active
+              </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, fontSize: 11, fontWeight: 900, color: "#1D4ED8", background: "#DBEAFE" }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#2563EB" }} />
-              Active
-            </div>
+            {step?.callout && step.callout !== "" && (
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "0 14px 12px" }}>
+                <span style={{ fontSize: 13, flexShrink: 0 }}>💡</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#134E4A", lineHeight: 1.45 }}>{step.callout}</span>
+              </div>
+            )}
           </div>
 
           {/* Messages */}
-          <div ref={chatRef} style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+          <div ref={chatRef} className={panelStyles.chatScroll}>
             {messages.map((m, i) => (
               <div key={i} style={{ display: "flex", gap: 10, maxWidth: "95%", alignSelf: m.role === "user" ? "flex-end" : "flex-start", flexDirection: m.role === "user" ? "row-reverse" : "row" }}>
                 <div style={{ width: 32, height: 32, flexShrink: 0, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900, marginTop: 2, color: "white", background: m.role === "user" ? "#CBD5E1" : "linear-gradient(135deg,#2563EB,#14B8A6)" }}>
                   {m.role === "user" ? <span style={{ color: "#475569" }}>U</span> : "AI"}
                 </div>
-                <div style={{ borderRadius: 18, padding: "10px 14px", border: "1px solid", fontSize: 13.5, lineHeight: 1.5,
+                <div style={{
+                  borderRadius: 18, padding: "10px 14px", border: "1px solid", fontSize: 13.5, lineHeight: 1.5,
                   ...(m.role === "user"
                     ? { background: "#2563EB", borderColor: "#2563EB", color: "white", borderTopRightRadius: 4 }
-                    : { background: "white", borderColor: "#E2E8F0", color: "#1E293B", borderTopLeftRadius: 4 }) }}>
+                    : { background: "white", borderColor: "#E2E8F0", color: "#1E293B", borderTopLeftRadius: 4 })
+                }}>
                   {m.role === "user" ? m.content : <MdText text={m.content} />}
                 </div>
               </div>
@@ -269,9 +279,9 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
             )}
           </div>
 
-          {/* Input + nav */}
+          {/* Input */}
           <div style={{ flexShrink: 0, borderTop: "1px solid #E2E8F0", background: "rgba(255,255,255,.96)" }}>
-            <div style={{ display: "flex", gap: 10, padding: 14, borderBottom: "1px solid #E2E8F0" }}>
+            <div style={{ display: "flex", gap: 10, padding: 14 }}>
               <input
                 value={input}
                 onChange={e => setInput(e.target.value)}
@@ -283,19 +293,6 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
               <button onClick={sendMessage} disabled={loading} suppressHydrationWarning
                 style={{ padding: "0 16px", height: 42, borderRadius: 13, border: 0, color: "white", fontSize: 13.5, fontWeight: 900, cursor: "pointer", background: "linear-gradient(135deg,#2563EB,#1D4ED8)", opacity: loading ? .6 : 1 }}>
                 Ask
-              </button>
-            </div>
-            <div style={{ display: "flex", gap: 12, padding: 14, alignItems: "center" }}>
-              <button onClick={goPrev} disabled={current === 0} suppressHydrationWarning
-                style={{ padding: "9px 16px", borderRadius: 13, fontSize: 13, fontWeight: 900, cursor: "pointer", border: "1px solid #E2E8F0", background: "#F8FAFC", color: "#64748B", opacity: current === 0 ? .4 : 1 }}>
-                ← Prev
-              </button>
-              <div style={{ flex: 1, fontSize: 11.5, color: "#94A3B8", fontWeight: 600, textAlign: "center" }}>
-                {current < steps.length - 1 ? "Advance when ready" : "🎉 You've completed this activity!"}
-              </div>
-              <button onClick={goNext} suppressHydrationWarning
-                style={{ padding: "9px 16px", borderRadius: 13, border: 0, fontSize: 13, fontWeight: 900, cursor: "pointer", color: "white", background: "linear-gradient(135deg,#2563EB,#1D4ED8)" }}>
-                {current < steps.length - 1 ? "Next →" : "Finish ✓"}
               </button>
             </div>
           </div>
@@ -314,12 +311,31 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
             </div>
             <div style={{ flex: 1, minHeight: 0, overflow: "hidden", position: "relative", background: "#F1F5F9", display: "flex", alignItems: "center", justifyContent: "center" }}>
               {slideUrl ? (
-                <SlideZoom src={slideUrl} alt={`Step ${current + 1}`} />
+                <SlideZoom src={slideUrl} alt={`Step ${current + 1}`} open={slideOpen} onClose={() => setSlideOpen(false)} />
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, color: "#94A3B8", fontSize: 13.5, fontWeight: 600 }}>
                   <div style={{ fontSize: 40 }}>🖼️</div>
                   <div>No slide for this step</div>
                 </div>
+              )}
+              {slideUrl && (
+                <button
+                  onClick={() => setSlideOpen(true)}
+                  title="Expand"
+                  style={{
+                    position: "absolute", bottom: 10, right: 10, zIndex: 2,
+                    width: 28, height: 28, borderRadius: 7, border: 0, cursor: "pointer",
+                    background: "rgba(15,23,42,.42)", backdropFilter: "blur(4px)",
+                    color: "white", display: "flex", alignItems: "center", justifyContent: "center",
+                  }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="15 3 21 3 21 9"/>
+                    <polyline points="9 21 3 21 3 15"/>
+                    <line x1="21" y1="3" x2="14" y2="10"/>
+                    <line x1="3" y1="21" x2="10" y2="14"/>
+                  </svg>
+                </button>
               )}
             </div>
           </div>
@@ -372,7 +388,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
                 <div style={sideHeading}>STEPS</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                   {steps.map((s, i) => {
-                    const done   = i < current;
+                    const done = i < current;
                     const active = i === current;
                     return (
                       <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderRadius: 8, background: active ? "#EFF6FF" : "transparent", paddingLeft: active ? 8 : 0, paddingRight: active ? 8 : 0, margin: active ? "0 -8px" : 0, transition: ".15s" }}>
@@ -388,14 +404,6 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
                 </div>
               </div>
 
-              {/* Callout for active step */}
-              {step?.callout && step.callout !== "" && (
-                <div style={{ padding: "12px 16px", borderBottom: "1px solid #E8EEF4" }}>
-                  <div style={{ padding: "10px 12px", borderRadius: 12, background: "#CCFBF1", border: "1px solid rgba(20,184,166,.25)", fontSize: 12, fontWeight: 700, lineHeight: 1.4, color: "#134E4A" }}>
-                    💡 {step.callout}
-                  </div>
-                </div>
-              )}
 
               {/* Downloads */}
               {content?.downloads && content.downloads.length > 0 && (
@@ -443,14 +451,28 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
               )}
             </div>
 
-            {/* Progress bar */}
+            {/* Progress bar + navigation */}
             <div style={{ flexShrink: 0, padding: "10px 16px", borderTop: "1px solid #E8EEF4", background: "#FAFBFC" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: "#64748B" }}>{current} of {steps.length} done</span>
-                <span style={{ fontSize: 12, fontWeight: 800, color: "#2563EB" }}>+{activity.points} XP</span>
-              </div>
-              <div style={{ height: 6, background: "#E2E8F0", borderRadius: 999, overflow: "hidden" }}>
-                <div style={{ height: "100%", borderRadius: 999, background: "linear-gradient(90deg,#22C55E,#14B8A6)", width: `${pct}%`, transition: "width .3s" }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                <button onClick={goPrev} disabled={current === 0} suppressHydrationWarning
+                  style={{ padding: "7px 14px", borderRadius: 10, fontSize: 12.5, fontWeight: 800, cursor: "pointer", border: "1px solid #E2E8F0", background: "#F8FAFC", color: "#64748B", flexShrink: 0, opacity: current === 0 ? .4 : 1 }}>
+                  ← Prev
+                </button>
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#64748B" }}>{current} of {steps.length} done</span>
+                    {progress?.status === "completed" && (
+                      <span style={{ fontSize: 11, fontWeight: 800, color: "#2563EB" }}>+{activity.points} XP</span>
+                    )}
+                  </div>
+                  {/* <div style={{ height: 6, background: "#E2E8F0", borderRadius: 999, overflow: "hidden" }}>
+                    <div style={{ height: "100%", borderRadius: 999, background: "linear-gradient(90deg,#22C55E,#14B8A6)", width: `${pct}%`, transition: "width .3s" }} />
+                  </div> */}
+                </div>
+                <button onClick={goNext} suppressHydrationWarning
+                  style={{ padding: "7px 14px", borderRadius: 10, border: 0, fontSize: 12.5, fontWeight: 800, cursor: "pointer", color: "white", flexShrink: 0, background: "linear-gradient(135deg,#2563EB,#1D4ED8)" }}>
+                  {current < steps.length - 1 ? "Next →" : "Finish ✓"}
+                </button>
               </div>
             </div>
           </div>
