@@ -1,0 +1,34 @@
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { rowsToToolLogoMap } from "@/lib/toolLogos";
+import ToolLogosPageClient from "./ToolLogosPageClient";
+
+export const dynamic = "force-dynamic";
+
+export default async function ToolLogosPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, email, role, company_id, full_name, avatar_url, created_at")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError || !profile) redirect("/login");
+  if (profile.role !== "superadmin") redirect("/dashboard");
+
+  const { data: company } = profile.company_id
+    ? await supabase.from("companies").select("name").eq("id", profile.company_id).single()
+    : { data: null };
+
+  const { data: toolLogoRows } = await supabase.from("tool_logos").select("tool, logo_url");
+
+  return (
+    <ToolLogosPageClient
+      profile={{ ...profile, companies: company } as any}
+      toolLogos={rowsToToolLogoMap(toolLogoRows ?? [])}
+    />
+  );
+}

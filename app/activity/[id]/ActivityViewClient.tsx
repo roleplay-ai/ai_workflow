@@ -3,6 +3,9 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Topbar from "@/components/Topbar";
 import QuizModal from "@/components/QuizModal";
+import CelebrationModal from "@/components/CelebrationModal";
+import ToolIcon from "@/components/ToolIcon";
+import { activityHeaderTool, type ToolLogoMap } from "@/lib/toolLogos";
 import MdText from "@/components/MdText";
 import SlideZoom from "@/components/SlideZoom";
 import type { WorkflowStep, Quiz } from "@/types";
@@ -14,9 +17,10 @@ type Props = {
   activity: Activity & { activity_content: ActivityContent | null };
   activitySteps: ActivityStep[];
   progress: UserProgress | null;
+  toolLogos: ToolLogoMap;
 };
 
-export default function ActivityViewClient({ profile, activity, activitySteps, progress: initProgress }: Props) {
+export default function ActivityViewClient({ profile, activity, activitySteps, progress: initProgress, toolLogos }: Props) {
   const supabase = createClient();
   const content = activity.activity_content;
 
@@ -72,6 +76,8 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
   const [initializing, setInitializing] = useState(true);
   const [showQuiz, setShowQuiz] = useState(false);
   const [pendingQuiz, setPendingQuiz] = useState<Quiz | null>(null);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const finishPendingRef = useRef(false);
   const [jumpToast, setJumpToast] = useState<string | null>(null);
   const [progress, setProgress] = useState(initProgress);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
@@ -81,6 +87,8 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
 
   const step = steps[current];
   const slideUrl = step?.slideUrl ?? null;
+  const headerTool = activityHeaderTool(activity.tools ?? [], toolLogos);
+  const activityTools = activity.tools ?? [];
   const pct = steps.length ? ((current + 1) / steps.length) * 100 : 0;
 
   useEffect(() => {
@@ -116,7 +124,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
         }
       })
       .catch(() => {
-        setMessages([{ role: "assistant", content: `Hi! I'm your AI coach for **${activity.title}**. Look at the slide and ask me anything — I'll guide you through each step.` }]);
+        setMessages([{ role: "assistant", content: `Hi! I'm **Nudgie**, your AI coach for **${activity.title}**. Look at the slide and ask me anything — I'll guide you through each step.` }]);
       })
       .finally(() => setInitializing(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -159,23 +167,46 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
     opacity: loading ? .6 : 1, transition: "background .15s",
   });
   const prevEnabled = !hasInput && current > 0 && !loading && !initializing;
-  const nextEnabled = !hasInput && !loading && !initializing;
+  const nextEnabled = !hasInput && !loading && !initializing && !showCelebration;
+
+  const finishActivity = async () => {
+    const completedSteps = steps.map((_, i) => i);
+    const payload = {
+      status: "completed" as const,
+      completed_steps: completedSteps,
+      completed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    if (progress) {
+      const { data } = await supabase.from("user_progress").update(payload).eq("id", progress.id).select().single();
+      if (data) setProgress(data as UserProgress);
+    } else {
+      const { data } = await supabase.from("user_progress").insert({ user_id: profile.id, activity_id: activity.id, ...payload }).select().single();
+      if (data) setProgress(data as UserProgress);
+    }
+    setShowCelebration(true);
+  };
+
+  const handleQuizClose = () => {
+    setShowQuiz(false);
+    setPendingQuiz(null);
+    if (finishPendingRef.current) {
+      finishPendingRef.current = false;
+      void finishActivity();
+    }
+  };
 
   const goNext = async () => {
     if (current >= steps.length - 1) {
-      const completedSteps = steps.map((_, i) => i);
-      const payload = {
-        status: "completed" as const,
-        completed_steps: completedSteps,
-        completed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      if (progress) {
-        await supabase.from("user_progress").update(payload).eq("id", progress.id);
-      } else {
-        await supabase.from("user_progress").insert({ user_id: profile.id, activity_id: activity.id, ...payload });
+      if (loading || initializing || hasInput || showCelebration) return;
+      const quiz = quizForStep[current];
+      if (quiz) {
+        finishPendingRef.current = true;
+        setPendingQuiz(quiz);
+        setShowQuiz(true);
+        return;
       }
-      window.location.href = "/dashboard";
+      await finishActivity();
       return;
     }
 
@@ -244,9 +275,13 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
         backdropFilter: "blur(18px)", zIndex: 10,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 900, fontSize: 14, background: "linear-gradient(135deg,#2563EB,#14B8A6)", boxShadow: "0 10px 22px rgba(37,99,235,.22)", flexShrink: 0 }}>
-            {(activity.title?.trim()[0] ?? "A").toUpperCase()}
-          </div>
+          {headerTool ? (
+            <ToolIcon tool={headerTool} size={36} logos={toolLogos} insetScale={0.9} />
+          ) : (
+            <div style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 900, fontSize: 14, background: "linear-gradient(135deg,#2563EB,#14B8A6)", boxShadow: "0 10px 22px rgba(37,99,235,.22)", flexShrink: 0 }}>
+              {(activity.title?.trim()[0] ?? "A").toUpperCase()}
+            </div>
+          )}
           <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0 }}>
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 17, fontWeight: 900, letterSpacing: "-.03em" }}>{activity.title}</div>
@@ -288,7 +323,10 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
           {/* Chat header + insight callout */}
           <div style={{ flexShrink: 0, borderBottom: "1px solid #E2E8F0", background: "linear-gradient(180deg,rgba(255,255,255,.94),rgba(248,250,252,.94))" }}>
             <div style={{ height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px" }}>
-              <div style={{ fontSize: 15, fontWeight: 900, letterSpacing: "-.03em", color: "#0F172A" }}>AI Coach</div>
+              <div style={{ fontSize: 15, letterSpacing: "-.03em", color: "#0F172A" }}>
+                <span style={{ fontWeight: 900 }}>Nudgie</span>
+                <span style={{ fontWeight: 500 }}> — your AI coach</span>
+              </div>
               <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, fontSize: 11, fontWeight: 900, color: "#1D4ED8", background: "#DBEAFE" }}>
                 <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#2563EB" }} />
                 Active
@@ -306,14 +344,14 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
           <div ref={chatRef} className={panelStyles.chatScroll}>
             {initializing && (
               <div style={{ display: "flex", gap: 10, alignSelf: "flex-start" }}>
-                <div style={{ width: 32, height: 32, flexShrink: 0, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900, color: "white", background: "linear-gradient(135deg,#2563EB,#14B8A6)" }}>AI</div>
+                <div style={aiChatAvatarStyle}>AI</div>
                 <div style={{ borderRadius: 18, borderTopLeftRadius: 4, padding: "10px 14px", background: "white", border: "1px solid #E2E8F0", color: "#94A3B8", fontSize: 13.5 }}>Preparing your session…</div>
               </div>
             )}
             {messages.map((m, i) => (
               <div key={i} style={{ display: "flex", gap: 10, maxWidth: "95%", alignSelf: m.role === "user" ? "flex-end" : "flex-start", flexDirection: m.role === "user" ? "row-reverse" : "row" }}>
-                <div style={{ width: 32, height: 32, flexShrink: 0, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900, marginTop: 2, color: "white", background: m.role === "user" ? "#CBD5E1" : "linear-gradient(135deg,#2563EB,#14B8A6)" }}>
-                  {m.role === "user" ? <span style={{ color: "#475569" }}>U</span> : "AI"}
+                <div style={{ ...aiChatAvatarStyle, marginTop: 2, ...(m.role === "user" ? { background: "#CBD5E1", color: "#475569" } : {}) }}>
+                  {m.role === "user" ? "U" : "AI"}
                 </div>
                 <div style={{
                   borderRadius: 18, padding: "10px 14px", border: "1px solid", fontSize: 13.5, lineHeight: 1.5,
@@ -327,7 +365,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
             ))}
             {loading && (
               <div style={{ display: "flex", gap: 10, alignSelf: "flex-start" }}>
-                <div style={{ width: 32, height: 32, flexShrink: 0, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900, color: "white", background: "linear-gradient(135deg,#2563EB,#14B8A6)" }}>AI</div>
+                <div style={aiChatAvatarStyle}>AI</div>
                 <div style={{ borderRadius: 18, borderTopLeftRadius: 4, padding: "10px 14px", background: "white", border: "1px solid #E2E8F0", color: "#94A3B8", fontSize: 13.5 }}>Thinking…</div>
               </div>
             )}
@@ -358,7 +396,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendMessage()}
-                  placeholder="Ask the AI coach anything…"
+                  placeholder="Ask Nudgie anything…"
                   suppressHydrationWarning
                   style={{ flex: 1, minWidth: 0, height: "100%", border: 0, background: "transparent", fontSize: 13.5, outline: "none", fontFamily: "inherit", padding: "0 8px" }}
                 />
@@ -432,6 +470,28 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
                 <div style={{ fontSize: 15, fontWeight: 900, letterSpacing: "-.03em", color: "#0F172A", lineHeight: 1.2 }}>{activity.title}</div>
                 {activity.description && (
                   <div style={{ fontSize: 12, color: "#64748B", marginTop: 5, lineHeight: 1.4 }}>{activity.description}</div>
+                )}
+                {activityTools.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+                    {activityTools.map(t => (
+                      <span
+                        key={t}
+                        style={{
+                          height: 26,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 5,
+                          padding: "0 8px 0 4px",
+                          border: "1px solid #E2E8F0",
+                          background: "white",
+                          borderRadius: 999,
+                        }}
+                      >
+                        <ToolIcon tool={t} size={18} logos={toolLogos} />
+                        <span style={{ fontSize: 11, color: "#475569", fontWeight: 700 }}>{t}</span>
+                      </span>
+                    ))}
+                  </div>
                 )}
               </div>
 
@@ -556,7 +616,15 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
 
       {/* Quiz modal */}
       {showQuiz && pendingQuiz && (
-        <QuizModal quiz={pendingQuiz} onClose={() => { setShowQuiz(false); setPendingQuiz(null); }} />
+        <QuizModal quiz={pendingQuiz} onClose={handleQuizClose} />
+      )}
+
+      {showCelebration && (
+        <CelebrationModal
+          activityTitle={activity.title}
+          points={activity.points}
+          onContinue={() => { window.location.href = "/dashboard"; }}
+        />
       )}
 
       {/* Jump toast */}
@@ -568,6 +636,12 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
     </div>
   );
 }
+
+const aiChatAvatarStyle: React.CSSProperties = {
+  width: 32, height: 32, flexShrink: 0, borderRadius: "50%",
+  display: "flex", alignItems: "center", justifyContent: "center",
+  fontSize: 11, fontWeight: 900, background: "#FFCE00", color: "#221D23",
+};
 
 const sideHeading: React.CSSProperties = {
   fontSize: 11.5, fontWeight: 800, color: "#475569", marginBottom: 8,

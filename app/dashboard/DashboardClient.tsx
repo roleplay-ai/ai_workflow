@@ -4,28 +4,14 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import type { Activity, UserProgress, Profile } from "@/lib/supabase/types";
 import Topbar from "@/components/Topbar";
+import ToolIcon from "@/components/ToolIcon";
+import type { ToolLogoMap } from "@/lib/toolLogos";
 
 type Props = {
   profile: Profile & { companies: { name: string } | null };
   activities: (Activity & { activity_content: { id: string } | null })[];
   progress: UserProgress[];
-};
-
-const TOOL_LOGOS: Record<string, { bg: string; label: string }> = {
-  claude: { bg: "#c15f3c", label: "Cl" },
-  gemini: { bg: "linear-gradient(135deg,#4285f4,#a142f4)", label: "G" },
-  chatgpt: { bg: "#10a37f", label: "C" },
-  copilot: { bg: "linear-gradient(135deg,#00a4ef,#7fba00)", label: "Co" },
-  drive: { bg: "#fbbc04", label: "D" },
-  sheets: { bg: "#0f9d58", label: "S" },
-  gmail: { bg: "#ea4335", label: "M" },
-  calendar: { bg: "#1a73e8", label: "Ca" },
-  vapi: { bg: "#111827", label: "V" },
-  wati: { bg: "#22c55e", label: "W" },
-  lovable: { bg: "#ff477e", label: "L" },
-  napkin: { bg: "#8b5cf6", label: "N" },
-  "ai-studio": { bg: "#3b82f6", label: "AI" },
-  notebooklm: { bg: "#fbbc04", label: "NB" },
+  toolLogos: ToolLogoMap;
 };
 
 const CAT_META: Record<string, { icon: string; label: string; stripe: string; pill: { bg: string; color: string; border: string } }> = {
@@ -40,7 +26,7 @@ function statusChip(status: string) {
   return { label: "Not Started", bg: "#F0EEE8", color: "#6B6B6B" };
 }
 
-function ActivityCard({ activity, status }: { activity: Activity; status: string }) {
+function ActivityCard({ activity, status, toolLogos }: { activity: Activity; status: string; toolLogos: ToolLogoMap }) {
   const cat = CAT_META[activity.category] ?? CAT_META.chat;
   const chip = statusChip(status);
   const visible = activity.tools.slice(0, 2);
@@ -63,15 +49,12 @@ function ActivityCard({ activity, status }: { activity: Activity; status: string
         <h3 style={{ margin: "0 0 5px", fontSize: 15.5, fontWeight: 800, lineHeight: 1.2, letterSpacing: "-.03em" }}>{activity.title}</h3>
         <p style={{ margin: "0 0 10px", color: "#6B6B6B", fontSize: 12.5, lineHeight: 1.45, flex: 1 }}>{activity.description}</p>
         <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
-          {visible.map(t => {
-            const logo = TOOL_LOGOS[t] ?? { bg: "#888", label: t.slice(0, 2).toUpperCase() };
-            return (
-              <span key={t} style={{ height: 26, display: "inline-flex", alignItems: "center", gap: 5, padding: "0 8px 0 4px", border: "1px solid #E8E6DC", background: "white", borderRadius: 999 }}>
-                <span style={{ width: 18, height: 18, borderRadius: 5, display: "inline-grid", placeItems: "center", fontSize: 8, fontWeight: 900, color: "white", background: logo.bg, flexShrink: 0 }}>{logo.label}</span>
-                <span style={{ fontSize: 11, color: "#444", fontWeight: 700 }}>{t}</span>
-              </span>
-            );
-          })}
+          {visible.map(t => (
+            <span key={t} style={{ height: 26, display: "inline-flex", alignItems: "center", gap: 5, padding: "0 8px 0 4px", border: "1px solid #E8E6DC", background: "white", borderRadius: 999 }}>
+              <ToolIcon tool={t} size={18} logos={toolLogos} />
+              <span style={{ fontSize: 11, color: "#444", fontWeight: 700 }}>{t}</span>
+            </span>
+          ))}
           {extra > 0 && <span style={{ height: 26, padding: "0 8px", display: "inline-flex", alignItems: "center", borderRadius: 999, background: "#F0EEE8", color: "#6B6B6B", fontSize: 11, fontWeight: 800 }}>+{extra}</span>}
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 5, paddingTop: 10, borderTop: "1px solid rgba(232,230,220,.9)" }}>
@@ -88,7 +71,7 @@ function ActivityCard({ activity, status }: { activity: Activity; status: string
   );
 }
 
-export default function DashboardClient({ profile, activities, progress }: Props) {
+export default function DashboardClient({ profile, activities, progress, toolLogos }: Props) {
   const [searchQ, setSearchQ] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [activeTool, setActiveTool] = useState("all");
@@ -184,7 +167,12 @@ export default function DashboardClient({ profile, activities, progress }: Props
                 background: activeTool === t ? "#FFCE00" : "white", color: activeTool === t ? "#221D23" : "#4A4848",
                 fontWeight: 700, fontSize: 12.5, cursor: "pointer", boxShadow: activeTool === t ? "0 4px 14px rgba(255,206,0,.28)" : "none",
               }}>
-                {t === "all" ? "All tools" : t.charAt(0).toUpperCase() + t.slice(1)}
+                {t === "all" ? "All tools" : (
+                  <>
+                    <ToolIcon tool={t} size={16} logos={toolLogos} />
+                    {t.charAt(0).toUpperCase() + t.slice(1)}
+                  </>
+                )}
               </button>
             ))}
           </div>
@@ -197,7 +185,7 @@ export default function DashboardClient({ profile, activities, progress }: Props
               <section style={{ marginBottom: 26 }}>
                 <h2 style={{ margin: "0 0 12px", fontSize: 20, fontWeight: 800, letterSpacing: "-.04em" }}>Newly added</h2>
                 <div style={grid3}>
-                  {recentActivities.map(a => <ActivityCard key={a.id} activity={a} status={progressMap[a.id]?.status ?? "not_started"} />)}
+                  {recentActivities.map(a => <ActivityCard key={a.id} activity={a} status={progressMap[a.id]?.status ?? "not_started"} toolLogos={toolLogos} />)}
                 </div>
               </section>
             )}
@@ -207,7 +195,7 @@ export default function DashboardClient({ profile, activities, progress }: Props
               <section style={{ marginBottom: 26 }}>
                 <h2 style={{ margin: "0 0 12px", fontSize: 20, fontWeight: 800, letterSpacing: "-.04em" }}>Continue where you left off</h2>
                 <div style={grid3}>
-                  {continueActivities.map(a => <ActivityCard key={a.id} activity={a} status="in_progress" />)}
+                  {continueActivities.map(a => <ActivityCard key={a.id} activity={a} status="in_progress" toolLogos={toolLogos} />)}
                 </div>
               </section>
             )}
@@ -232,7 +220,7 @@ export default function DashboardClient({ profile, activities, progress }: Props
                   </div>
                 ) : (
                   <div style={grid3}>
-                    {filtered.map(a => <ActivityCard key={a.id} activity={a} status={progressMap[a.id]?.status ?? "not_started"} />)}
+                    {filtered.map(a => <ActivityCard key={a.id} activity={a} status={progressMap[a.id]?.status ?? "not_started"} toolLogos={toolLogos} />)}
                   </div>
                 )}
               </div>

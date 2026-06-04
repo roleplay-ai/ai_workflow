@@ -60,7 +60,7 @@ export default function LearnerView({ workflow }: Props) {
         setMessages([
           {
             role: "assistant",
-            content: `Hi! I'm your AI coach for ${title}. Look at the slide and ask me anything — I'll guide you through each step.`,
+            content: `Hi! I'm Nudgie, your AI coach for ${title}. Look at the slide and ask me anything — I'll guide you through each step.`,
           },
         ]);
       })
@@ -168,7 +168,10 @@ export default function LearnerView({ workflow }: Props) {
             style={{ borderColor: "#E2E8F0", background: "linear-gradient(180deg,rgba(255,255,255,.94),rgba(248,250,252,.94))" }}
           >
             <div>
-              <div className="text-[11px] font-black uppercase tracking-widest text-blue-600 mb-0.5">AI Coach</div>
+              <div className="text-[15px] tracking-tight text-slate-900 mb-0.5">
+                <span className="font-black">Nudgie</span>
+                <span className="font-medium"> — your AI coach</span>
+              </div>
               <div className="text-base font-black tracking-tight">Step {current + 1}: {step?.title}</div>
             </div>
             <div
@@ -245,7 +248,7 @@ export default function LearnerView({ workflow }: Props) {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-                placeholder="Ask the AI coach anything…"
+                placeholder="Ask Nudgie anything…"
                 className="flex-1 h-[42px] px-3.5 rounded-[13px] border text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20"
                 style={{ borderColor: "#CBD5E1", background: "#F8FAFC" }}
               />

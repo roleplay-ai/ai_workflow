@@ -37,6 +37,12 @@ export type ActivityCompany = {
   company_id: string;
 };
 
+export type ToolLogo = {
+  tool: string;
+  logo_url: string;
+  updated_at: string;
+};
+
 
 
 export type SlideImage = { url: string; caption?: string };
@@ -127,6 +133,11 @@ export type Database = {
         Row: ActivityCompany;
         Insert: { activity_id: string; company_id: string };
         Update: never;
+      };
+      tool_logos: {
+        Row: ToolLogo;
+        Insert: { tool: string; logo_url: string; updated_at?: string };
+        Update: { logo_url?: string; updated_at?: string };
       };
       activity_content: {
         Row: ActivityContent;

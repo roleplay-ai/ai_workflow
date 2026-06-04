@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import DashboardClient from "./DashboardClient";
+import { rowsToToolLogoMap } from "@/lib/toolLogos";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,7 @@ export default async function DashboardPage() {
     : { data: null };
 
   // Activities are now standalone — no module layer
-  const [{ data: activities }, { data: progress }] = await Promise.all([
+  const [{ data: activities }, { data: progress }, { data: toolLogoRows }] = await Promise.all([
     supabase
       .from("activities")
       .select("*, activity_content(id)")
@@ -34,6 +35,7 @@ export default async function DashboardPage() {
       .from("user_progress")
       .select("*")
       .eq("user_id", user.id),
+    supabase.from("tool_logos").select("tool, logo_url"),
   ]);
 
   const fullProfile = profile ? { ...profile, companies: company } : null;
@@ -43,6 +45,7 @@ export default async function DashboardPage() {
       profile={fullProfile as any}
       activities={activities as any ?? []}
       progress={progress ?? []}
+      toolLogos={rowsToToolLogoMap(toolLogoRows ?? [])}
     />
   );
 }

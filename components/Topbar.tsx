@@ -61,7 +61,10 @@ export default function Topbar({ profile, role, onSignOut }: Props) {
           <Link href="/admin" style={{ color: "inherit", textDecoration: "none" }}>Admin</Link>
         )}
         {role === "superadmin" && (
-          <Link href="/superadmin" style={{ color: "inherit", textDecoration: "none" }}>Superadmin</Link>
+          <>
+            <Link href="/superadmin" style={{ color: "inherit", textDecoration: "none" }}>Superadmin</Link>
+            <Link href="/superadmin/tool-logos" style={{ color: "inherit", textDecoration: "none" }}>Tool logos</Link>
+          </>
         )}
 
         {/* Profile pill + dropdown */}

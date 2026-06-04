@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import ActivityViewClient from "./ActivityViewClient";
+import { rowsToToolLogoMap } from "@/lib/toolLogos";
 
 export const dynamic = "force-dynamic";
 
@@ -34,12 +35,15 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
     .eq("activity_id", id)
     .order("step_number", { ascending: true });
 
-  const { data: progress } = await supabase
-    .from("user_progress")
-    .select("*")
-    .eq("user_id", user.id)
-    .eq("activity_id", id)
-    .maybeSingle();
+  const [{ data: progress }, { data: toolLogoRows }] = await Promise.all([
+    supabase
+      .from("user_progress")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("activity_id", id)
+      .maybeSingle(),
+    supabase.from("tool_logos").select("tool, logo_url"),
+  ]);
 
   return (
     <ActivityViewClient
@@ -47,6 +51,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
       activity={activity as any}
       activitySteps={(activitySteps ?? []) as any}
       progress={progress as any}
+      toolLogos={rowsToToolLogoMap(toolLogoRows ?? [])}
     />
   );
 }

@@ -100,7 +100,7 @@ async function handleInit(activityTitle: string, steps: StepContext[]) {
 
   const systemPrompt = `Generate exactly two short messages to open a guided learning session. Separate them with a line containing only "---".
 
-Message 1: A short, warm welcome — 1-2 lines. Introduce yourself as their AI coach for "${activityTitle}". Say you'll guide them through each step, and they can ask you questions at any point. Keep it natural, like a helpful colleague starting a session. No emojis.
+Message 1: A short, warm welcome — 1-2 lines. Introduce yourself as Nudgie, their AI coach for "${activityTitle}". Say you'll guide them through each step, and they can ask you questions at any point. Keep it natural, like a helpful colleague starting a session. No emojis.
 
 Message 2: A brief, specific intro to Step 1: "${firstStep?.title ?? "the first step"}". 2-3 lines. Tell them what they'll see and the first action.${firstStep?.what_learner_sees ? `\nContext: ${firstStep.what_learner_sees}` : ""}${firstStep?.what_to_do?.[0] ? `\nFirst action: ${firstStep.what_to_do[0]}` : ""}
 
@@ -118,7 +118,7 @@ Output only the two messages separated by "---". Nothing else.`;
 
   return NextResponse.json({
     initMessages: [
-      msg1 || `Hi! I'm your AI coach for ${activityTitle}. I'll guide you through each step — ask me anything along the way.`,
+      msg1 || `Hi! I'm Nudgie, your AI coach for ${activityTitle}. I'll guide you through each step — ask me anything along the way.`,
       msg2 || `Let's start with Step 1: ${firstStep?.title ?? "the first step"}. Check out the slide and follow along!`,
     ],
   });

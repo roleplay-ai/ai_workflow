@@ -4,6 +4,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import Topbar from "@/components/Topbar";
 import type { Profile, Company, Activity } from "@/lib/supabase/types";
+import { TOOLS } from "@/lib/tools";
 
 type ActivityRow = Activity & { activity_content: { id: string } | null };
 
@@ -15,7 +16,6 @@ type Props = {
 };
 
 const CATEGORIES = ["chat", "build", "automate"];
-const TOOLS = ["claude","gemini","chatgpt","copilot","drive","sheets","gmail","calendar","vapi","wati","lovable","napkin","ai-studio","notebooklm"];
 
 export default function SuperadminClient({ profile, companies, activities: initActivities, allAssignments: initAssignments }: Props) {
   const [activities,   setActivities]   = useState(initActivities);
@@ -93,7 +93,10 @@ export default function SuperadminClient({ profile, companies, activities: initA
             <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, letterSpacing: "-.04em" }}>Activities</h1>
             <p style={{ margin: "3px 0 0", color: "#6B6B6B", fontSize: 13 }}>{activities.length} total · create, edit content, assign to companies</p>
           </div>
-          <button onClick={() => setShowForm(v => !v)} style={btnAmber}>+ New Activity</button>
+          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            <Link href="/superadmin/tool-logos" style={{ ...btnGhost, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Tool logos</Link>
+            <button onClick={() => setShowForm(v => !v)} style={btnAmber}>+ New Activity</button>
+          </div>
         </div>
 
         {/* Create form */}
