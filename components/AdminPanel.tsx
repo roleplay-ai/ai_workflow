@@ -30,7 +30,6 @@ export default function AdminPanel() {
         id: uuidv4(),
         title: data.title,
         subtitle: data.subtitle,
-        rawMarkdown: await file.text(),
         steps: data.steps,
         slides: [],
       };
