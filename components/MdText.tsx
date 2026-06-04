@@ -18,9 +18,11 @@ export default function MdText({ text, className = "" }: { text: string; classNa
     const bulletMatch = trimmed.match(/^[-•*]\s+(.+)/);
     if (bulletMatch) {
       return (
-        <div key={i} className="flex gap-1.5 items-start">
-          <span className="mt-[3px] flex-shrink-0 w-1.5 h-1.5 rounded-full bg-current opacity-50" />
-          <span>{renderInline(bulletMatch[1])}</span>
+        <div key={i} className="flex gap-2 items-start">
+          <span className="flex-shrink-0 flex items-center h-[1.625em] w-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-current opacity-50" />
+          </span>
+          <span className="min-w-0 flex-1">{renderInline(bulletMatch[1])}</span>
         </div>
       );
     }
