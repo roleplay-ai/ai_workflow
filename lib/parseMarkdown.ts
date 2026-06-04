@@ -1,23 +1,6 @@
 import { WorkflowStep } from "@/types";
 import { v4 as uuidv4 } from "uuid";
 
-/**
- * Parses a markdown workflow document into steps.
- *
- * Expected format:
- * ---
- * title: Workflow Title
- * subtitle: Short subtitle
- * ---
- *
- * ## Step 1: Step Title
- * **Description:** What happens in this step.
- * **AI Message:** What the AI coach says to open this step.
- * **Callout:** Annotation shown on the slide.
- * **Slide:** 1  (1-based slide index)
- *
- * ...repeat for each step
- */
 export function parseMarkdownWorkflow(markdown: string): {
   title: string;
   subtitle: string;
@@ -27,7 +10,6 @@ export function parseMarkdownWorkflow(markdown: string): {
   let title = "Guided Workflow";
   let subtitle = "AI-powered step-by-step guide";
 
-  // Parse frontmatter
   if (lines[0]?.trim() === "---") {
     const endIdx = lines.findIndex((l, i) => i > 0 && l.trim() === "---");
     if (endIdx > 0) {
@@ -42,11 +24,9 @@ export function parseMarkdownWorkflow(markdown: string): {
   }
 
   const content = lines.join("\n");
-
-  // Split by ## headings
   const stepBlocks = content.split(/^## /m).filter((b) => b.trim());
 
-  const steps: WorkflowStep[] = stepBlocks.map((block) => {
+  const steps: WorkflowStep[] = stepBlocks.map((block, idx) => {
     const [firstLine, ...rest] = block.split("\n");
     const stepTitle = firstLine.replace(/^Step \d+:\s*/i, "").trim();
     const body = rest.join("\n");
@@ -57,21 +37,20 @@ export function parseMarkdownWorkflow(markdown: string): {
     };
 
     const slideVal = get("Slide");
-    const slideIndex = slideVal ? Math.max(0, parseInt(slideVal, 10) - 1) : 0;
-
-    // Extract description — everything that isn't a **Key:** line
-    const descLines = rest.filter(
-      (l) => !l.match(/^\*\*\w[\w ]+:\*\*/) && l.trim() !== ""
-    );
-    const description = get("Description") || descLines.join("\n").trim();
+    const slideNumber = slideVal ? Math.max(1, parseInt(slideVal, 10)) : idx + 1;
+    const description = get("Description") || rest.filter(l => !l.match(/^\*\*\w[\w ]+:\*\*/) && l.trim()).join("\n").trim();
 
     return {
       id: uuidv4(),
+      step_number: idx + 1,
+      slide_number: slideNumber,
       title: stepTitle,
-      description,
-      aiMessage: get("AI Message") || get("AI") || description,
-      callout: get("Callout") || undefined,
-      slideIndex,
+      what_learner_sees: description,
+      what_this_means: get("AI Message") || get("AI") || description,
+      what_to_do: [],
+      if_stuck: "Not specified in this slide.",
+      callout: get("Callout") || "",
+      coach_next: "",
     };
   });
 

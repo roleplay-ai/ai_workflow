@@ -310,16 +310,16 @@ subtitle: Short description
                       <div className="text-xs font-black text-slate-500 min-w-[80px]">Step {si + 1}</div>
                       <div className="flex-1 text-sm font-semibold text-slate-700 truncate">{step.title}</div>
                       <select
-                        value={step.slideIndex}
+                        value={step.slide_number}
                         onChange={(e) => {
-                          const idx = parseInt(e.target.value);
-                          setWorkflow({ ...workflow, steps: workflow.steps.map((s, i) => i === si ? { ...s, slideIndex: idx } : s) });
+                          const num = parseInt(e.target.value);
+                          setWorkflow({ ...workflow, steps: workflow.steps.map((s, i) => i === si ? { ...s, slide_number: num } : s) });
                         }}
                         className="px-3 py-1.5 rounded-xl border text-sm font-semibold outline-none" style={{ borderColor: "#CBD5E1" }}>
                         {slides.map((_, i) => (
-                          <option key={i} value={i}>Slide {i + 1}</option>
+                          <option key={i} value={i + 1}>Slide {i + 1}</option>
                         ))}
-                        <option value={-1}>No slide</option>
+                        <option value={0}>No slide</option>
                       </select>
                     </div>
                   ))}

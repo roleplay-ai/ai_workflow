@@ -1,15 +1,8 @@
-import type { WorkflowStep } from "./supabase/types";
-
-/**
- * Splits a workflow markdown document into steps.
- * A step begins at any line starting with ## or a numbered heading like "Step 1".
- * Everything before the first heading is treated as an intro (skipped from step list).
- */
-export function parseWorkflowSteps(markdown: string): WorkflowStep[] {
+export function parseWorkflowSteps(markdown: string): { title: string; body: string }[] {
   if (!markdown?.trim()) return [];
 
   const lines = markdown.split("\n");
-  const steps: WorkflowStep[] = [];
+  const steps: { title: string; body: string }[] = [];
   let currentTitle = "";
   let currentBody: string[] = [];
 

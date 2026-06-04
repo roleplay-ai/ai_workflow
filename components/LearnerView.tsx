@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Workflow, ChatMessage, buildCoachMessage } from "@/types";
 import QuizModal from "./QuizModal";
 import MdText from "./MdText";
@@ -22,6 +22,7 @@ export default function LearnerView({ workflow }: Props) {
   const [jumpToast, setJumpToast] = useState<string | null>(null);
   const chatRef = useRef<HTMLDivElement>(null);
 
+  const [slideOpen, setSlideOpen] = useState(false);
   const step     = steps[current];
   const slideUrl = step?.slideUrl ?? slides[step?.slide_number ? step.slide_number - 1 : 0] ?? slides[0] ?? null;
   const progress = ((current + 1) / steps.length) * 100;
@@ -193,12 +194,31 @@ export default function LearnerView({ workflow }: Props) {
               </div>
               <div className="flex-1 min-h-0 overflow-hidden relative bg-slate-50 flex items-center justify-center">
                 {slideUrl ? (
-                  <SlideZoom src={slideUrl} alt={`Step ${current + 1}`} />
+                  <SlideZoom src={slideUrl} alt={`Step ${current + 1}`} open={slideOpen} onClose={() => setSlideOpen(false)} />
                 ) : (
                   <div className="flex items-center justify-center h-full min-h-[300px] text-slate-400 text-sm font-semibold flex-col gap-3">
                     <div className="text-4xl">🖼️</div>
                     <div>No slide image for this step</div>
                   </div>
+                )}
+                {slideUrl && (
+                  <button
+                    onClick={() => setSlideOpen(true)}
+                    title="Expand"
+                    style={{
+                      position: "absolute", bottom: 10, right: 10, zIndex: 2,
+                      width: 28, height: 28, borderRadius: 7, border: 0, cursor: "pointer",
+                      background: "rgba(15,23,42,.42)", backdropFilter: "blur(4px)",
+                      color: "white", display: "flex", alignItems: "center", justifyContent: "center",
+                    }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="15 3 21 3 21 9"/>
+                      <polyline points="9 21 3 21 3 15"/>
+                      <line x1="21" y1="3" x2="14" y2="10"/>
+                      <line x1="3" y1="21" x2="10" y2="14"/>
+                    </svg>
+                  </button>
                 )}
               </div>
             </div>
