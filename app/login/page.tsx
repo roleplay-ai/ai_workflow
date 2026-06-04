@@ -78,13 +78,14 @@ export default function LoginPage() {
       }}>
         {/* Brand */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 28 }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 10,
-            background: "linear-gradient(135deg,#FFCE00,#F68A29)",
-            display: "grid", placeItems: "center",
-            fontWeight: 900, fontSize: 12, color: "#221D23",
-          }}>AI</div>
-          <span style={{ fontWeight: 800, fontSize: 17, letterSpacing: "-.03em" }}>AI Work Studio</span>
+          <img
+            src="/nudgeable-icon.png"
+            alt=""
+            width={36}
+            height={36}
+            style={{ width: 36, height: 36, borderRadius: 10, display: "block", flexShrink: 0 }}
+          />
+          <span style={{ fontWeight: 800, fontSize: 17, letterSpacing: "-.03em" }}>Nudgeable AI Work Studio</span>
         </div>
 
         <h1 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 800, letterSpacing: "-.04em" }}>

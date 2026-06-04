@@ -37,18 +37,26 @@ export default function Topbar({ profile, role, onSignOut }: Props) {
       fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     }}>
       {/* Brand */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 16, fontWeight: 800, letterSpacing: "-.03em" }}>
-        <div style={{
-          width: 32, height: 32, borderRadius: 9, display: "grid", placeItems: "center",
-          background: "linear-gradient(135deg,#FFCE00,#F68A29)",
-          boxShadow: "0 4px 14px rgba(255,206,0,.3)", fontSize: 10, fontWeight: 900, color: "#221D23",
-        }}>AI</div>
-        <span>AI Work Studio</span>
-      </div>
+      <Link
+        href="/dashboard"
+        style={{
+          display: "flex", alignItems: "center", gap: 10, fontSize: 16, fontWeight: 800,
+          letterSpacing: "-.03em", color: "inherit", textDecoration: "none",
+        }}
+      >
+        <img
+          src="/nudgeable-icon.png"
+          alt=""
+          width={32}
+          height={32}
+          style={{ width: 32, height: 32, borderRadius: 9, display: "block", flexShrink: 0 }}
+        />
+        <span>Nudgeable AI Work Studio</span>
+      </Link>
 
       {/* Nav */}
       <nav style={{ display: "flex", gap: 22, alignItems: "center", color: "#6B6B6B", fontSize: 13.5, fontWeight: 600 }}>
-        <Link href="/dashboard" style={{ color: "inherit", textDecoration: "none" }}>Explore</Link>
+        {/* <Link href="/dashboard" style={{ color: "inherit", textDecoration: "none" }}>Explore</Link> */}
         {(role === "admin" || role === "superadmin") && (
           <Link href="/admin" style={{ color: "inherit", textDecoration: "none" }}>Admin</Link>
         )}
@@ -78,7 +86,7 @@ export default function Topbar({ profile, role, onSignOut }: Props) {
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#B0ABA5" strokeWidth="2.5"
               strokeLinecap="round" strokeLinejoin="round"
               style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: ".15s" }}>
-              <polyline points="6 9 12 15 18 9"/>
+              <polyline points="6 9 12 15 18 9" />
             </svg>
           </button>
 
@@ -145,9 +153,9 @@ export default function Topbar({ profile, role, onSignOut }: Props) {
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                   strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                  <polyline points="16 17 21 12 16 7"/>
-                  <line x1="21" y1="12" x2="9" y2="12"/>
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
                 </svg>
                 Sign out
               </button>
