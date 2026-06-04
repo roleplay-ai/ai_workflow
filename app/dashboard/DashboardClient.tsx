@@ -12,32 +12,32 @@ type Props = {
 };
 
 const TOOL_LOGOS: Record<string, { bg: string; label: string }> = {
-  claude:      { bg: "#c15f3c",  label: "Cl" },
-  gemini:      { bg: "linear-gradient(135deg,#4285f4,#a142f4)", label: "G" },
-  chatgpt:     { bg: "#10a37f", label: "C"  },
-  copilot:     { bg: "linear-gradient(135deg,#00a4ef,#7fba00)", label: "Co" },
-  drive:       { bg: "#fbbc04", label: "D"  },
-  sheets:      { bg: "#0f9d58", label: "S"  },
-  gmail:       { bg: "#ea4335", label: "M"  },
-  calendar:    { bg: "#1a73e8", label: "Ca" },
-  vapi:        { bg: "#111827", label: "V"  },
-  wati:        { bg: "#22c55e", label: "W"  },
-  lovable:     { bg: "#ff477e", label: "L"  },
-  napkin:      { bg: "#8b5cf6", label: "N"  },
+  claude: { bg: "#c15f3c", label: "Cl" },
+  gemini: { bg: "linear-gradient(135deg,#4285f4,#a142f4)", label: "G" },
+  chatgpt: { bg: "#10a37f", label: "C" },
+  copilot: { bg: "linear-gradient(135deg,#00a4ef,#7fba00)", label: "Co" },
+  drive: { bg: "#fbbc04", label: "D" },
+  sheets: { bg: "#0f9d58", label: "S" },
+  gmail: { bg: "#ea4335", label: "M" },
+  calendar: { bg: "#1a73e8", label: "Ca" },
+  vapi: { bg: "#111827", label: "V" },
+  wati: { bg: "#22c55e", label: "W" },
+  lovable: { bg: "#ff477e", label: "L" },
+  napkin: { bg: "#8b5cf6", label: "N" },
   "ai-studio": { bg: "#3b82f6", label: "AI" },
-  notebooklm:  { bg: "#fbbc04", label: "NB" },
+  notebooklm: { bg: "#fbbc04", label: "NB" },
 };
 
 const CAT_META: Record<string, { icon: string; label: string; stripe: string; pill: { bg: string; color: string; border: string } }> = {
-  chat:     { icon: "✦", label: "Chatbot Feature",  stripe: "linear-gradient(90deg,#623CEA,#3696FC)", pill: { bg: "rgba(98,60,234,.08)",  color: "#5030C0", border: "rgba(98,60,234,.2)"  } },
-  build:    { icon: "🛠", label: "Vibe Coding",      stripe: "linear-gradient(90deg,#23CE68,#3696FC)", pill: { bg: "rgba(35,206,104,.08)", color: "#17A855", border: "rgba(35,206,104,.2)" } },
-  automate: { icon: "⚡", label: "Work Automation",  stripe: "linear-gradient(90deg,#F68A29,#FFCE00)", pill: { bg: "rgba(246,138,41,.08)", color: "#B05000", border: "rgba(246,138,41,.2)" } },
+  chat: { icon: "✦", label: "Chatbot Feature", stripe: "linear-gradient(90deg,#623CEA,#3696FC)", pill: { bg: "rgba(98,60,234,.08)", color: "#5030C0", border: "rgba(98,60,234,.2)" } },
+  build: { icon: "🛠", label: "Build with AI", stripe: "linear-gradient(90deg,#23CE68,#3696FC)", pill: { bg: "rgba(35,206,104,.08)", color: "#17A855", border: "rgba(35,206,104,.2)" } },
+  automate: { icon: "⚡", label: "Work Automation", stripe: "linear-gradient(90deg,#F68A29,#FFCE00)", pill: { bg: "rgba(246,138,41,.08)", color: "#B05000", border: "rgba(246,138,41,.2)" } },
 };
 
 function statusChip(status: string) {
-  if (status === "completed")   return { label: "Completed",    bg: "rgba(35,206,104,.12)",  color: "#17A855" };
-  if (status === "in_progress") return { label: "In Progress",  bg: "rgba(54,150,252,.12)",  color: "#1A7FD4" };
-  return                               { label: "Not Started",  bg: "#F0EEE8",               color: "#6B6B6B" };
+  if (status === "completed") return { label: "Completed", bg: "rgba(35,206,104,.12)", color: "#17A855" };
+  if (status === "in_progress") return { label: "In Progress", bg: "rgba(54,150,252,.12)", color: "#1A7FD4" };
+  return { label: "Not Started", bg: "#F0EEE8", color: "#6B6B6B" };
 }
 
 function ActivityCard({ activity, status }: { activity: Activity; status: string }) {
@@ -89,9 +89,9 @@ function ActivityCard({ activity, status }: { activity: Activity; status: string
 }
 
 export default function DashboardClient({ profile, activities, progress }: Props) {
-  const [searchQ,      setSearchQ]      = useState("");
-  const [activeTab,    setActiveTab]    = useState("all");
-  const [activeTool,   setActiveTool]   = useState("all");
+  const [searchQ, setSearchQ] = useState("");
+  const [activeTab, setActiveTab] = useState("all");
+  const [activeTool, setActiveTool] = useState("all");
   const [activeFilter, setActiveFilter] = useState("all");
 
   const progressMap = useMemo(() => {
@@ -100,12 +100,12 @@ export default function DashboardClient({ profile, activities, progress }: Props
     return m;
   }, [progress]);
 
-  const completed  = progress.filter(p => p.status === "completed").length;
+  const completed = progress.filter(p => p.status === "completed").length;
   const inProgress = progress.filter(p => p.status === "in_progress").length;
-  const totalPts   = progress.filter(p => p.status === "completed")
+  const totalPts = progress.filter(p => p.status === "completed")
     .reduce((s, p) => s + (activities.find(a => a.id === p.activity_id)?.points ?? 0), 0);
 
-  const recentActivities  = activities.slice(0, 3);
+  const recentActivities = activities.slice(0, 3);
   const continueActivities = activities.filter(a => progressMap[a.id]?.status === "in_progress").slice(0, 3);
 
   const filtered = useMemo(() => {
@@ -113,14 +113,14 @@ export default function DashboardClient({ profile, activities, progress }: Props
     return activities.filter(a => {
       const status = progressMap[a.id]?.status ?? "not_started";
       const text = `${a.title} ${a.description} ${a.tools.join(" ")} ${a.level} ${a.category} ${status}`.toLowerCase();
-      const matchTab    = activeTab === "all" || a.category === activeTab;
-      const matchTool   = activeTool === "all" || a.tools.includes(activeTool);
-      const matchQ      = !q || text.includes(q);
-      let   matchFilter = true;
-      if (activeFilter === "beginner")   matchFilter = a.level === "Beginner";
-      if (activeFilter === "short")      matchFilter = (a.time_estimate_minutes ?? 99) <= 15;
+      const matchTab = activeTab === "all" || a.category === activeTab;
+      const matchTool = activeTool === "all" || a.tools.includes(activeTool);
+      const matchQ = !q || text.includes(q);
+      let matchFilter = true;
+      if (activeFilter === "beginner") matchFilter = a.level === "Beginner";
+      if (activeFilter === "short") matchFilter = (a.time_estimate_minutes ?? 99) <= 15;
       if (activeFilter === "notstarted") matchFilter = status === "not_started";
-      if (activeFilter === "mytool")     matchFilter = matchTool;
+      if (activeFilter === "mytool") matchFilter = matchTool;
       return matchTab && matchTool && matchQ && (activeFilter === "mytool" ? matchTool : matchFilter);
     });
   }, [activities, progressMap, searchQ, activeTab, activeTool, activeFilter]);
@@ -159,7 +159,7 @@ export default function DashboardClient({ profile, activities, progress }: Props
         {/* Hero */}
         <section style={{ padding: "44px 0 22px", textAlign: "center" }}>
           <div style={{ display: "inline-flex", gap: 6, alignItems: "center", padding: "6px 13px", borderRadius: 999, background: "white", border: "1px solid #E8E6DC", color: "#F68A29", fontSize: 11.5, fontWeight: 700, marginBottom: 18, letterSpacing: ".02em" }}>
-            ★ New activities added every week
+            ★ New applications added every week
           </div>
           <h1 style={{ maxWidth: 740, margin: "0 auto 14px", fontSize: "clamp(28px,5vw,48px)", fontWeight: 900, lineHeight: 1.04, letterSpacing: "-.05em" }}>
             Practical AI workflows for everyday work
@@ -169,7 +169,7 @@ export default function DashboardClient({ profile, activities, progress }: Props
           </p>
           {/* Search */}
           <div style={{ maxWidth: 740, height: 60, margin: "0 auto 16px", display: "flex", alignItems: "center", gap: 10, padding: "0 7px 0 16px", background: "white", border: "1.5px solid #E8E6DC", borderRadius: 999, boxShadow: "0 2px 12px rgba(34,29,35,.07)" }}>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#B0ABA5" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#B0ABA5" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
             <input value={searchQ} onChange={e => setSearchQ(e.target.value)} placeholder="Search activities, tools, or topics…"
               suppressHydrationWarning
               style={{ flex: 1, border: 0, outline: 0, fontSize: 14.5, background: "transparent", color: "#221D23", fontFamily: "inherit" }} />
@@ -218,12 +218,12 @@ export default function DashboardClient({ profile, activities, progress }: Props
               <div style={{ background: "white", border: "1px solid #E8E6DC", borderRadius: 20, padding: 15, boxShadow: "0 2px 12px rgba(34,29,35,.07)" }}>
                 {/* Tabs */}
                 <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 11, marginBottom: 11, borderBottom: "1px solid #E8E6DC" }}>
-                  {[{ id: "all", label: "⭐ All" }, { id: "chat", label: "✦ Chatbot" }, { id: "automate", label: "⚡ Automation" }, { id: "build", label: "🛠 Vibe Coding" }]
+                  {[{ id: "all", label: "⭐ All" }, { id: "chat", label: "✦ Chatbot" }, { id: "automate", label: "⚡ Automation" }, { id: "build", label: "🛠 Build" }]
                     .map(tab => <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={tabBtn(activeTab === tab.id)}>{tab.label}</button>)}
                 </div>
                 {/* Filters */}
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
-                  {[{ id: "all", label: "All" }, { id: "beginner", label: "Beginner" }, { id: "short", label: "≤ 15 min" }, { id: "notstarted", label: "Not Started" }, { id: "mytool", label: "My Chatbot" }]
+                  {[{ id: "all", label: "All" }, { id: "beginner", label: "Beginner" }, { id: "short", label: "≤ 15 min" }, { id: "notstarted", label: "Not Started" }]
                     .map(f => <button key={f.id} onClick={() => setActiveFilter(f.id)} style={filterBtn(activeFilter === f.id)}>{f.label}</button>)}
                 </div>
                 {filtered.length === 0 ? (
@@ -259,10 +259,10 @@ export default function DashboardClient({ profile, activities, progress }: Props
               {/* Summary tiles */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 7, marginBottom: 14 }}>
                 {[
-                  { label: "✓ Completed",  value: completed,            bg: "rgba(35,206,104,.08)",  border: "rgba(35,206,104,.2)" },
-                  { label: "↻ In Progress", value: inProgress,           bg: "rgba(54,150,252,.08)",  border: "rgba(54,150,252,.2)" },
-                  { label: "+ Points",      value: totalPts,             bg: "rgba(255,206,0,.12)",   border: "rgba(255,206,0,.3)"  },
-                  { label: "◆ Available",   value: activities.length,    bg: "rgba(246,138,41,.08)",  border: "rgba(246,138,41,.2)" },
+                  { label: "✓ Completed", value: completed, bg: "rgba(35,206,104,.08)", border: "rgba(35,206,104,.2)" },
+                  { label: "↻ In Progress", value: inProgress, bg: "rgba(54,150,252,.08)", border: "rgba(54,150,252,.2)" },
+                  { label: "+ Points", value: totalPts, bg: "rgba(255,206,0,.12)", border: "rgba(255,206,0,.3)" },
+                  { label: "◆ Available", value: activities.length, bg: "rgba(246,138,41,.08)", border: "rgba(246,138,41,.2)" },
                 ].map((tile, i) => (
                   <div key={i} style={{ borderRadius: 13, padding: "11px 10px", border: `1px solid ${tile.border}`, background: tile.bg }}>
                     <div style={{ color: "#6B6B6B", fontSize: 11, fontWeight: 700, marginBottom: 4 }}>{tile.label}</div>
@@ -272,9 +272,9 @@ export default function DashboardClient({ profile, activities, progress }: Props
               </div>
               {/* Category progress */}
               {[
-                { label: "Chatbot",    key: "chat",     color: "linear-gradient(90deg,#623CEA,#3696FC)" },
+                { label: "Chatbot", key: "chat", color: "linear-gradient(90deg,#623CEA,#3696FC)" },
                 { label: "Automation", key: "automate", color: "linear-gradient(90deg,#F68A29,#FFCE00)" },
-                { label: "Vibe Coding",key: "build",    color: "linear-gradient(90deg,#23CE68,#3696FC)" },
+                { label: "Vibe Coding", key: "build", color: "linear-gradient(90deg,#23CE68,#3696FC)" },
               ].map(cat => {
                 const catActs = activities.filter(a => a.category === cat.key);
                 const catDone = catActs.filter(a => progressMap[a.id]?.status === "completed").length;
