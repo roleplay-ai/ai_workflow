@@ -120,7 +120,7 @@ export default function AdminPanel() {
     // index lookup — this prevents slide/step mismatches on navigation.
     const stepsWithUrls = workflow.steps.map((s) => ({
       ...s,
-      slideUrl: slides[s.slideIndex] ?? slides[0] ?? undefined,
+      slideUrl: slides[s.slide_number - 1] ?? slides[0] ?? undefined,
     }));
     const finalWorkflow: Workflow = { ...workflow, slides, steps: stepsWithUrls };
     try {
