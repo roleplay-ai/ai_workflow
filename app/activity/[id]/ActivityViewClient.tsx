@@ -5,7 +5,6 @@ import Topbar from "@/components/Topbar";
 import QuizModal from "@/components/QuizModal";
 import MdText from "@/components/MdText";
 import SlideZoom from "@/components/SlideZoom";
-import { buildCoachMessage } from "@/types";
 import type { WorkflowStep, Quiz } from "@/types";
 import type { Profile, Activity, ActivityContent, ActivityStep, UserProgress } from "@/lib/supabase/types";
 import panelStyles from "./activity-panel.module.css";
@@ -58,13 +57,19 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
 
   type Msg = { role: "user" | "assistant"; content: string };
 
+  const stepsForAPI = useMemo(() => steps.map(s => ({
+    title: s.title,
+    what_learner_sees: s.what_learner_sees,
+    what_this_means: s.what_this_means,
+    what_to_do: s.what_to_do,
+    if_stuck: s.if_stuck,
+  })), [steps]);
+
   const [current, setCurrent] = useState(0);
-  const [messages, setMessages] = useState<Msg[]>(() => {
-    const first = activitySteps[0];
-    return [{ role: "assistant", content: first ? buildCoachMessage(first) : `Welcome! Let's get started with "${activity.title}".` }];
-  });
+  const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(true);
   const [showQuiz, setShowQuiz] = useState(false);
   const [pendingQuiz, setPendingQuiz] = useState<Quiz | null>(null);
   const [jumpToast, setJumpToast] = useState<string | null>(null);
@@ -72,6 +77,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [slideOpen, setSlideOpen] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
+  const initDone = useRef(false);
 
   const step = steps[current];
   const slideUrl = step?.slideUrl ?? null;
@@ -92,7 +98,57 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
         updated_at: new Date().toISOString(),
       }).select().single().then(({ data }) => { if (data) setProgress(data as any); });
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch two opening messages from Claude on mount
+  useEffect(() => {
+    if (initDone.current) return;
+    initDone.current = true;
+    fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ init: true, activityTitle: activity.title, steps: stepsForAPI }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.initMessages) {
+          setMessages((data.initMessages as string[]).map(content => ({ role: "assistant" as const, content })));
+        }
+      })
+      .catch(() => {
+        setMessages([{ role: "assistant", content: `Hi! I'm your AI coach for **${activity.title}**. Look at the slide and ask me anything — I'll guide you through each step.` }]);
+      })
+      .finally(() => setInitializing(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const callAI = async (userMessage: string, stepIndexOverride?: number) => {
+    const effectiveIndex = stepIndexOverride ?? current;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: userMessage,
+          stepIndex: effectiveIndex,
+          activityTitle: activity.title,
+          steps: stepsForAPI,
+        }),
+      });
+      const data = await res.json();
+      if (data.reply) setMessages(m => [...m, { role: "assistant", content: data.reply }]);
+      if (typeof data.goToStep === "number") {
+        setCurrent(data.goToStep);
+        const stepTitle = steps[data.goToStep]?.title ?? `Step ${data.goToStep + 1}`;
+        setJumpToast(`Jumped to Step ${data.goToStep + 1}: ${stepTitle}`);
+        setTimeout(() => setJumpToast(null), 3500);
+      }
+    } catch {
+      setMessages(m => [...m, { role: "assistant", content: "Sorry, I had trouble connecting. Please try again." }]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const goNext = async () => {
     if (current >= steps.length - 1) {
@@ -112,22 +168,33 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
       return;
     }
 
+    if (loading || initializing) return;
+
     const quiz = quizForStep[current];
     if (quiz) { setPendingQuiz(quiz); setShowQuiz(true); }
-
-    const next = current + 1;
     setSlideOpen(false);
-    setCurrent(next);
-    setMessages(m => [...m, { role: "assistant", content: buildCoachMessage(steps[next]) }]);
 
     const completedSteps = Array.from(new Set([...(progress?.completed_steps ?? []), current]));
     if (progress) supabase.from("user_progress").update({ completed_steps: completedSteps, updated_at: new Date().toISOString() }).eq("id", progress.id);
+
+    const msg = "next";
+    setMessages(m => [...m, { role: "user", content: msg }]);
+    await callAI(msg, current);
   };
 
   const goPrev = () => {
-    if (current <= 0) return;
+    if (current <= 0 || loading || initializing) return;
     setSlideOpen(false);
-    setCurrent(c => c - 1);
+    const msg = "go back to previous step";
+    setMessages(m => [...m, { role: "user", content: msg }]);
+    callAI(msg, current);
+  };
+
+  const goToStep = (stepNum: number) => {
+    if (loading || initializing) return;
+    const msg = `go to step ${stepNum}`;
+    setMessages(m => [...m, { role: "user", content: msg }]);
+    callAI(msg, current);
   };
 
   const sendMessage = async () => {
@@ -135,37 +202,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
     const userMsg = input.trim();
     setInput("");
     setMessages(m => [...m, { role: "user", content: userMsg }]);
-    setLoading(true);
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: userMsg,
-          stepIndex: current,
-          activityTitle: activity.title,
-          steps: steps.map(s => ({
-            title: s.title,
-            what_learner_sees: s.what_learner_sees,
-            what_this_means: s.what_this_means,
-            what_to_do: s.what_to_do,
-            if_stuck: s.if_stuck,
-          })),
-        }),
-      });
-      const data = await res.json();
-      if (data.reply) setMessages(m => [...m, { role: "assistant", content: data.reply }]);
-      if (typeof data.goToStep === "number") {
-        setCurrent(data.goToStep);
-        const title = steps[data.goToStep]?.title ?? `Step ${data.goToStep + 1}`;
-        setJumpToast(`Jumped to Step ${data.goToStep + 1}: ${title}`);
-        setTimeout(() => setJumpToast(null), 3500);
-      }
-    } catch {
-      setMessages(m => [...m, { role: "assistant", content: "Sorry, I had trouble connecting. Please try again." }]);
-    } finally {
-      setLoading(false);
-    }
+    await callAI(userMsg);
   };
 
   async function handleSignOut() {
@@ -256,6 +293,12 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
 
           {/* Messages */}
           <div ref={chatRef} className={panelStyles.chatScroll}>
+            {initializing && (
+              <div style={{ display: "flex", gap: 10, alignSelf: "flex-start" }}>
+                <div style={{ width: 32, height: 32, flexShrink: 0, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900, color: "white", background: "linear-gradient(135deg,#2563EB,#14B8A6)" }}>AI</div>
+                <div style={{ borderRadius: 18, borderTopLeftRadius: 4, padding: "10px 14px", background: "white", border: "1px solid #E2E8F0", color: "#94A3B8", fontSize: 13.5 }}>Preparing your session…</div>
+              </div>
+            )}
             {messages.map((m, i) => (
               <div key={i} style={{ display: "flex", gap: 10, maxWidth: "95%", alignSelf: m.role === "user" ? "flex-end" : "flex-start", flexDirection: m.role === "user" ? "row-reverse" : "row" }}>
                 <div style={{ width: 32, height: 32, flexShrink: 0, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900, marginTop: 2, color: "white", background: m.role === "user" ? "#CBD5E1" : "linear-gradient(135deg,#2563EB,#14B8A6)" }}>
@@ -281,19 +324,41 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
 
           {/* Input */}
           <div style={{ flexShrink: 0, borderTop: "1px solid #E2E8F0", background: "rgba(255,255,255,.96)" }}>
-            <div style={{ display: "flex", gap: 10, padding: 14 }}>
-              <input
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendMessage()}
-                placeholder="Ask the AI coach anything…"
-                suppressHydrationWarning
-                style={{ flex: 1, height: 42, padding: "0 14px", borderRadius: 13, border: "1px solid #CBD5E1", fontSize: 13.5, background: "#F8FAFC", outline: "none", fontFamily: "inherit" }}
-              />
-              <button onClick={sendMessage} disabled={loading} suppressHydrationWarning
-                style={{ padding: "0 16px", height: 42, borderRadius: 13, border: 0, color: "white", fontSize: 13.5, fontWeight: 900, cursor: "pointer", background: "linear-gradient(135deg,#2563EB,#1D4ED8)", opacity: loading ? .6 : 1 }}>
-                Ask
-              </button>
+            <div style={{ padding: 14 }}>
+              <div style={{
+                display: "flex", alignItems: "center", gap: 8,
+                height: 44, padding: "0 6px 0 14px", borderRadius: 14,
+                border: "1px solid #CBD5E1", background: "#F8FAFC",
+              }}>
+                <input
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendMessage()}
+                  placeholder="Ask the AI coach anything…"
+                  suppressHydrationWarning
+                  style={{ flex: 1, minWidth: 0, height: "100%", border: 0, background: "transparent", fontSize: 13.5, outline: "none", fontFamily: "inherit" }}
+                />
+                <button
+                  type="button"
+                  onClick={sendMessage}
+                  disabled={loading || !input.trim()}
+                  title="Send"
+                  aria-label="Send message"
+                  suppressHydrationWarning
+                  style={{
+                    flexShrink: 0, width: 32, height: 32, borderRadius: 10, border: 0,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "white", cursor: input.trim() && !loading ? "pointer" : "default",
+                    background: input.trim() && !loading ? "linear-gradient(135deg,#2563EB,#1D4ED8)" : "#CBD5E1",
+                    opacity: loading ? .6 : 1, transition: "background .15s",
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <line x1="12" y1="19" x2="12" y2="5" />
+                    <polyline points="5 12 12 5 19 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -391,14 +456,22 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
                     const done = i < current;
                     const active = i === current;
                     return (
-                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderRadius: 8, background: active ? "#EFF6FF" : "transparent", paddingLeft: active ? 8 : 0, paddingRight: active ? 8 : 0, margin: active ? "0 -8px" : 0, transition: ".15s" }}>
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => goToStep(i + 1)}
+                        disabled={loading || initializing}
+                        style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderRadius: 8, background: active ? "#EFF6FF" : "transparent", paddingLeft: active ? 8 : 0, paddingRight: active ? 8 : 0, margin: active ? "0 -8px" : 0, transition: ".15s", border: 0, cursor: loading || initializing ? "default" : "pointer", width: "100%", textAlign: "left" }}
+                        onMouseEnter={e => { if (!loading && !initializing && !active) e.currentTarget.style.background = "#F8FAFC"; }}
+                        onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
+                      >
                         <div style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, display: "grid", placeItems: "center", fontSize: 11, fontWeight: 800, background: done ? "#22C55E" : active ? "#2563EB" : "#E2E8F0", color: done || active ? "white" : "#94A3B8", transition: ".2s" }}>
                           {done ? "✓" : i + 1}
                         </div>
                         <span style={{ fontSize: 12.5, fontWeight: active ? 700 : 500, color: done ? "#16A34A" : active ? "#1D4ED8" : "#64748B", lineHeight: 1.3, flex: 1 }}>
                           {s.title}
                         </span>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
@@ -454,8 +527,8 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
             {/* Progress bar + navigation */}
             <div style={{ flexShrink: 0, padding: "10px 16px", borderTop: "1px solid #E8EEF4", background: "#FAFBFC" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                <button onClick={goPrev} disabled={current === 0} suppressHydrationWarning
-                  style={{ padding: "7px 14px", borderRadius: 10, fontSize: 12.5, fontWeight: 800, cursor: "pointer", border: "1px solid #E2E8F0", background: "#F8FAFC", color: "#64748B", flexShrink: 0, opacity: current === 0 ? .4 : 1 }}>
+                <button onClick={goPrev} disabled={current === 0 || loading || initializing} suppressHydrationWarning
+                  style={{ padding: "7px 14px", borderRadius: 10, fontSize: 12.5, fontWeight: 800, cursor: "pointer", border: "1px solid #E2E8F0", background: "#F8FAFC", color: "#64748B", flexShrink: 0, opacity: current === 0 || loading || initializing ? .4 : 1 }}>
                   ← Prev
                 </button>
                 <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
