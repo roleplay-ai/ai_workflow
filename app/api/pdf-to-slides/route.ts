@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
 
     // Convert PDF pages → PNG buffers (server-side, Node.js)
     const pdfBuffer  = Buffer.from(await pdfFile.arrayBuffer());
-    const pngBuffers = await convertPdfToImages(pdfBuffer, 1.5);
+    const pngBuffers = await convertPdfToImages(pdfBuffer, 3.0);
 
     // Upload each PNG to Supabase Storage and collect public URLs
     const slides: { url: string; caption: string }[] = [];

@@ -65,7 +65,7 @@ export default function SlideZoom({ src, alt, open, onClose }: Props) {
       <img
         src={src}
         alt={alt}
-        style={{ width: "100%", height: "auto", display: "block", transform: "scale(1.2)", transformOrigin: "center center" }}
+        style={{ width: "100%", height: "100%", display: "block", objectFit: "contain" }}
       />
 
       {/* Lightbox */}
