@@ -74,7 +74,7 @@ GOTO_STEP format: GOTO_STEP:N where N is the STEP_NUMBER from the reference list
 For non-navigation questions: use GOTO_STEP:N only if your answer clearly belongs to a different specific step.`;
 
   const response = await anthropic.messages.create({
-    model: "claude-haiku-4-5",
+    model: "claude-sonnet-4-6",
     max_tokens: 512,
     system: systemPrompt,
     messages: [{ role: "user", content: message }],
@@ -107,7 +107,7 @@ Message 2: A brief, specific intro to Step 1: "${firstStep?.title ?? "the first 
 Output only the two messages separated by "---". Nothing else.`;
 
   const response = await anthropic.messages.create({
-    model: "claude-haiku-4-5",
+    model: "claude-sonnet-4-6",
     max_tokens: 300,
     system: systemPrompt,
     messages: [{ role: "user", content: "start" }],
