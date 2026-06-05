@@ -121,9 +121,12 @@ function ActivityCard({
               display: "inline-flex", alignItems: "center",
               padding: "5px 10px", borderRadius: 999,
               fontSize: 11, fontWeight: 900,
-              background: "rgba(255,255,255,.86)",
-              border: `1px solid ${C.line}`,
-              color: "#5e5962",
+              ...(badgeLabel === "Completed"
+                ? { background: "white", border: "1px solid rgba(35,206,107,.4)", color: "#15803d" }
+                : badgeLabel === "In Progress"
+                ? { background: "white", border: "1px solid rgba(54,153,252,.4)", color: "#1a6fc4" }
+                : { background: "white", border: `1px solid ${C.line}`, color: "#5e5962" }
+              ),
             }}>
               {badgeLabel}
             </span>
