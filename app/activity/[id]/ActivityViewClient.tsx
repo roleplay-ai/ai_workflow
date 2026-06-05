@@ -78,7 +78,8 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
   const [showQuiz, setShowQuiz] = useState(false);
   const [pendingQuiz, setPendingQuiz] = useState<Quiz | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
-  const [showVideo, setShowVideo] = useState(false);
+  const [showVideo,  setShowVideo]  = useState(false);
+  const [videoThumb, setVideoThumb] = useState<string | null>(null);
   const finishPendingRef = useRef(false);
   const [jumpToast, setJumpToast] = useState<string | null>(null);
   const [progress, setProgress] = useState(initProgress);
@@ -96,6 +97,43 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
   useEffect(() => {
     chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
+
+  // Auto-generate thumbnail from the video URL
+  useEffect(() => {
+    const url = content?.video_url;
+    if (!url) return;
+
+    // YouTube — use their public thumbnail CDN
+    const ytMatch = url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/);
+    if (ytMatch) {
+      setVideoThumb(`https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`);
+      return;
+    }
+
+    // Direct video — capture frame with a hidden <video> + canvas
+    const vid = document.createElement("video");
+    vid.crossOrigin  = "anonymous";
+    vid.preload      = "metadata";
+    vid.muted        = true;
+    vid.playsInline  = true;
+
+    vid.onloadeddata = () => { vid.currentTime = 1; };
+    vid.onseeked = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width  = vid.videoWidth  || 640;
+        canvas.height = vid.videoHeight || 360;
+        canvas.getContext("2d")?.drawImage(vid, 0, 0, canvas.width, canvas.height);
+        setVideoThumb(canvas.toDataURL("image/jpeg", 0.85));
+      } catch {
+        // CORS taint — canvas blocked; leave thumb null, fallback gradient shows
+      }
+      vid.src = "";
+    };
+
+    vid.src = url;
+    return () => { vid.src = ""; };
+  }, [content?.video_url]);
 
   // Create progress row on first load
   useEffect(() => {
@@ -149,9 +187,12 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
       if (data.reply) setMessages(m => [...m, { role: "assistant", content: data.reply }]);
       if (typeof data.goToStep === "number") {
         setCurrent(data.goToStep);
-        const stepTitle = steps[data.goToStep]?.title ?? `Step ${data.goToStep + 1}`;
-        setJumpToast(`Jumped to Step ${data.goToStep + 1}: ${stepTitle}`);
-        setTimeout(() => setJumpToast(null), 3500);
+        const jumped = steps[data.goToStep];
+        const toastText = jumped?.callout && jumped.callout !== ""
+          ? jumped.callout
+          : jumped?.title ?? `Step ${data.goToStep + 1}`;
+        setJumpToast(toastText);
+        setTimeout(() => setJumpToast(null), 4000);
       }
     } catch {
       setMessages(m => [...m, { role: "assistant", content: "Sorry, I had trouble connecting. Please try again." }]);
@@ -343,7 +384,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
 
         {/* ── LEFT: AI Coach chat ──────────────────────────────────────────── */}
         <div style={{ display: "flex", flexDirection: "column", borderRadius: 24, overflow: "hidden", border: "1px solid #E2E8F0", background: "rgba(255,255,255,.92)", boxShadow: "0 18px 45px rgba(15,23,42,.10)", minHeight: 0 }}>
-          {/* Chat header + insight callout */}
+          {/* Chat header */}
           <div style={{ flexShrink: 0, borderBottom: "1px solid #E2E8F0", background: "linear-gradient(180deg,rgba(255,255,255,.94),rgba(248,250,252,.94))" }}>
             <div style={{ height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px" }}>
               <div style={{ fontSize: 15, letterSpacing: "-.03em", color: "#0F172A" }}>
@@ -355,12 +396,6 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
                 Active
               </div>
             </div>
-            {step?.callout && step.callout !== "" && (
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "0 14px 12px" }}>
-                <span style={{ fontSize: 13, flexShrink: 0 }}>💡</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: "#134E4A", lineHeight: 1.45 }}>{step.callout}</span>
-              </div>
-            )}
           </div>
 
           {/* Messages */}
@@ -625,61 +660,106 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
             {/* Progress bar + navigation */}
             <div style={{ flexShrink: 0, padding: "10px 16px", borderTop: "1px solid #E8EEF4", background: "#FAFBFC", display: "flex", flexDirection: "column", gap: 8 }}>
 
-              {/* ── Watch Video button ── always visible, state changes based on video availability */}
-              {content?.video_url ? (
-                /* Video exists — active button */
-                <button
-                  onClick={() => setShowVideo(true)}
-                  style={{
-                    width: "100%", padding: "9px 0", borderRadius: 12, border: 0,
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                    background: progress?.video_watched
-                      ? "linear-gradient(135deg,#22C55E,#14B8A6)"
-                      : "linear-gradient(135deg,#7C3AED,#2563EB)",
-                    color: "white", fontSize: 13, fontWeight: 800, cursor: "pointer",
-                    boxShadow: progress?.video_watched
-                      ? "0 4px 14px rgba(34,197,94,.3)"
-                      : "0 4px 14px rgba(124,58,237,.35)",
-                    transition: "opacity .15s",
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.opacity = ".88")}
-                  onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
-                >
-                  {progress?.video_watched ? (
-                    <>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                      Video Watched
-                    </>
-                  ) : (
-                    <>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3" /></svg>
-                      Watch Video
-                      <span style={{ fontSize: 10, fontWeight: 900, padding: "2px 7px", borderRadius: 999, background: "rgba(255,255,255,.22)" }}>AI Feature</span>
-                    </>
-                  )}
-                </button>
-              ) : (
-                /* No video uploaded yet — muted placeholder */
-                <div style={{
-                  width: "100%", padding: "9px 0", borderRadius: 12,
-                  border: "1.5px dashed #E2E8F0",
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                  color: "#CBD5E1", fontSize: 13, fontWeight: 700,
-                  background: "#F8FAFC",
-                }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style={{ opacity: .5 }}><polygon points="5 3 19 12 5 21 5 3" /></svg>
-                  Watch Video
-                  <span style={{ fontSize: 10, fontWeight: 900, padding: "2px 7px", borderRadius: 999, background: "#EEF2FF", color: "#A5B4FC" }}>AI Feature</span>
-                </div>
-              )}
+              {/* ── Video thumbnail card ─────────────────────────────────── */}
+              <div
+                onClick={content?.video_url ? () => setShowVideo(true) : undefined}
+                style={{
+                  position: "relative", width: "100%", aspectRatio: "16/9",
+                  borderRadius: 12, overflow: "hidden",
+                  cursor: content?.video_url ? "pointer" : "default",
+                  background: videoThumb ? "#000" : content?.video_url
+                    ? "linear-gradient(135deg,#1E1B4B,#312E81)"
+                    : "#F1F5F9",
+                  border: content?.video_url ? "none" : "1.5px dashed #E2E8F0",
+                  flexShrink: 0,
+                }}
+              >
+                {/* thumbnail image */}
+                {videoThumb && (
+                  <img
+                    src={videoThumb}
+                    alt="Video thumbnail"
+                    style={{
+                      position: "absolute", inset: 0,
+                      width: "100%", height: "100%", objectFit: "cover",
+                      filter: progress?.video_watched ? "brightness(.55) saturate(.5)" : "brightness(.65)",
+                    }}
+                  />
+                )}
 
-              {/* Steps done + XP */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: "#64748B" }}>{current} of {steps.length} done</span>
-                {progress?.status === "completed" && (
-                  <span style={{ fontSize: 11, fontWeight: 800, color: "#2563EB" }}>+{activity.points} XP</span>
+                {/* dark gradient overlay at bottom */}
+                {content?.video_url && (
+                  <div style={{
+                    position: "absolute", bottom: 0, left: 0, right: 0, height: "55%",
+                    background: "linear-gradient(to top, rgba(0,0,0,.75) 0%, transparent 100%)",
+                  }} />
+                )}
+
+                {/* centre — play button or watched check */}
+                <div style={{
+                  position: "absolute", inset: 0,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  {content?.video_url ? (
+                    progress?.video_watched ? (
+                      /* watched state */
+                      <div style={{
+                        width: 40, height: 40, borderRadius: "50%",
+                        background: "linear-gradient(135deg,#22C55E,#14B8A6)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        boxShadow: "0 4px 16px rgba(34,197,94,.45)",
+                      }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                      </div>
+                    ) : (
+                      /* play button */
+                      <div style={{
+                        width: 44, height: 44, borderRadius: "50%",
+                        background: "rgba(255,255,255,.92)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        boxShadow: "0 4px 20px rgba(0,0,0,.45)",
+                        transition: "transform .15s",
+                      }}
+                        onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.1)")}
+                        onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#1E1B4B" style={{ marginLeft: 2 }}>
+                          <polygon points="5 3 19 12 5 21 5 3"/>
+                        </svg>
+                      </div>
+                    )
+                  ) : (
+                    /* no video yet */
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="5 3 19 12 5 21 5 3"/>
+                      </svg>
+                      <span style={{ fontSize: 10, color: "#CBD5E1", fontWeight: 600 }}>No video yet</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* bottom label row */}
+                {content?.video_url && (
+                  <div style={{
+                    position: "absolute", bottom: 0, left: 0, right: 0,
+                    padding: "6px 10px",
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                  }}>
+                    <span style={{ fontSize: 10.5, fontWeight: 700, color: "rgba(255,255,255,.9)" }}>
+                      {progress?.video_watched ? "✓ Watched" : "Activity Video"}
+                    </span>
+                    <span style={{
+                      fontSize: 9, fontWeight: 900, padding: "2px 6px",
+                      borderRadius: 999, background: "rgba(124,58,237,.75)",
+                      color: "white", letterSpacing: ".02em",
+                    }}>AI Feature</span>
+                  </div>
                 )}
               </div>
+
             </div>
           </div>
         </div>
@@ -709,10 +789,11 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
         />
       )}
 
-      {/* Jump toast */}
+      {/* Callout / insight toast */}
       {jumpToast && (
-        <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", zIndex: 50, display: "flex", alignItems: "center", gap: 10, padding: "12px 20px", borderRadius: 16, color: "white", fontSize: 13.5, fontWeight: 700, background: "linear-gradient(135deg,#2563EB,#14B8A6)", boxShadow: "0 12px 32px rgba(37,99,235,.35)" }}>
-          ↗ {jumpToast}
+        <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", zIndex: 50, display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 18px", borderRadius: 16, color: "white", fontSize: 13, fontWeight: 700, background: "linear-gradient(135deg,#0F172A,#1E3A5F)", boxShadow: "0 12px 32px rgba(15,23,42,.45)", maxWidth: "min(420px, 90vw)", lineHeight: 1.45 }}>
+          <span style={{ fontSize: 16, flexShrink: 0 }}>💡</span>
+          {jumpToast}
         </div>
       )}
     </div>
