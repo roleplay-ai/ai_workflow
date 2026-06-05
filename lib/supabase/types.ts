@@ -26,9 +26,17 @@ export type Activity = {
   time_estimate_minutes: number | null;
   points: number;
   tools: string[];
+  tags: string[];
   position: number;
   published: boolean;
   category: string;
+  created_at: string;
+};
+
+export type ActivityTag = {
+  id: string;
+  name: string;
+  icon_url: string | null;
   created_at: string;
 };
 

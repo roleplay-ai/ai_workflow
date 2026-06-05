@@ -3,12 +3,16 @@ import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import Topbar from "@/components/Topbar";
+import MultiSelect, { type SelectOption } from "@/components/MultiSelect";
 import type { Profile, Activity, ActivityContent, ActivityStep, PromptTemplate, DownloadFile } from "@/lib/supabase/types";
 
 type Props = {
   profile: Profile & { companies: { name: string } | null };
   activity: Activity & { activity_content: ActivityContent | null };
   activitySteps: ActivityStep[];
+  toolOptions: SelectOption[];
+  tagOptions:  SelectOption[];
+  categories:  string[];
 };
 
 type EditableStep = Omit<ActivityStep, "created_at"> & {
@@ -18,8 +22,9 @@ type EditableStep = Omit<ActivityStep, "created_at"> & {
   what_to_do_text: string;
 };
 
-type Tab = "slides" | "steps" | "quiz" | "goals" | "prompts" | "downloads" | "video";
+type Tab = "info" | "slides" | "steps" | "quiz" | "goals" | "prompts" | "downloads" | "video";
 const TABS: { id: Tab; label: string }[] = [
+  { id: "info",      label: "✏️ Info"      },
   { id: "slides",    label: "📸 Slides"    },
   { id: "steps",     label: "📋 Steps"     },
   { id: "quiz",      label: "✓ Quiz"      },
@@ -29,12 +34,101 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "downloads", label: "📥 Downloads"},
 ];
 
-export default function ActivityEditClient({ profile, activity, activitySteps: initSteps }: Props) {
+export default function ActivityEditClient({ profile, activity, activitySteps: initSteps, toolOptions: initToolOpts, tagOptions: initTagOpts, categories: initCategories }: Props) {
   const supabase   = createClient();
   const content    = activity.activity_content;
-  const [tab, setTab] = useState<Tab>("slides");
+  const [tab, setTab] = useState<Tab>("info");
   const [saving, setSaving]   = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
+
+  // Info — basic fields
+  const [infoTitle,    setInfoTitle]    = useState(activity.title ?? "");
+  const [infoDesc,     setInfoDesc]     = useState(activity.description ?? "");
+  const [infoLevel,    setInfoLevel]    = useState<Activity["level"]>(activity.level ?? null);
+  const [infoTime,     setInfoTime]     = useState(activity.time_estimate_minutes ?? 0);
+  const [infoPoints,   setInfoPoints]   = useState(activity.points ?? 0);
+  const [infoPublished,setInfoPublished]= useState(activity.published ?? false);
+  const [infoPosition, setInfoPosition] = useState(activity.position ?? 0);
+  const [savingInfo,   setSavingInfo]   = useState(false);
+  const [infoMsg,      setInfoMsg]      = useState("");
+
+  // Info — multi-select state (arrays)
+  const [infoToolsArr,  setInfoToolsArr]  = useState<string[]>(activity.tools ?? []);
+  const [infoTagsArr,   setInfoTagsArr]   = useState<string[]>((activity as any).tags ?? []);
+  const [infoCategoryArr, setInfoCategoryArr] = useState<string[]>(activity.category ? [activity.category] : []);
+
+  // Option lists (grow when new items are added via the dropdowns)
+  const [toolOpts, setToolOpts] = useState<SelectOption[]>(initToolOpts);
+  const [tagOpts,  setTagOpts]  = useState<SelectOption[]>(initTagOpts);
+  const [catOpts,  setCatOpts]  = useState<SelectOption[]>(initCategories.map(c => ({ name: c })));
+
+  // ── helpers: upload icon + persist new option to DB ─────────────────────────
+  async function uploadIcon(file: File, folder: string): Promise<string | null> {
+    const safe = file.name.replace(/[^\w.\-]/g, "_");
+    const path = `${folder}/${Date.now()}_${safe}`;
+    const { error } = await supabase.storage.from("activity-icons").upload(path, file, { upsert: true });
+    if (error) {
+      console.error("[uploadIcon]", error.message);
+      setInfoMsg(`Logo upload failed: ${error.message} — run supabase/migrations/20240603_activity_icons_storage.sql first`);
+      setTimeout(() => setInfoMsg(""), 6000);
+      return null;
+    }
+    return supabase.storage.from("activity-icons").getPublicUrl(path).data.publicUrl;
+  }
+
+  async function handleAddTool(name: string, imageFile: File | null) {
+    const logoUrl = imageFile ? (await uploadIcon(imageFile, "tools") ?? "") : "";
+    await supabase.from("tool_logos").upsert({ tool: name, logo_url: logoUrl, updated_at: new Date().toISOString() });
+    const opt = { name, imageUrl: logoUrl || null };
+    setToolOpts(prev => [...prev, opt]);
+    setInfoToolsArr(prev => [...prev, name]);
+  }
+
+  async function handleAddTag(name: string, imageFile: File | null) {
+    const iconUrl = imageFile ? (await uploadIcon(imageFile, "tags") ?? null) : null;
+    await supabase.from("activity_tags").insert({ name, icon_url: iconUrl });
+    const opt = { name, imageUrl: iconUrl };
+    setTagOpts(prev => [...prev, opt]);
+    setInfoTagsArr(prev => [...prev, name]);
+  }
+
+  async function handleAddCategory(name: string, _imageFile: File | null) {
+    setCatOpts(prev => [...prev, { name }]);
+    setInfoCategoryArr([name]);
+  }
+
+  async function handleUpdateToolImage(name: string, imageFile: File) {
+    const logoUrl = await uploadIcon(imageFile, "tools");
+    if (!logoUrl) return;
+    await supabase.from("tool_logos").update({ logo_url: logoUrl, updated_at: new Date().toISOString() }).eq("tool", name);
+    setToolOpts(prev => prev.map(o => o.name === name ? { ...o, imageUrl: logoUrl } : o));
+  }
+
+  async function handleUpdateTagImage(name: string, imageFile: File) {
+    const iconUrl = await uploadIcon(imageFile, "tags");
+    if (!iconUrl) return;
+    await supabase.from("activity_tags").update({ icon_url: iconUrl }).eq("name", name);
+    setTagOpts(prev => prev.map(o => o.name === name ? { ...o, imageUrl: iconUrl } : o));
+  }
+
+  async function saveInfo() {
+    setSavingInfo(true); setInfoMsg("");
+    const { error } = await supabase.from("activities").update({
+      title:                  infoTitle.trim(),
+      description:            infoDesc.trim() || null,
+      level:                  infoLevel,
+      time_estimate_minutes:  infoTime || null,
+      points:                 infoPoints,
+      category:               infoCategoryArr[0] ?? "",
+      tools:                  infoToolsArr,
+      tags:                   infoTagsArr,
+      published:              infoPublished,
+      position:               infoPosition,
+    }).eq("id", activity.id);
+    setSavingInfo(false);
+    setInfoMsg(error ? `Error: ${error.message}` : "✓ Saved");
+    if (!error) setTimeout(() => setInfoMsg(""), 3000);
+  }
 
   // Slides
   const [slideFiles,    setSlideFiles]    = useState<FileList | null>(null);
@@ -412,6 +506,133 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
               }}>{t.label}</button>
             ))}
           </div>
+
+          {/* ── Info ─────────────────────────────────────────────────────────── */}
+          {tab === "info" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+
+              {/* Title */}
+              <div>
+                <label style={lbl}>Title</label>
+                <input value={infoTitle} onChange={e => setInfoTitle(e.target.value)}
+                  placeholder="Activity title" style={{ ...inp, marginTop: 6, fontSize: 15, fontWeight: 700 }} />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label style={lbl}>Description</label>
+                <textarea value={infoDesc} onChange={e => setInfoDesc(e.target.value)} rows={3}
+                  placeholder="Short description shown to learners…"
+                  style={{ ...inp, marginTop: 6, resize: "vertical" }} />
+              </div>
+
+              {/* Level + Time + Points */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                <div>
+                  <label style={lbl}>Level</label>
+                  <select value={infoLevel ?? ""} onChange={e => setInfoLevel((e.target.value || null) as Activity["level"])}
+                    style={{ ...inp, marginTop: 6 }}>
+                    <option value="">— none —</option>
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={lbl}>Time (minutes)</label>
+                  <input type="number" min={0} value={infoTime}
+                    onChange={e => setInfoTime(Number(e.target.value))}
+                    style={{ ...inp, marginTop: 6 }} />
+                </div>
+                <div>
+                  <label style={lbl}>Points (XP)</label>
+                  <input type="number" min={0} value={infoPoints}
+                    onChange={e => setInfoPoints(Number(e.target.value))}
+                    style={{ ...inp, marginTop: 6 }} />
+                </div>
+              </div>
+
+              {/* Category (single-select dropdown) + Position */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 120px", gap: 12, alignItems: "end" }}>
+                <MultiSelect
+                  label="Category"
+                  mode="single"
+                  selected={infoCategoryArr}
+                  options={catOpts}
+                  onChange={setInfoCategoryArr}
+                  onAddNew={handleAddCategory}
+                  placeholder="Select or add a category…"
+                />
+                <div>
+                  <label style={lbl}>Position</label>
+                  <input type="number" min={0} value={infoPosition}
+                    onChange={e => setInfoPosition(Number(e.target.value))}
+                    style={{ ...inp, marginTop: 6 }} />
+                </div>
+              </div>
+
+              {/* Tools multi-select */}
+              <MultiSelect
+                label="Tools"
+                mode="multi"
+                selected={infoToolsArr}
+                options={toolOpts}
+                onChange={setInfoToolsArr}
+                onAddNew={handleAddTool}
+                onUpdateImage={handleUpdateToolImage}
+                placeholder="Select tools (ChatGPT, Gemini…)"
+              />
+
+              {/* Tags multi-select */}
+              <MultiSelect
+                label="Tags"
+                mode="multi"
+                selected={infoTagsArr}
+                options={tagOpts}
+                onChange={setInfoTagsArr}
+                onAddNew={handleAddTag}
+                onUpdateImage={handleUpdateTagImage}
+                placeholder="Select tags (Chat, Email, PPT…)"
+              />
+
+              {/* Published toggle */}
+              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: infoPublished ? "rgba(34,197,94,.07)" : "#FAFAF8", border: `1.5px solid ${infoPublished ? "rgba(34,197,94,.25)" : "#E8E6DC"}`, borderRadius: 12 }}>
+                <button
+                  type="button"
+                  onClick={() => setInfoPublished(p => !p)}
+                  style={{
+                    width: 44, height: 24, borderRadius: 999, border: 0,
+                    background: infoPublished ? "#22C55E" : "#D1D5DB",
+                    position: "relative", cursor: "pointer", flexShrink: 0, transition: "background .2s",
+                  }}
+                >
+                  <span style={{
+                    position: "absolute", top: 2, borderRadius: "50%",
+                    width: 20, height: 20, background: "white",
+                    boxShadow: "0 1px 4px rgba(0,0,0,.2)",
+                    left: infoPublished ? 22 : 2, transition: "left .2s",
+                  }} />
+                </button>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: infoPublished ? "#15803D" : "#6B6B6B" }}>
+                    {infoPublished ? "Published — visible to learners" : "Unpublished — hidden from learners"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Save button */}
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <button onClick={saveInfo} disabled={savingInfo} style={btnAmber}>
+                  {savingInfo ? "Saving…" : "Save Info"}
+                </button>
+                {infoMsg && (
+                  <span style={{ fontSize: 13, fontWeight: 700, color: infoMsg.startsWith("✓") ? "#17A855" : "#EF4444" }}>
+                    {infoMsg}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* ── Slides ──────────────────────────────────────────────────────── */}
           {tab === "slides" && (

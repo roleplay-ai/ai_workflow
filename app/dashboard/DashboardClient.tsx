@@ -87,6 +87,10 @@ export default function DashboardClient({ profile, activities, progress, toolLog
   const inProgress = progress.filter(p => p.status === "in_progress").length;
   const totalPts = progress.filter(p => p.status === "completed")
     .reduce((s, p) => s + (activities.find(a => a.id === p.activity_id)?.points ?? 0), 0);
+  const levelProgress = totalPts >= 1000 ? 100
+    : totalPts < 100 ? (totalPts / 100) * 100
+    : totalPts < 500 ? ((totalPts - 100) / 400) * 100
+    : ((totalPts - 500) / 500) * 100;
 
   const recentActivities = activities.slice(0, 3);
   const continueActivities = activities.filter(a => progressMap[a.id]?.status === "in_progress").slice(0, 3);
@@ -236,12 +240,12 @@ export default function DashboardClient({ profile, activities, progress, toolLog
                 <div style={{ color: "rgba(255,255,255,.5)", fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 7 }}>Current Level</div>
                 <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12, marginBottom: 10 }}>
                   <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: "-.05em" }}>
-                    {totalPts < 100 ? "Starter" : totalPts < 300 ? "Explorer" : totalPts < 600 ? "Builder" : "Expert"}
+                    {totalPts < 100 ? "Starter" : totalPts < 500 ? "Explorer" : totalPts < 1000 ? "Builder" : "Expert"}
                   </div>
                   <div style={{ color: "#FFCE00", fontSize: 12, fontWeight: 700 }}>{totalPts} pts</div>
                 </div>
                 <div style={{ height: 6, overflow: "hidden", borderRadius: 999, background: "rgba(255,255,255,.15)" }}>
-                  <div style={{ height: "100%", borderRadius: 999, background: "linear-gradient(90deg,#FFCE00,#F68A29)", width: `${Math.min((totalPts % 300) / 3, 100)}%` }} />
+                  <div style={{ height: "100%", borderRadius: 999, background: "linear-gradient(90deg,#FFCE00,#F68A29)", width: `${Math.min(levelProgress, 100)}%` }} />
                 </div>
               </div>
               {/* Summary tiles */}

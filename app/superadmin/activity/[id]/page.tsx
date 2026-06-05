@@ -26,11 +26,25 @@ export default async function ActivityEditPage({ params }: { params: Promise<{ i
     .eq("activity_id", id)
     .order("step_number", { ascending: true });
 
+  // Tool & tag options for the Info dropdowns
+  const [{ data: toolLogoRows }, { data: tagRows }, { data: catRows }] = await Promise.all([
+    supabase.from("tool_logos").select("tool, logo_url").order("tool"),
+    supabase.from("activity_tags").select("name, icon_url").order("name"),
+    supabase.from("activities").select("category").not("category", "is", null).not("category", "eq", ""),
+  ]);
+
+  const toolOptions = (toolLogoRows ?? []).map(r => ({ name: r.tool, imageUrl: r.logo_url || null }));
+  const tagOptions  = (tagRows ?? []).map(r => ({ name: r.name, imageUrl: r.icon_url || null }));
+  const categories  = [...new Set((catRows ?? []).map(r => r.category).filter(Boolean))] as string[];
+
   return (
     <ActivityEditClient
       profile={{ ...profile!, companies: company } as any}
       activity={activity as any}
       activitySteps={activitySteps ?? []}
+      toolOptions={toolOptions}
+      tagOptions={tagOptions}
+      categories={categories}
     />
   );
 }
