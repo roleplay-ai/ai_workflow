@@ -29,6 +29,7 @@ export type Activity = {
   tags: string[];
   position: number;
   published: boolean;
+  is_featured: boolean;
   category: string;
   created_at: string;
 };
@@ -137,8 +138,8 @@ export type Database = {
       };
       activities: {
         Row: Activity;
-        Insert: { title: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; position?: number; published?: boolean; category?: string };
-        Update: { title?: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; position?: number; published?: boolean; category?: string };
+        Insert: { title: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; position?: number; published?: boolean; is_featured?: boolean; category?: string };
+        Update: { title?: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; position?: number; published?: boolean; is_featured?: boolean; category?: string };
       };
       activity_companies: {
         Row: ActivityCompany;

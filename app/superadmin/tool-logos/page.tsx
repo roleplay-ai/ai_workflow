@@ -23,12 +23,16 @@ export default async function ToolLogosPage() {
     ? await supabase.from("companies").select("name").eq("id", profile.company_id).single()
     : { data: null };
 
-  const { data: toolLogoRows } = await supabase.from("tool_logos").select("tool, logo_url");
+  const [{ data: toolLogoRows }, { data: tags }] = await Promise.all([
+    supabase.from("tool_logos").select("tool, logo_url"),
+    supabase.from("activity_tags").select("id, name, icon_url").order("name"),
+  ]);
 
   return (
     <ToolLogosPageClient
       profile={{ ...profile, companies: company } as any}
       toolLogos={rowsToToolLogoMap(toolLogoRows ?? [])}
+      tags={tags ?? []}
     />
   );
 }

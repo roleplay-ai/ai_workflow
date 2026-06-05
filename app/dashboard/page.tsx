@@ -25,7 +25,7 @@ export default async function DashboardPage() {
     : { data: null };
 
   // Activities are now standalone — no module layer
-  const [{ data: activities }, { data: progress }, { data: toolLogoRows }] = await Promise.all([
+  const [{ data: activities }, { data: progress }, { data: toolLogoRows }, { data: tagRows }] = await Promise.all([
     supabase
       .from("activities")
       .select("*, activity_content(id)")
@@ -36,7 +36,13 @@ export default async function DashboardPage() {
       .select("*")
       .eq("user_id", user.id),
     supabase.from("tool_logos").select("tool, logo_url"),
+    supabase.from("activity_tags").select("name, icon_url"),
   ]);
+
+  const tagLogos: Record<string, string> = {};
+  for (const row of tagRows ?? []) {
+    if (row.icon_url) tagLogos[(row.name as string).toLowerCase()] = row.icon_url as string;
+  }
 
   const fullProfile = profile ? { ...profile, companies: company } : null;
 
@@ -46,6 +52,7 @@ export default async function DashboardPage() {
       activities={activities as any ?? []}
       progress={progress ?? []}
       toolLogos={rowsToToolLogoMap(toolLogoRows ?? [])}
+      tagLogos={tagLogos}
     />
   );
 }

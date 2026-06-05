@@ -12,70 +12,200 @@ type Props = {
   activities: (Activity & { activity_content: { id: string } | null })[];
   progress: UserProgress[];
   toolLogos: ToolLogoMap;
+  tagLogos: Record<string, string>;
 };
 
-const CAT_META: Record<string, { icon: string; label: string; stripe: string; pill: { bg: string; color: string; border: string } }> = {
-  chat: { icon: "✦", label: "Chatbot Feature", stripe: "linear-gradient(90deg,#623CEA,#3696FC)", pill: { bg: "rgba(98,60,234,.08)", color: "#5030C0", border: "rgba(98,60,234,.2)" } },
-  build: { icon: "🛠", label: "Build with AI", stripe: "linear-gradient(90deg,#23CE68,#3696FC)", pill: { bg: "rgba(35,206,104,.08)", color: "#17A855", border: "rgba(35,206,104,.2)" } },
-  automate: { icon: "⚡", label: "Work Automation", stripe: "linear-gradient(90deg,#F68A29,#FFCE00)", pill: { bg: "rgba(246,138,41,.08)", color: "#B05000", border: "rgba(246,138,41,.2)" } },
+const C = {
+  yellow: "#FFCE00",
+  lightYellow: "#FFF6CF",
+  orange: "#F68A29",
+  purple: "#623CEA",
+  blue: "#3699FC",
+  green: "#23CE6B",
+  dark: "#221D23",
+  muted: "#6f6a73",
+  line: "#e8e3d8",
+  bg: "#faf9f5",
+  soft: "#f4f1ea",
 };
 
-function statusChip(status: string) {
-  if (status === "completed") return { label: "Completed", bg: "rgba(35,206,104,.12)", color: "#17A855" };
-  if (status === "in_progress") return { label: "In Progress", bg: "rgba(54,150,252,.12)", color: "#1A7FD4" };
-  return { label: "Not Started", bg: "#F0EEE8", color: "#6B6B6B" };
+function isNew(activity: Activity) {
+  return activity.is_featured;
 }
 
-function ActivityCard({ activity, status, toolLogos }: { activity: Activity; status: string; toolLogos: ToolLogoMap }) {
-  const cat = CAT_META[activity.category] ?? CAT_META.chat;
-  const chip = statusChip(status);
-  const visible = activity.tools.slice(0, 2);
-  const extra = activity.tools.length - 2;
+function toolDot(tool: string) {
+  if (tool === "claude") return C.orange;
+  if (tool === "chatgpt") return C.green;
+  if (tool === "gemini") return C.blue;
+  if (tool === "copilot") return C.purple;
+  return C.yellow;
+}
+
+function botBadge(tool: string) {
+  if (tool === "claude") return { bg: C.orange, letter: "C" };
+  if (tool === "chatgpt") return { bg: C.green, letter: "G" };
+  if (tool === "gemini") return { bg: C.blue, letter: "G" };
+  if (tool === "copilot") return { bg: C.purple, letter: "M" };
+  return { bg: C.dark, letter: "AI" };
+}
+
+function visualStyle(category: string) {
+  if (category === "automate") return { bg: "linear-gradient(180deg,#fff8d9,#fff2ad)", dot: C.yellow };
+  if (category === "build") return { bg: "linear-gradient(180deg,#f3eeff,#e9deff)", dot: C.purple };
+  return { bg: "linear-gradient(180deg,#ecf6ff,#dff0ff)", dot: C.blue };
+}
+
+function typeLabel(category: string) {
+  if (category === "automate") return "Automation";
+  if (category === "build") return "Build";
+  return "Chat";
+}
+
+function ActivityCard({
+  activity,
+  status,
+  toolLogos,
+  tagLogos,
+}: {
+  activity: Activity;
+  status: string;
+  toolLogos: ToolLogoMap;
+  tagLogos: Record<string, string>;
+}) {
+  const newBadge = isNew(activity);
+  const showBadge = newBadge || status === "in_progress" || status === "completed";
+  const badgeLabel = newBadge ? "New" : status === "in_progress" ? "In Progress" : "Completed";
+  const vis = visualStyle(activity.category);
 
   return (
     <Link href={`/activity/${activity.id}`} style={{ textDecoration: "none", color: "inherit", display: "block" }}>
       <article
-        style={{ position: "relative", minHeight: 232, padding: 15, display: "flex", flexDirection: "column", overflow: "hidden", borderRadius: 20, background: "white", border: "1px solid #E8E6DC", boxShadow: "0 2px 12px rgba(34,29,35,.07)", cursor: "pointer", transition: ".17s ease" }}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 28px rgba(34,29,35,.13)"; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ""; (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 12px rgba(34,29,35,.07)"; }}
+        style={{
+          background: "white",
+          border: `1px solid ${C.line}`,
+          borderRadius: 24,
+          padding: 14,
+          minHeight: 230,
+          boxShadow: "0 10px 30px rgba(34,29,35,.08)",
+          display: "flex",
+          flexDirection: "column",
+          gap: 14,
+          transition: ".16s ease",
+          cursor: "pointer",
+        }}
+        onMouseEnter={e => {
+          (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)";
+          (e.currentTarget as HTMLElement).style.boxShadow = "0 16px 36px rgba(34,29,35,.13)";
+        }}
+        onMouseLeave={e => {
+          (e.currentTarget as HTMLElement).style.transform = "";
+          (e.currentTarget as HTMLElement).style.boxShadow = "0 10px 30px rgba(34,29,35,.08)";
+        }}
       >
-        <div style={{ position: "absolute", inset: "0 0 auto 0", height: 4, background: cat.stripe, borderRadius: "20px 20px 0 0" }} />
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, marginTop: 8 }}>
-          <span style={{ padding: "4px 9px", borderRadius: 999, fontSize: 10.5, fontWeight: 800, background: chip.bg, color: chip.color }}>{chip.label}</span>
-        </div>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 9px", borderRadius: 999, border: `1px solid ${cat.pill.border}`, background: cat.pill.bg, color: cat.pill.color, fontSize: 10.5, fontWeight: 800, marginBottom: 8, width: "fit-content" }}>
-          {cat.icon} {cat.label}
-        </div>
-        <h3 style={{ margin: "0 0 5px", fontSize: 15.5, fontWeight: 800, lineHeight: 1.2, letterSpacing: "-.03em" }}>{activity.title}</h3>
-        <p style={{ margin: "0 0 10px", color: "#6B6B6B", fontSize: 12.5, lineHeight: 1.45, flex: 1 }}>{activity.description}</p>
-        <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
-          {visible.map(t => (
-            <span key={t} style={{ height: 26, display: "inline-flex", alignItems: "center", gap: 5, padding: "0 8px 0 4px", border: "1px solid #E8E6DC", background: "white", borderRadius: 999 }}>
-              <ToolIcon tool={t} size={18} logos={toolLogos} />
-              <span style={{ fontSize: 11, color: "#444", fontWeight: 700 }}>{t}</span>
+        {/* Visual */}
+        <div style={{
+          position: "relative",
+          minHeight: 100,
+          borderRadius: 18,
+          padding: 16,
+          border: `1px solid ${C.line}`,
+          overflow: "hidden",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: vis.bg,
+        }}>
+          {showBadge && (
+            <span style={{
+              position: "absolute", top: 12, right: 12, zIndex: 3,
+              display: "inline-flex", alignItems: "center",
+              padding: "5px 10px", borderRadius: 999,
+              fontSize: 11, fontWeight: 900,
+              background: "rgba(255,255,255,.86)",
+              border: `1px solid ${C.line}`,
+              color: "#5e5962",
+            }}>
+              {badgeLabel}
             </span>
-          ))}
-          {extra > 0 && <span style={{ height: 26, padding: "0 8px", display: "inline-flex", alignItems: "center", borderRadius: 999, background: "#F0EEE8", color: "#6B6B6B", fontSize: 11, fontWeight: 800 }}>+{extra}</span>}
+          )}
+          {/* Flow — tag logos */}
+          <div style={{ position: "relative", width: "100%", display: "flex", justifyContent: "center", alignItems: "center", gap: 12, padding: "0 6px" }}>
+            <div style={{ position: "absolute", left: "14%", right: "14%", top: "50%", transform: "translateY(-50%)", borderTop: "2px dashed rgba(34,29,35,.2)", zIndex: 1 }} />
+            {(activity.tags.length > 0 ? activity.tags : activity.tools).slice(0, 4).map((item, i) => {
+              const isTag = activity.tags.length > 0;
+              const url = isTag ? tagLogos[item.toLowerCase()] : toolLogos[item.toLowerCase()];
+              return (
+                <div key={i} style={{
+                  width: 42, height: 42, borderRadius: 14,
+                  background: "rgba(255,255,255,.96)",
+                  border: `1px solid ${C.line}`,
+                  display: "grid", placeItems: "center",
+                  boxShadow: "0 4px 12px rgba(34,29,35,.06)",
+                  position: "relative", zIndex: 2, flexShrink: 0,
+                }}>
+                  {url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={url} alt={item} width={24} height={24} style={{ objectFit: "contain", borderRadius: 4 }} />
+                  ) : isTag ? (
+                    <span style={{ fontSize: 10, fontWeight: 800, color: C.muted }}>{item.slice(0, 3).toUpperCase()}</span>
+                  ) : (
+                    <ToolIcon tool={item} size={22} logos={toolLogos} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 5, paddingTop: 10, borderTop: "1px solid rgba(232,230,220,.9)" }}>
-          {activity.time_estimate_minutes && (
-            <span style={{ height: 24, display: "inline-flex", alignItems: "center", gap: 4, borderRadius: 999, padding: "0 8px", fontSize: 11, fontWeight: 700, background: "rgba(54,150,252,.1)", color: "#1A7FD4", border: "1px solid rgba(54,150,252,.22)" }}>⏱ {activity.time_estimate_minutes}m</span>
-          )}
-          {activity.level && (
-            <span style={{ height: 24, display: "inline-flex", alignItems: "center", gap: 4, borderRadius: 999, padding: "0 8px", fontSize: 11, fontWeight: 700, background: "rgba(246,138,41,.1)", color: "#B05000", border: "1px solid rgba(246,138,41,.25)" }}>◆ {activity.level}</span>
-          )}
-          <span style={{ height: 24, display: "inline-flex", alignItems: "center", gap: 4, borderRadius: 999, padding: "0 8px", fontSize: 11, fontWeight: 700, background: "rgba(255,206,0,.16)", color: "#7A5F00", border: "1px solid rgba(255,206,0,.35)" }}>+ {activity.points} pts</span>
+
+        {/* Title block */}
+        <div>
+          <h3 style={{ margin: "0 0 6px", fontSize: 17, fontWeight: 800, lineHeight: 1.2, letterSpacing: "-.04em", minHeight: "2.4em", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{activity.title}</h3>
+          <p style={{ margin: 0, color: C.muted, fontSize: 13.5, lineHeight: 1.45, minHeight: "calc(13.5px * 1.45 * 3)", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{activity.description}</p>
+        </div>
+
+        {/* Meta row */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: "auto" }}>
+          {/* Tool logos + names */}
+          <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+            {activity.tools.slice(0, 2).map((t, i) => (
+              <div key={i} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 9px", borderRadius: 999, border: `1px solid ${C.line}`, background: "white", fontSize: 11.5, fontWeight: 700, color: C.dark }}>
+                <ToolIcon tool={t} size={16} logos={toolLogos} />
+                {t.charAt(0).toUpperCase() + t.slice(1)}
+              </div>
+            ))}
+            {activity.tools.length > 2 && (
+              <span style={{ fontSize: 11, fontWeight: 800, color: C.muted, padding: "5px 7px", border: `1px solid ${C.line}`, borderRadius: 999, background: "white" }}>+{activity.tools.length - 2}</span>
+            )}
+          </div>
+          {/* Type chip */}
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 7,
+            padding: "7px 10px", borderRadius: 999,
+            fontSize: 11, fontWeight: 900,
+            border: `1px solid ${C.line}`, color: C.muted, background: "#faf8f3",
+          }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", display: "inline-block", background: vis.dot }} />
+            {typeLabel(activity.category)}
+          </div>
         </div>
       </article>
     </Link>
   );
 }
 
-export default function DashboardClient({ profile, activities, progress, toolLogos }: Props) {
+const INTENT_BTNS = [
+  { id: "all", icon: "✦", label: "All workflows", desc: "Browse everything available for your AI tools." },
+  { id: "chat", icon: "💬", label: "Chat", desc: "Write, summarize, analyze, compare, and decide faster." },
+  { id: "automate", icon: "⚡", label: "Automate", desc: "Save time on repetitive document, email, and follow-up tasks." },
+  { id: "build", icon: "🛠", label: "Build", desc: "Create apps, dashboards, tools, and reusable workflows." },
+];
+
+const TOOL_FILTERS = ["all", "claude", "chatgpt", "gemini", "copilot"];
+
+export default function DashboardClient({ profile, activities, progress, toolLogos, tagLogos }: Props) {
   const [searchQ, setSearchQ] = useState("");
-  const [activeTab, setActiveTab] = useState("all");
   const [activeTool, setActiveTool] = useState("all");
-  const [activeFilter, setActiveFilter] = useState("all");
+  const [activeIntent, setActiveIntent] = useState("all");
 
   const progressMap = useMemo(() => {
     const m: Record<string, UserProgress> = {};
@@ -85,32 +215,46 @@ export default function DashboardClient({ profile, activities, progress, toolLog
 
   const completed = progress.filter(p => p.status === "completed").length;
   const inProgress = progress.filter(p => p.status === "in_progress").length;
-  const totalPts = progress.filter(p => p.status === "completed")
+  const totalPts = progress
+    .filter(p => p.status === "completed")
     .reduce((s, p) => s + (activities.find(a => a.id === p.activity_id)?.points ?? 0), 0);
-  const levelProgress = totalPts >= 1000 ? 100
-    : totalPts < 100 ? (totalPts / 100) * 100
+  const levelPct = totalPts < 100 ? (totalPts / 100) * 100
     : totalPts < 500 ? ((totalPts - 100) / 400) * 100
-    : ((totalPts - 500) / 500) * 100;
+      : totalPts < 1000 ? ((totalPts - 500) / 500) * 100 : 100;
+  const levelName = totalPts < 100 ? "Starter" : totalPts < 500 ? "Explorer" : totalPts < 1000 ? "Builder" : "Expert";
+  const newCount = activities.filter(isNew).length;
 
-  const recentActivities = activities.slice(0, 3);
-  const continueActivities = activities.filter(a => progressMap[a.id]?.status === "in_progress").slice(0, 3);
+  const toolRelevant = useMemo(() =>
+    activities.filter(a => activeTool === "all" || a.tools.includes(activeTool)),
+    [activities, activeTool]
+  );
+
+  const intentRelevant = useMemo(() =>
+    toolRelevant.filter(a => activeIntent === "all" || a.category === activeIntent),
+    [toolRelevant, activeIntent]
+  );
+
+  const newList = useMemo(() =>
+    intentRelevant.filter(isNew).slice(0, 3),
+    [intentRelevant]
+  );
+
+  const continueList = useMemo(() =>
+    intentRelevant.filter(a => progressMap[a.id]?.status === "in_progress").slice(0, 3),
+    [intentRelevant, progressMap]
+  );
 
   const filtered = useMemo(() => {
     const q = searchQ.toLowerCase();
     return activities.filter(a => {
       const status = progressMap[a.id]?.status ?? "not_started";
       const text = `${a.title} ${a.description} ${a.tools.join(" ")} ${a.level} ${a.category} ${status}`.toLowerCase();
-      const matchTab = activeTab === "all" || a.category === activeTab;
-      const matchTool = activeTool === "all" || a.tools.includes(activeTool);
-      const matchQ = !q || text.includes(q);
-      let matchFilter = true;
-      if (activeFilter === "beginner") matchFilter = a.level === "Beginner";
-      if (activeFilter === "short") matchFilter = (a.time_estimate_minutes ?? 99) <= 15;
-      if (activeFilter === "notstarted") matchFilter = status === "not_started";
-      if (activeFilter === "mytool") matchFilter = matchTool;
-      return matchTab && matchTool && matchQ && (activeFilter === "mytool" ? matchTool : matchFilter);
+      const toolOk = activeTool === "all" || a.tools.includes(activeTool);
+      const intentOk = activeIntent === "all" || a.category === activeIntent;
+      const searchOk = !q || text.includes(q);
+      return toolOk && intentOk && searchOk;
     });
-  }, [activities, progressMap, searchQ, activeTab, activeTool, activeFilter]);
+  }, [activities, progressMap, searchQ, activeTool, activeIntent]);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -118,172 +262,261 @@ export default function DashboardClient({ profile, activities, progress, toolLog
     window.location.href = "/login";
   }
 
-  const tools = ["all", "claude", "gemini", "chatgpt", "copilot"];
-
-  const tabBtn = (active: boolean): React.CSSProperties => ({
-    padding: "8px 13px", borderRadius: 999, border: "1.5px solid",
-    borderColor: active ? "#221D23" : "#E8E6DC",
-    background: active ? "#221D23" : "transparent",
-    color: active ? "white" : "#6B6B6B",
-    fontWeight: 700, fontSize: 12.5, cursor: "pointer", whiteSpace: "nowrap",
-  });
-
-  const filterBtn = (active: boolean): React.CSSProperties => ({
-    border: "1.5px solid",
-    borderColor: active ? "rgba(246,138,41,.28)" : "transparent",
-    background: active ? "#FFF6CF" : "#F2F0EB",
-    color: active ? "#F68A29" : "#6B6B6B",
-    padding: "6px 11px", borderRadius: 999, fontSize: 11.5, fontWeight: 700, cursor: "pointer",
-  });
-
-  const grid3: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 13 };
+  function scrollToLibrary() {
+    document.getElementById("library")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif", color: "#221D23" }}>
+    <div style={{ minHeight: "100vh", background: C.bg, fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif", color: C.dark }}>
       <Topbar profile={profile} role={profile?.role} onSignOut={handleSignOut} />
 
-      <main style={{ width: "min(1180px,calc(100% - 48px))", margin: "0 auto" }}>
-        {/* Hero */}
-        <section style={{ padding: "44px 0 22px", textAlign: "center" }}>
-          <div style={{ display: "inline-flex", gap: 6, alignItems: "center", padding: "6px 13px", borderRadius: 999, background: "white", border: "1px solid #E8E6DC", color: "#F68A29", fontSize: 11.5, fontWeight: 700, marginBottom: 18, letterSpacing: ".02em" }}>
+      <main style={{ maxWidth: 1280, margin: "0 auto", padding: "44px 32px 80px" }}>
+
+        {/* ── Hero ── */}
+        <section style={{ textAlign: "center", maxWidth: 900, margin: "0 auto 28px" }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "white", border: `1px solid ${C.line}`, color: "#a45b00", borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 850, boxShadow: "0 10px 30px rgba(34,29,35,.08)" }}>
             ★ New applications added every week
           </div>
-          <h1 style={{ maxWidth: 740, margin: "0 auto 14px", fontSize: "clamp(28px,5vw,48px)", fontWeight: 900, lineHeight: 1.04, letterSpacing: "-.05em" }}>
-            Practical AI workflows for everyday work
+          <h1 style={{ margin: "20px 0 10px", fontSize: "clamp(34px,5vw,48px)", fontWeight: 900, lineHeight: .96, letterSpacing: "-.065em" }}>
+            Keep pace with practical AI workflows
           </h1>
-          <p style={{ maxWidth: 520, margin: "0 auto 26px", color: "#6B6B6B", fontSize: 15, lineHeight: 1.5 }}>
-            Pick your chatbot. Pick a problem. Build or practice.
+          <p style={{ margin: 0, color: C.muted, fontSize: 17 }}>
+            Pick the AI tool you have. Choose a work problem. Practice with guided screenshots and videos.
           </p>
-          {/* Search */}
-          <div style={{ maxWidth: 740, height: 60, margin: "0 auto 16px", display: "flex", alignItems: "center", gap: 10, padding: "0 7px 0 16px", background: "white", border: "1.5px solid #E8E6DC", borderRadius: 999, boxShadow: "0 2px 12px rgba(34,29,35,.07)" }}>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#B0ABA5" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-            <input value={searchQ} onChange={e => setSearchQ(e.target.value)} placeholder="Search activities, tools, or topics…"
+
+          {/* Search bar */}
+          <div style={{ maxWidth: 820, margin: "28px auto 0", display: "flex", gap: 10, background: "white", padding: 10, borderRadius: 999, border: `1px solid ${C.line}`, boxShadow: "0 10px 30px rgba(34,29,35,.08)" }}>
+            <input
+              value={searchQ}
+              onChange={e => setSearchQ(e.target.value)}
+              type="search"
+              placeholder="Search activities, tools, topics, or work problems..."
               suppressHydrationWarning
-              style={{ flex: 1, border: 0, outline: 0, fontSize: 14.5, background: "transparent", color: "#221D23", fontFamily: "inherit" }} />
-            <button style={{ border: 0, borderRadius: 999, padding: "10px 22px", color: "#221D23", fontWeight: 800, fontSize: 13, background: "#FFCE00", cursor: "pointer" }}>Search</button>
-          </div>
-          {/* Tool pills */}
-          <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 7 }}>
-            {tools.map(t => (
-              <button key={t} onClick={() => setActiveTool(t)} style={{
-                display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 999,
-                border: "1.5px solid", borderColor: activeTool === t ? "#FFCE00" : "#E8E6DC",
-                background: activeTool === t ? "#FFCE00" : "white", color: activeTool === t ? "#221D23" : "#4A4848",
-                fontWeight: 700, fontSize: 12.5, cursor: "pointer", boxShadow: activeTool === t ? "0 4px 14px rgba(255,206,0,.28)" : "none",
-              }}>
-                {t === "all" ? "All tools" : (
-                  <>
-                    <ToolIcon tool={t} size={16} logos={toolLogos} />
-                    {t.charAt(0).toUpperCase() + t.slice(1)}
-                  </>
-                )}
-              </button>
-            ))}
+              style={{ flex: 1, border: 0, outline: 0, padding: "0 16px", fontSize: 15, background: "transparent", color: C.dark, fontFamily: "inherit" }}
+            />
+            <button
+              onClick={scrollToLibrary}
+              style={{ border: 0, background: C.yellow, color: C.dark, fontWeight: 900, padding: "13px 28px", borderRadius: 999, boxShadow: `2px 2px 0 ${C.dark}`, cursor: "pointer", fontFamily: "inherit", fontSize: 14 }}
+            >
+              Search
+            </button>
           </div>
         </section>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 308px", gap: 22, alignItems: "start", padding: "22px 0 56px" }}>
+        {/* ── Selector panel ── */}
+        <section style={{ background: "white", border: `1px solid ${C.line}`, borderRadius: 28, boxShadow: "0 10px 30px rgba(34,29,35,.08)", padding: 18, margin: "0 0 26px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, marginBottom: 14 }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: 18, letterSpacing: "-.03em" }}>Start with your AI tool</h2>
+              {/* <div style={{ color: C.muted, fontSize: 13, fontWeight: 650, marginTop: 3 }}>
+                Select your tool to see the most relevant workflows first.
+              </div> */}
+            </div>
+            <div style={{ color: C.muted, fontSize: 13, fontWeight: 650 }}>
+              {filtered.length} workflow{filtered.length !== 1 ? "s" : ""}
+            </div>
+          </div>
+
+          {/* Tool chips */}
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
+            {TOOL_FILTERS.map(t => {
+              const active = activeTool === t;
+              return (
+                <button
+                  key={t}
+                  onClick={() => setActiveTool(t)}
+                  style={{
+                    border: `1px solid ${active ? C.dark : C.line}`,
+                    background: active ? C.dark : "white",
+                    borderRadius: 999, padding: "10px 15px",
+                    fontSize: 14, fontWeight: 850,
+                    color: active ? "white" : C.dark,
+                    display: "flex", alignItems: "center", gap: 8,
+                    cursor: "pointer",
+                    boxShadow: active ? `2px 2px 0 ${C.yellow}` : "none",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  <span style={{ width: 10, height: 10, borderRadius: "50%", border: "1.5px solid currentColor", display: "inline-block", background: toolDot(t) }} />
+                  {t === "all" ? "All tools" : t.charAt(0).toUpperCase() + t.slice(1)}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Intent grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
+            {INTENT_BTNS.map(btn => {
+              const active = activeIntent === btn.id;
+              return (
+                <button
+                  key={btn.id}
+                  onClick={() => setActiveIntent(btn.id)}
+                  style={{
+                    textAlign: "left",
+                    border: `1px solid ${active ? "#f0bd00" : C.line}`,
+                    background: active ? C.lightYellow : C.soft,
+                    padding: 16, borderRadius: 20, minHeight: 104,
+                    cursor: "pointer", fontFamily: "inherit",
+                    boxShadow: active ? `3px 3px 0 ${C.dark}` : "none",
+                    transition: ".12s ease",
+                  }}
+                >
+                  <div style={{ width: 32, height: 32, borderRadius: 12, background: "white", border: `1px solid ${C.line}`, display: "grid", placeItems: "center", marginBottom: 10, fontSize: 16 }}>
+                    {btn.icon}
+                  </div>
+                  <h3 style={{ margin: "0 0 4px", fontSize: 15, letterSpacing: "-.03em" }}>{btn.label}</h3>
+                  <p style={{ margin: 0, fontSize: 12.5, color: C.muted, lineHeight: 1.35 }}>{btn.desc}</p>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* ── Main layout ── */}
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 330px", gap: 24, alignItems: "start" }}>
+
+          {/* Left column */}
           <div>
-            {/* Newly added */}
-            {recentActivities.length > 0 && (
-              <section style={{ marginBottom: 26 }}>
-                <h2 style={{ margin: "0 0 12px", fontSize: 20, fontWeight: 800, letterSpacing: "-.04em" }}>Newly added</h2>
-                <div style={grid3}>
-                  {recentActivities.map(a => <ActivityCard key={a.id} activity={a} status={progressMap[a.id]?.status ?? "not_started"} toolLogos={toolLogos} />)}
+
+            {/* New this week */}
+            <section style={{ marginBottom: 34 }}>
+              <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, marginBottom: 14 }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: 23, letterSpacing: "-.045em" }}>New this week</h2>
+                  <p style={{ margin: "3px 0 0", color: C.muted, fontSize: 14 }}>Fresh workflows you can practice right away.</p>
                 </div>
-              </section>
-            )}
+                <button
+                  onClick={scrollToLibrary}
+                  style={{ border: 0, background: "transparent", color: C.purple, fontWeight: 900, fontSize: 14, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}
+                >
+                  View all new
+                </button>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 16 }}>
+                {(newList.length ? newList : intentRelevant.slice(0, 3)).map(a => (
+                  <ActivityCard key={a.id} activity={a} status={progressMap[a.id]?.status ?? "not_started"} toolLogos={toolLogos} tagLogos={tagLogos} />
+                ))}
+              </div>
+            </section>
 
             {/* Continue */}
-            {continueActivities.length > 0 && (
-              <section style={{ marginBottom: 26 }}>
-                <h2 style={{ margin: "0 0 12px", fontSize: 20, fontWeight: 800, letterSpacing: "-.04em" }}>Continue where you left off</h2>
-                <div style={grid3}>
-                  {continueActivities.map(a => <ActivityCard key={a.id} activity={a} status="in_progress" toolLogos={toolLogos} />)}
+            {continueList.length > 0 && (
+              <section style={{ marginBottom: 34 }}>
+                <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, marginBottom: 14 }}>
+                  <div>
+                    <h2 style={{ margin: 0, fontSize: 23, letterSpacing: "-.045em" }}>Continue where you left off</h2>
+                    <p style={{ margin: "3px 0 0", color: C.muted, fontSize: 14 }}>Jump back into unfinished workflows.</p>
+                  </div>
+                  <button
+                    onClick={scrollToLibrary}
+                    style={{ border: 0, background: "transparent", color: C.purple, fontWeight: 900, fontSize: 14, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}
+                  >
+                    View in progress
+                  </button>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 16 }}>
+                  {continueList.map(a => (
+                    <ActivityCard key={a.id} activity={a} status="in_progress" toolLogos={toolLogos} tagLogos={tagLogos} />
+                  ))}
                 </div>
               </section>
             )}
 
-            {/* Explore all */}
-            <section style={{ marginBottom: 26 }}>
-              <h2 style={{ margin: "0 0 12px", fontSize: 20, fontWeight: 800, letterSpacing: "-.04em" }}>Explore all activities</h2>
-              <div style={{ background: "white", border: "1px solid #E8E6DC", borderRadius: 20, padding: 15, boxShadow: "0 2px 12px rgba(34,29,35,.07)" }}>
-                {/* Tabs */}
-                <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 11, marginBottom: 11, borderBottom: "1px solid #E8E6DC" }}>
-                  {[{ id: "all", label: "⭐ All" }, { id: "chat", label: "✦ Chatbot" }, { id: "automate", label: "⚡ Automation" }, { id: "build", label: "🛠 Build" }]
-                    .map(tab => <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={tabBtn(activeTab === tab.id)}>{tab.label}</button>)}
+            {/* Full library */}
+            <section id="library" style={{ marginBottom: 34 }}>
+              <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, marginBottom: 14 }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: 23, letterSpacing: "-.045em" }}>Full workflow library</h2>
+                  <p style={{ margin: "3px 0 0", color: C.muted, fontSize: 14 }}>Use filters when you want to browse everything.</p>
                 </div>
-                {/* Filters */}
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
-                  {[{ id: "all", label: "All" }, { id: "beginner", label: "Beginner" }, { id: "short", label: "≤ 15 min" }, { id: "notstarted", label: "Not Started" }]
-                    .map(f => <button key={f.id} onClick={() => setActiveFilter(f.id)} style={filterBtn(activeFilter === f.id)}>{f.label}</button>)}
-                </div>
+              </div>
+
+              <div style={{ background: "white", border: `1px solid ${C.line}`, borderRadius: 28, padding: 16, boxShadow: "0 10px 30px rgba(34,29,35,.08)" }}>
+                {/* Cards */}
                 {filtered.length === 0 ? (
-                  <div style={{ padding: 36, border: "1.5px dashed #D5D0C8", borderRadius: 20, textAlign: "center", color: "#6B6B6B", fontSize: 13.5 }}>
-                    No matching activities. Try a different filter.
+                  <div style={{ background: "white", border: "1px dashed #d7d0c2", borderRadius: 22, padding: 26, textAlign: "center", color: C.muted, fontWeight: 750 }}>
+                    No matching workflows. Try changing the tool, intent, or search term.
                   </div>
                 ) : (
-                  <div style={grid3}>
-                    {filtered.map(a => <ActivityCard key={a.id} activity={a} status={progressMap[a.id]?.status ?? "not_started"} toolLogos={toolLogos} />)}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 16 }}>
+                    {filtered.map(a => (
+                      <ActivityCard key={a.id} activity={a} status={progressMap[a.id]?.status ?? "not_started"} toolLogos={toolLogos} tagLogos={tagLogos} />
+                    ))}
                   </div>
                 )}
               </div>
             </section>
           </div>
 
-          {/* Sidebar */}
-          <aside style={{ position: "sticky", top: 82 }}>
-            <div style={{ background: "white", border: "1px solid #E8E6DC", borderRadius: 20, padding: 16, boxShadow: "0 2px 12px rgba(34,29,35,.07)" }}>
-              <div style={{ fontWeight: 800, fontSize: 15, letterSpacing: "-.03em", marginBottom: 13 }}>Your progress</div>
-              {/* Level card */}
-              <div style={{ padding: 15, borderRadius: 15, color: "white", marginBottom: 13, background: "radial-gradient(circle at 80% 20%,rgba(255,206,0,.25),transparent 42%),#221D23", border: "1px solid rgba(255,255,255,.05)" }}>
-                <div style={{ color: "rgba(255,255,255,.5)", fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 7 }}>Current Level</div>
-                <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12, marginBottom: 10 }}>
-                  <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: "-.05em" }}>
-                    {totalPts < 100 ? "Starter" : totalPts < 500 ? "Explorer" : totalPts < 1000 ? "Builder" : "Expert"}
-                  </div>
-                  <div style={{ color: "#FFCE00", fontSize: 12, fontWeight: 700 }}>{totalPts} pts</div>
+          {/* ── Sidebar ── */}
+          <aside style={{ position: "sticky", top: 80, display: "flex", flexDirection: "column", gap: 16 }}>
+
+            {/* Progress card */}
+            <section style={{ background: "white", border: `1px solid ${C.line}`, borderRadius: 26, padding: 20, boxShadow: "0 10px 30px rgba(34,29,35,.08)" }}>
+              <h3 style={{ margin: "0 0 14px", letterSpacing: "-.03em", fontSize: 18 }}>Your AI Work Pace</h3>
+
+              {/* Level box */}
+              <div style={{ color: "white", background: `radial-gradient(circle at 80% 20%,rgba(255,206,0,.35),transparent 26%),${C.dark}`, borderRadius: 18, padding: 18, marginBottom: 14 }}>
+                <div style={{ fontSize: 11, color: "#d6d0ca", textTransform: "uppercase", letterSpacing: ".18em", fontWeight: 900 }}>Current level</div>
+                <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginTop: 8 }}>
+                  <strong style={{ fontSize: 24, letterSpacing: "-.05em" }}>{levelName}</strong>
+                  <span style={{ color: C.yellow, fontWeight: 900, fontSize: 13 }}>{totalPts} pts</span>
                 </div>
-                <div style={{ height: 6, overflow: "hidden", borderRadius: 999, background: "rgba(255,255,255,.15)" }}>
-                  <div style={{ height: "100%", borderRadius: 999, background: "linear-gradient(90deg,#FFCE00,#F68A29)", width: `${Math.min(levelProgress, 100)}%` }} />
+                <div style={{ height: 8, background: "#4a414d", borderRadius: 999, overflow: "hidden", marginTop: 14 }}>
+                  <div style={{ width: `${Math.min(levelPct, 100)}%`, height: "100%", background: C.yellow }} />
                 </div>
               </div>
-              {/* Summary tiles */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 7, marginBottom: 14 }}>
+
+              {/* Stat grid */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
                 {[
-                  { label: "✓ Completed", value: completed, bg: "rgba(35,206,104,.08)", border: "rgba(35,206,104,.2)" },
-                  { label: "↻ In Progress", value: inProgress, bg: "rgba(54,150,252,.08)", border: "rgba(54,150,252,.2)" },
-                  { label: "+ Points", value: totalPts, bg: "rgba(255,206,0,.12)", border: "rgba(255,206,0,.3)" },
-                  { label: "◆ Available", value: activities.length, bg: "rgba(246,138,41,.08)", border: "rgba(246,138,41,.2)" },
+                  { label: "Completed", value: completed, bg: "#fbf7e6" },
+                  { label: "In progress", value: inProgress, bg: "#eef6ff" },
+                  { label: "New this week", value: newCount, bg: "#f0fff5" },
+                  { label: "Available", value: activities.length, bg: "#fff2e8" },
                 ].map((tile, i) => (
-                  <div key={i} style={{ borderRadius: 13, padding: "11px 10px", border: `1px solid ${tile.border}`, background: tile.bg }}>
-                    <div style={{ color: "#6B6B6B", fontSize: 11, fontWeight: 700, marginBottom: 4 }}>{tile.label}</div>
-                    <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: "-.05em" }}>{tile.value}</div>
+                  <div key={i} style={{ border: `1px solid ${C.line}`, borderRadius: 16, background: tile.bg, padding: 13 }}>
+                    <div style={{ color: C.muted, fontSize: 11, fontWeight: 850, marginBottom: 6 }}>{tile.label}</div>
+                    <div style={{ fontSize: 24, fontWeight: 950, letterSpacing: "-.05em" }}>{tile.value}</div>
                   </div>
                 ))}
               </div>
-              {/* Category progress */}
-              {[
-                { label: "Chatbot", key: "chat", color: "linear-gradient(90deg,#623CEA,#3696FC)" },
-                { label: "Automation", key: "automate", color: "linear-gradient(90deg,#F68A29,#FFCE00)" },
-                { label: "Vibe Coding", key: "build", color: "linear-gradient(90deg,#23CE68,#3696FC)" },
-              ].map(cat => {
-                const catActs = activities.filter(a => a.category === cat.key);
-                const catDone = catActs.filter(a => progressMap[a.id]?.status === "completed").length;
-                const pct = catActs.length ? (catDone / catActs.length) * 100 : 0;
-                return (
-                  <div key={cat.key} style={{ marginBottom: 12 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
-                      <span>{cat.label}</span>
-                      <span style={{ color: "#6B6B6B", fontWeight: 600 }}>{catDone} / {catActs.length}</span>
-                    </div>
-                    <div style={{ height: 6, background: "#ECEAE4", borderRadius: 999, overflow: "hidden" }}>
-                      <div style={{ height: "100%", borderRadius: 999, background: cat.color, width: `${pct}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+
+              {/* Pace callout */}
+              <div style={{ padding: 13, borderRadius: 16, background: C.lightYellow, fontSize: 13, lineHeight: 1.4, fontWeight: 700, border: "1px solid #f3d25a" }}>
+                {completed === 0
+                  ? "Start your first workflow to earn points and level up."
+                  : `Next level: complete ${Math.max(0, 2 - completed)} more workflow${2 - completed !== 1 ? "s" : ""}. You are keeping pace with the essentials.`}
+              </div>
+            </section>
+
+            {/* News card — driven by is_featured activities */}
+            {activities.filter(a => a.is_featured).length > 0 && (
+              <section style={{ background: "white", border: `1px solid ${C.line}`, borderRadius: 26, padding: 20, boxShadow: "0 10px 30px rgba(34,29,35,.08)" }}>
+                <h3 style={{ margin: "0 0 14px", letterSpacing: "-.03em", fontSize: 18 }}>This week in AI work</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+                  {activities.filter(a => a.is_featured).map(a => {
+                    const primary = a.tools[0] ?? "claude";
+                    const bot = botBadge(primary);
+                    return (
+                      <Link key={a.id} href={`/activity/${a.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "34px 1fr", gap: 10, alignItems: "start", padding: 11, border: `1px solid ${C.line}`, borderRadius: 16, background: "#fbfaf7", cursor: "pointer", transition: ".12s" }}
+                          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "#f4f1ea"}
+                          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "#fbfaf7"}
+                        >
+                          <div style={{ width: 34, height: 34, borderRadius: 12, display: "grid", placeItems: "center", background: bot.bg, color: "white", fontWeight: 950, fontSize: 14 }}>{bot.letter}</div>
+                          <div>
+                            <strong style={{ display: "block", fontSize: 13, lineHeight: 1.25, marginBottom: 2 }}>{a.title}</strong>
+                            <span style={{ color: C.muted, fontSize: 12, fontWeight: 650 }}>{typeLabel(a.category)}{a.level ? ` · ${a.level}` : ""}</span>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
           </aside>
         </div>
       </main>

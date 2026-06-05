@@ -3,7 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import Topbar from "@/components/Topbar";
-import type { Profile, Company, Activity } from "@/lib/supabase/types";
+import type { Profile, Company, Activity, ActivityTag } from "@/lib/supabase/types";
 import { TOOLS } from "@/lib/tools";
 
 type ActivityRow = Activity & { activity_content: { id: string } | null };
@@ -13,13 +13,15 @@ type Props = {
   companies: Pick<Company, "id" | "name" | "domain">[];
   activities: ActivityRow[];
   allAssignments: { activity_id: string; company_id: string }[];
+  tags: Pick<ActivityTag, "id" | "name" | "icon_url">[];
 };
 
 const CATEGORIES = ["chat", "build", "automate"];
 
-export default function SuperadminClient({ profile, companies, activities: initActivities, allAssignments: initAssignments }: Props) {
+export default function SuperadminClient({ profile, companies, activities: initActivities, allAssignments: initAssignments, tags: initTags }: Props) {
   const [activities,   setActivities]   = useState(initActivities);
   const [assignments,  setAssignments]  = useState(initAssignments);
+  const [tags,         setTags]         = useState(initTags);
   const [showForm,     setShowForm]     = useState(false);
   const supabase = createClient();
 
@@ -57,10 +59,21 @@ export default function SuperadminClient({ profile, companies, activities: initA
     setActivities(prev => prev.map(a => a.id === act.id ? { ...a, published: !a.published } : a));
   }
 
+  async function toggleFeatured(act: ActivityRow) {
+    await supabase.from("activities").update({ is_featured: !act.is_featured }).eq("id", act.id);
+    setActivities(prev => prev.map(a => a.id === act.id ? { ...a, is_featured: !a.is_featured } : a));
+  }
+
   async function deleteActivity(id: string) {
     if (!confirm("Delete this activity?")) return;
     await supabase.from("activities").delete().eq("id", id);
     setActivities(prev => prev.filter(a => a.id !== id));
+  }
+
+  async function deleteTag(id: string, name: string) {
+    if (!confirm(`Delete tag "${name}"? It will be removed from all activities.`)) return;
+    await supabase.from("activity_tags").delete().eq("id", id);
+    setTags(prev => prev.filter(t => t.id !== id));
   }
 
   async function toggleAssignment(activityId: string, companyId: string) {
@@ -185,6 +198,14 @@ export default function SuperadminClient({ profile, companies, activities: initA
                   </div>
 
                   <div style={{ display: "flex", gap: 8, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                    <button onClick={() => toggleFeatured(act)} title="Show in New this week section on dashboard" style={{
+                      padding: "5px 12px", borderRadius: 999, border: "1px solid",
+                      borderColor: act.is_featured ? "rgba(255,206,0,.5)" : "#E8E6DC",
+                      background: act.is_featured ? "#FFF6CF" : "#F0EEE8",
+                      color: act.is_featured ? "#7A5F00" : "#6B6B6B",
+                      fontSize: 12, fontWeight: 700, cursor: "pointer",
+                    }}>★ {act.is_featured ? "Added to New" : "Add to New"}</button>
+
                     <button onClick={() => togglePublish(act)} style={{
                       padding: "5px 12px", borderRadius: 999, border: "1px solid",
                       borderColor: act.published ? "rgba(35,206,104,.3)" : "#E8E6DC",
