@@ -22,7 +22,8 @@ function EyeOff() {
   );
 }
 
-export default function LoginPage() {
+export default function SignupPage() {
+  const [name, setName]         = useState("");
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading]   = useState(false);
@@ -43,7 +44,10 @@ export default function LoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(""); setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signUp({
+      email, password,
+      options: { data: { full_name: name } },
+    });
     if (error) { setError(error.message); setLoading(false); return; }
     window.location.href = "/";
     setLoading(false);
@@ -65,8 +69,8 @@ export default function LoginPage() {
           <span style={{ fontWeight: 800, fontSize: 17, letterSpacing: "-.03em" }}>Nudgeable AI Work Studio</span>
         </div>
 
-        <h1 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 800, letterSpacing: "-.04em" }}>Welcome back</h1>
-        <p style={{ margin: "0 0 22px", color: "#6B6B6B", fontSize: 13.5 }}>Sign in to continue your learning.</p>
+        <h1 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 800, letterSpacing: "-.04em" }}>Create account</h1>
+        <p style={{ margin: "0 0 22px", color: "#6B6B6B", fontSize: 13.5 }}>Start your AI learning journey.</p>
 
         <button onClick={handleGoogleSignIn} disabled={loading} style={{
           width: "100%", padding: "11px 16px", border: "1.5px solid #E8E6DC",
@@ -85,6 +89,10 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <input
+            value={name} onChange={e => setName(e.target.value)}
+            placeholder="Full name" required style={inputStyle}
+          />
           <input
             type="email" value={email} onChange={e => setEmail(e.target.value)}
             placeholder="Work email" required style={inputStyle}
@@ -114,13 +122,13 @@ export default function LoginPage() {
             background: "#FFCE00", color: "#221D23", fontWeight: 800, fontSize: 14,
             cursor: "pointer", marginTop: 4, opacity: loading ? .6 : 1,
           }}>
-            {loading ? "…" : "Sign in"}
+            {loading ? "…" : "Create account"}
           </button>
         </form>
 
         <p style={{ textAlign: "center", marginTop: 18, fontSize: 13, color: "#6B6B6B" }}>
-          Don&apos;t have an account?{" "}
-          <a href="/signup" style={{ color: "#F68A29", fontWeight: 700, textDecoration: "none" }}>Sign up</a>
+          Already have an account?{" "}
+          <a href="/login" style={{ color: "#F68A29", fontWeight: 700, textDecoration: "none" }}>Sign in</a>
         </p>
       </div>
     </div>

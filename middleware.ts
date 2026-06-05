@@ -29,8 +29,8 @@ export async function middleware(request: NextRequest) {
   // Always allow — auth callback needs to run to set the session cookie
   if (path.startsWith("/auth/")) return supabaseResponse;
 
-  // Login page — always let through (user may want to switch accounts)
-  if (path.startsWith("/login")) {
+  // Login / signup pages — always let through
+  if (path.startsWith("/login") || path.startsWith("/signup")) {
     return supabaseResponse;
   }
 
