@@ -5,8 +5,8 @@ export const metadata: Metadata = {
   title: "Nudgeable AI Work Studio",
   description: "Practical AI workflows for everyday work",
   icons: {
-    icon: "/nudgeable-icon.png",
-    apple: "/nudgeable-icon.png",
+    icon: [{ url: "/nudgeable-icon.png", type: "image/png" }],
+    apple: [{ url: "/nudgeable-icon.png", type: "image/png" }],
   },
 };
 

@@ -24,6 +24,8 @@ build/
 # ── Uploads / local media (use Supabase Storage instead) ──────────────────────
 public/uploads/
 *.png
+!app/icon.png
+!public/nudgeable-icon.png
 *.jpg
 *.jpeg
 *.gif
