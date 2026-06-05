@@ -79,7 +79,7 @@ export default function LoginPage() {
         {/* Brand */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 28 }}>
           <img
-            src="/nudgeable-icon.png"
+            src="/icon.png"
             alt=""
             width={36}
             height={36}

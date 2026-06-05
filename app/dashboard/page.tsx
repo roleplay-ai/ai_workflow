@@ -24,8 +24,13 @@ export default async function DashboardPage() {
     ? await supabase.from("companies").select("name").eq("id", profile.company_id).single()
     : { data: null };
 
-  // Activities are now standalone — no module layer
-  const [{ data: activities }, { data: progress }, { data: toolLogoRows }, { data: tagRows }] = await Promise.all([
+  // RLS on activities handles company filtering via user_can_access_activity()
+  const [
+    { data: activities },
+    { data: progress },
+    { data: toolLogoRows },
+    { data: tagRows },
+  ] = await Promise.all([
     supabase
       .from("activities")
       .select("*, activity_content(id)")

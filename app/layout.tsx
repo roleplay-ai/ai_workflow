@@ -4,10 +4,6 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Nudgeable AI Work Studio",
   description: "Practical AI workflows for everyday work",
-  icons: {
-    icon: [{ url: "/nudgeable-icon.png", type: "image/png" }],
-    apple: [{ url: "/nudgeable-icon.png", type: "image/png" }],
-  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

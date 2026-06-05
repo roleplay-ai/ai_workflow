@@ -45,7 +45,7 @@ export default function Topbar({ profile, role, onSignOut }: Props) {
         }}
       >
         <img
-          src="/nudgeable-icon.png"
+          src="/icon.png"
           alt=""
           width={32}
           height={32}

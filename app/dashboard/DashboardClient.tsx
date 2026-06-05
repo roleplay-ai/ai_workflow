@@ -72,9 +72,9 @@ function ActivityCard({
   toolLogos: ToolLogoMap;
   tagLogos: Record<string, string>;
 }) {
-  const newBadge = isNew(activity);
+  const newBadge = isNew(activity) && status !== "completed";
   const showBadge = newBadge || status === "in_progress" || status === "completed";
-  const badgeLabel = newBadge ? "New" : status === "in_progress" ? "In Progress" : "Completed";
+  const badgeLabel = status === "completed" ? "Completed" : status === "in_progress" ? "In Progress" : "New";
   const vis = visualStyle(activity.category);
 
   return (
@@ -235,8 +235,8 @@ export default function DashboardClient({ profile, activities, progress, toolLog
   );
 
   const newList = useMemo(() =>
-    intentRelevant.filter(isNew).slice(0, 3),
-    [intentRelevant]
+    intentRelevant.filter(a => isNew(a) && progressMap[a.id]?.status !== "completed").slice(0, 3),
+    [intentRelevant, progressMap]
   );
 
   const continueList = useMemo(() =>
@@ -379,26 +379,28 @@ export default function DashboardClient({ profile, activities, progress, toolLog
           {/* Left column */}
           <div>
 
-            {/* New this week */}
-            <section style={{ marginBottom: 34 }}>
-              <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, marginBottom: 14 }}>
-                <div>
-                  <h2 style={{ margin: 0, fontSize: 23, letterSpacing: "-.045em" }}>New this week</h2>
-                  <p style={{ margin: "3px 0 0", color: C.muted, fontSize: 14 }}>Fresh workflows you can practice right away.</p>
+            {/* New this week — only featured activities */}
+            {newList.length > 0 && (
+              <section style={{ marginBottom: 34 }}>
+                <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, marginBottom: 14 }}>
+                  <div>
+                    <h2 style={{ margin: 0, fontSize: 23, letterSpacing: "-.045em" }}>New this week</h2>
+                    <p style={{ margin: "3px 0 0", color: C.muted, fontSize: 14 }}>Fresh workflows you can practice right away.</p>
+                  </div>
+                  <button
+                    onClick={scrollToLibrary}
+                    style={{ border: 0, background: "transparent", color: C.purple, fontWeight: 900, fontSize: 14, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}
+                  >
+                    View all new
+                  </button>
                 </div>
-                <button
-                  onClick={scrollToLibrary}
-                  style={{ border: 0, background: "transparent", color: C.purple, fontWeight: 900, fontSize: 14, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}
-                >
-                  View all new
-                </button>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 16 }}>
-                {(newList.length ? newList : intentRelevant.slice(0, 3)).map(a => (
-                  <ActivityCard key={a.id} activity={a} status={progressMap[a.id]?.status ?? "not_started"} toolLogos={toolLogos} tagLogos={tagLogos} />
-                ))}
-              </div>
-            </section>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 16 }}>
+                  {newList.map(a => (
+                    <ActivityCard key={a.id} activity={a} status={progressMap[a.id]?.status ?? "not_started"} toolLogos={toolLogos} tagLogos={tagLogos} />
+                  ))}
+                </div>
+              </section>
+            )}
 
             {/* Continue */}
             {continueList.length > 0 && (
@@ -484,11 +486,57 @@ export default function DashboardClient({ profile, activities, progress, toolLog
               </div>
 
               {/* Pace callout */}
-              <div style={{ padding: 13, borderRadius: 16, background: C.lightYellow, fontSize: 13, lineHeight: 1.4, fontWeight: 700, border: "1px solid #f3d25a" }}>
-                {completed === 0
-                  ? "Start your first workflow to earn points and level up."
-                  : `Next level: complete ${Math.max(0, 2 - completed)} more workflow${2 - completed !== 1 ? "s" : ""}. You are keeping pace with the essentials.`}
-              </div>
+              {(() => {
+                const nextLevel = levelName === "Starter" ? "Explorer"
+                  : levelName === "Explorer" ? "Builder"
+                  : levelName === "Builder" ? "Expert"
+                  : null;
+                const ptsNeeded = levelName === "Starter" ? 100 - totalPts
+                  : levelName === "Explorer" ? 500 - totalPts
+                  : levelName === "Builder" ? 1000 - totalPts
+                  : 0;
+                const avgPts = completed > 0 ? Math.round(totalPts / completed) : 50;
+                const estWorkflows = Math.ceil(ptsNeeded / Math.max(avgPts, 25));
+                const isClose = levelPct >= 75;
+
+                let icon = "🚀";
+                let line1 = "";
+                let line2 = "";
+
+                if (!nextLevel) {
+                  icon = "🏆";
+                  line1 = "Expert level reached!";
+                  line2 = "Keep completing workflows to stay ahead.";
+                } else if (completed === 0 && inProgress === 0) {
+                  icon = "👋";
+                  line1 = "Start your first workflow.";
+                  line2 = `Complete any activity to earn points toward ${nextLevel}.`;
+                } else if (completed === 0 && inProgress > 0) {
+                  icon = "⚡";
+                  line1 = `${inProgress} workflow${inProgress !== 1 ? "s" : ""} in progress.`;
+                  line2 = "Finish one to earn your first points and level up.";
+                } else if (isClose) {
+                  icon = "🎯";
+                  line1 = `Almost ${nextLevel}!`;
+                  line2 = "You're so close — just keep going.";
+                } else {
+                  icon = "📈";
+                  line1 = `Next: ${nextLevel}`;
+                  line2 = `Keep completing workflows to get there.`;
+                }
+
+                return (
+                  <div style={{ padding: 13, borderRadius: 16, background: C.lightYellow, border: "1px solid #f3d25a" }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                      <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0, marginTop: 1 }}>{icon}</span>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 800, lineHeight: 1.3, color: C.dark }}>{line1}</div>
+                        <div style={{ fontSize: 12, fontWeight: 600, lineHeight: 1.4, color: C.muted, marginTop: 2 }}>{line2}</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </section>
 
             {/* News card — driven by is_featured activities */}

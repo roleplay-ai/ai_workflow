@@ -79,11 +79,18 @@ export default function SuperadminClient({ profile, companies, activities: initA
   async function toggleAssignment(activityId: string, companyId: string) {
     const exists = assignments.some(a => a.activity_id === activityId && a.company_id === companyId);
     if (exists) {
-      await supabase.from("activity_companies")
-        .delete().eq("activity_id", activityId).eq("company_id", companyId);
+      const { error } = await supabase
+        .from("activity_companies")
+        .delete()
+        .eq("activity_id", activityId)
+        .eq("company_id", companyId);
+      if (error) { alert(`Failed to remove assignment: ${error.message}`); return; }
       setAssignments(prev => prev.filter(a => !(a.activity_id === activityId && a.company_id === companyId)));
     } else {
-      await supabase.from("activity_companies").insert({ activity_id: activityId, company_id: companyId });
+      const { error } = await supabase
+        .from("activity_companies")
+        .insert({ activity_id: activityId, company_id: companyId });
+      if (error) { alert(`Failed to add assignment: ${error.message}`); return; }
       setAssignments(prev => [...prev, { activity_id: activityId, company_id: companyId }]);
     }
   }

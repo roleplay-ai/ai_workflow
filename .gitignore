@@ -25,13 +25,10 @@ build/
 public/uploads/
 *.png
 !app/icon.png
-!public/nudgeable-icon.png
 *.jpg
 *.jpeg
 *.gif
 *.webp
-# Keep favicon
-!app/favicon.ico
 
 # ── TypeScript ────────────────────────────────────────────────────────────────
 *.tsbuildinfo
@@ -63,3 +60,5 @@ Desktop.ini
 
 # ── Misc ──────────────────────────────────────────────────────────────────────
 *.tgz
+
+.vercel
