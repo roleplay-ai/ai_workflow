@@ -10,6 +10,7 @@ import type { ToolLogoMap } from "@/lib/toolLogos";
 import MdText from "@/components/MdText";
 import SlideZoom from "@/components/SlideZoom";
 import type { WorkflowStep, Quiz } from "@/types";
+import { buildCoachMessage } from "@/types";
 import type { Profile, Activity, ActivityContent, ActivityStep, UserProgress } from "@/lib/supabase/types";
 import panelStyles from "./activity-panel.module.css";
 
@@ -148,29 +149,19 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fetch two opening messages from Claude on mount
+  // Build opening messages from DB step data — no API call needed
   useEffect(() => {
     if (initDone.current) return;
     initDone.current = true;
-    fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ init: true, activityTitle: activity.title, steps: stepsForAPI }),
-    })
-      .then(r => r.json())
-      .then(data => {
-        if (data.initMessages) {
-          setMessages((data.initMessages as string[]).map(content => ({ role: "assistant" as const, content })));
-        }
-      })
-      .catch(() => {
-        setMessages([{ role: "assistant", content: `Hi! I'm **Nudgie**, your AI coach for **${activity.title}**. Look at the slide and ask me anything — I'll guide you through each step.` }]);
-      })
-      .finally(() => setInitializing(false));
+    const welcome = `Hi! I'm **Nudgie**, your AI coach for **${activity.title}**. I'll guide you through each step — ask me anything along the way.`;
+    setMessages([
+      { role: "assistant", content: welcome },
+      { role: "assistant", content: buildCoachMessage(steps[0]) },
+    ]);
+    setInitializing(false);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const callAI = async (userMessage: string, stepIndexOverride?: number) => {
-    const effectiveIndex = stepIndexOverride ?? current;
+  const askCoach = async (userMessage: string) => {
     setLoading(true);
     try {
       const res = await fetch("/api/chat", {
@@ -178,7 +169,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: userMessage,
-          stepIndex: effectiveIndex,
+          stepIndex: current,
           activityTitle: activity.title,
           steps: stepsForAPI,
         }),
@@ -187,6 +178,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
       if (data.reply) setMessages(m => [...m, { role: "assistant", content: data.reply }]);
       if (typeof data.goToStep === "number") {
         setCurrent(data.goToStep);
+        setSlideOpen(false);
         const jumped = steps[data.goToStep];
         const toastText = jumped?.callout && jumped.callout !== ""
           ? jumped.callout
@@ -283,24 +275,41 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
     const completedSteps = Array.from(new Set([...(progress?.completed_steps ?? []), current]));
     if (progress) supabase.from("user_progress").update({ completed_steps: completedSteps, updated_at: new Date().toISOString() }).eq("id", progress.id);
 
-    const msg = "next";
-    setMessages(m => [...m, { role: "user", content: msg }]);
-    await callAI(msg, current);
+    const nextIndex = current + 1;
+    setCurrent(nextIndex);
+    setMessages(m => [...m, { role: "user", content: "next" }]);
+    setLoading(true);
+    setTimeout(() => {
+      setMessages(m => [...m, { role: "assistant", content: buildCoachMessage(steps[nextIndex]) }]);
+      setLoading(false);
+    }, 1500);
   };
 
   const goPrev = () => {
     if (current <= 0 || loading || initializing || hasInput) return;
     setSlideOpen(false);
-    const msg = "go back to previous step";
-    setMessages(m => [...m, { role: "user", content: msg }]);
-    callAI(msg, current);
+    const prevIndex = current - 1;
+    setCurrent(prevIndex);
+    setMessages(m => [...m, { role: "user", content: "previous" }]);
+    setLoading(true);
+    setTimeout(() => {
+      setMessages(m => [...m, { role: "assistant", content: buildCoachMessage(steps[prevIndex]) }]);
+      setLoading(false);
+    }, 1500);
   };
 
   const goToStep = (stepNum: number) => {
     if (loading || initializing) return;
-    const msg = `go to step ${stepNum}`;
-    setMessages(m => [...m, { role: "user", content: msg }]);
-    callAI(msg, current);
+    const targetIndex = stepNum - 1;
+    if (targetIndex < 0 || targetIndex >= steps.length || targetIndex === current) return;
+    setSlideOpen(false);
+    setCurrent(targetIndex);
+    setMessages(m => [...m, { role: "user", content: `go to step ${stepNum}` }]);
+    setLoading(true);
+    setTimeout(() => {
+      setMessages(m => [...m, { role: "assistant", content: buildCoachMessage(steps[targetIndex]) }]);
+      setLoading(false);
+    }, 1500);
   };
 
   const sendMessage = async () => {
@@ -308,7 +317,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
     const userMsg = input.trim();
     setInput("");
     setMessages(m => [...m, { role: "user", content: userMsg }]);
-    await callAI(userMsg);
+    await askCoach(userMsg);
   };
 
   async function handleSignOut() {

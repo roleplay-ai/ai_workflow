@@ -10,45 +10,33 @@ type StepContext = {
 };
 
 export async function POST(req: Request) {
-  const body = await req.json();
-
-  if (body.init) {
-    return handleInit(body.activityTitle, body.steps as StepContext[]);
-  }
-
-  const { message, stepIndex, activityTitle, steps } = body;
+  const { message, stepIndex, activityTitle, steps } = await req.json();
 
   if (!message?.trim()) {
     return NextResponse.json({ error: "Empty message" }, { status: 400 });
   }
 
-  const stepList = (steps as StepContext[])
-    .map((s, i) => `[STEP_NUMBER:${i + 1}] ${s.title}`)
-    .join("\n");
-
   const currentStep = (steps as StepContext[])[stepIndex];
   const totalSteps = steps.length;
-  const isFirst = stepIndex === 0;
-  const isLast = stepIndex === totalSteps - 1;
 
   const stepContext = currentStep ? `
 ## Currently on Step ${stepIndex + 1} of ${totalSteps}: ${currentStep.title}
 
 **What the learner sees:** ${currentStep.what_learner_sees}
 **What this means:** ${currentStep.what_this_means}
-**What to do:** ${(currentStep.what_to_do ?? []).map(a => `• ${a}`).join(" ")}
+**What to do:** ${(currentStep.what_to_do ?? []).map((a: string) => `• ${a}`).join(" ")}
 **If stuck:** ${currentStep.if_stuck}
 `.trim() : "";
 
-  const nextNav = isLast
-    ? `When user says "next": tell them they've completed all ${totalSteps} steps. Congratulate them warmly. No GOTO_STEP.`
-    : `When user says "next": output GOTO_STEP:${stepIndex + 2} on the very first line, then briefly describe Step ${stepIndex + 2} in 2-3 lines.`;
+  const allSteps = (steps as StepContext[])
+    .map((s, i) => `Step ${i + 1}: ${s.title}`)
+    .join("\n");
 
-  const prevNav = isFirst
-    ? `When user says "go back to previous step": tell them this is the first step. No GOTO_STEP.`
-    : `When user says "go back to previous step": output GOTO_STEP:${stepIndex} on the very first line, then briefly describe Step ${stepIndex} in 2-3 lines.`;
+  const stepList = (steps as StepContext[])
+    .map((s, i) => `[STEP_NUMBER:${i + 1}] ${s.title}`)
+    .join("\n");
 
-  const systemPrompt = `You are a friendly, sharp AI learning coach. You guide users through workflows step by step.
+  const systemPrompt = `You are Nudgie, a friendly and sharp AI learning coach. Answer the learner's question concisely.
 
 ## Activity: ${activityTitle}
 
@@ -57,21 +45,16 @@ ${stepList}
 
 ${stepContext}
 
-## Communication rules:
-- Short: max 4-5 lines. No essays.
-- Structured: use bullets or numbered steps for multi-part answers.
-- Direct: start with the answer. Never say "Great question!" or "Of course!".
-- Human tone: plain words, helpful colleague.
+## Rules:
+- Max 4-5 lines. No essays.
+- Use bullets or numbered steps for multi-part answers.
+- Start with the answer — never say "Great question!" or "Of course!".
+- Plain words, helpful colleague tone.
 - One emoji max if it adds clarity. Never decorative.
 
-## Navigation Commands (CRITICAL — follow exactly):
-${nextNav}
-${prevNav}
-When user says "go to step N": output GOTO_STEP:N on the very first line (use the exact N they said), then describe that step briefly.
-
-GOTO_STEP format: GOTO_STEP:N where N is the STEP_NUMBER from the reference list above.
-
-For non-navigation questions: use GOTO_STEP:N only if your answer clearly belongs to a different specific step.`;
+## Navigation:
+If your answer is about content that lives in a specific step (even if the learner didn't ask to go there), output GOTO_STEP:N on the very first line (N = step number from the reference list), then your answer.
+Always navigate when your explanation references a particular step's content.`;
 
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
@@ -93,33 +76,4 @@ For non-navigation questions: use GOTO_STEP:N only if your answer clearly belong
   }
 
   return NextResponse.json({ reply, goToStep });
-}
-
-async function handleInit(activityTitle: string, steps: StepContext[]) {
-  const firstStep = steps[0];
-
-  const systemPrompt = `Generate exactly two short messages to open a guided learning session. Separate them with a line containing only "---".
-
-Message 1: A short, warm welcome — 1-2 lines. Introduce yourself as Nudgie, their AI coach for "${activityTitle}". Say you'll guide them through each step, and they can ask you questions at any point. Keep it natural, like a helpful colleague starting a session. No emojis.
-
-Message 2: A brief, specific intro to Step 1: "${firstStep?.title ?? "the first step"}". 2-3 lines. Tell them what they'll see and the first action.${firstStep?.what_learner_sees ? `\nContext: ${firstStep.what_learner_sees}` : ""}${firstStep?.what_to_do?.[0] ? `\nFirst action: ${firstStep.what_to_do[0]}` : ""}
-
-Output only the two messages separated by "---". Nothing else.`;
-
-  const response = await anthropic.messages.create({
-    model: "claude-haiku-4-5",
-    max_tokens: 300,
-    system: systemPrompt,
-    messages: [{ role: "user", content: "start" }],
-  });
-
-  const raw = response.content[0]?.type === "text" ? response.content[0].text.trim() : "";
-  const [msg1, msg2] = raw.split(/^---$/m).map((p) => p.trim()).filter(Boolean);
-
-  return NextResponse.json({
-    initMessages: [
-      msg1 || `Hi! I'm Nudgie, your AI coach for ${activityTitle}. I'll guide you through each step — ask me anything along the way.`,
-      msg2 || `Let's start with Step 1: ${firstStep?.title ?? "the first step"}. Check out the slide and follow along!`,
-    ],
-  });
 }
