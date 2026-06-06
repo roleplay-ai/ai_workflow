@@ -23,8 +23,12 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
   const path = request.nextUrl.pathname;
+
+  // API routes return JSON errors; never redirect them to the login page
+  if (path.startsWith("/api/")) return supabaseResponse;
+
+  const { data: { user } } = await supabase.auth.getUser();
 
   // Always allow — auth callback needs to run to set the session cookie
   if (path.startsWith("/auth/")) return supabaseResponse;
