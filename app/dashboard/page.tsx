@@ -35,7 +35,8 @@ export default async function DashboardPage() {
       .from("activities")
       .select("*, activity_content(id)")
       .eq("published", true)
-      .order("created_at", { ascending: false }),
+      .order("tools")
+      .order("position"),
     supabase
       .from("user_progress")
       .select("*")

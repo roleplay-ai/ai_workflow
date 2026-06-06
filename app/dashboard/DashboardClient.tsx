@@ -168,16 +168,13 @@ function ActivityCard({
 
         {/* Meta row */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: "auto" }}>
-          {/* Tool logos + names */}
-          <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
-            {activity.tools.slice(0, 2).map((t, i) => (
-              <div key={i} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 9px", borderRadius: 999, border: `1px solid ${C.line}`, background: "white", fontSize: 11.5, fontWeight: 700, color: C.dark }}>
-                <ToolIcon tool={t} size={16} logos={toolLogos} />
-                {t.charAt(0).toUpperCase() + t.slice(1)}
+          {/* Tool logo + name (single tool) */}
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            {activity.tools[0] && (
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 9px", borderRadius: 999, border: `1px solid ${C.line}`, background: "white", fontSize: 11.5, fontWeight: 700, color: C.dark }}>
+                <ToolIcon tool={activity.tools[0]} size={16} logos={toolLogos} />
+                {activity.tools[0].charAt(0).toUpperCase() + activity.tools[0].slice(1)}
               </div>
-            ))}
-            {activity.tools.length > 2 && (
-              <span style={{ fontSize: 11, fontWeight: 800, color: C.muted, padding: "5px 7px", border: `1px solid ${C.line}`, borderRadius: 999, background: "white" }}>+{activity.tools.length - 2}</span>
             )}
           </div>
           {/* Type chip */}
@@ -227,9 +224,12 @@ export default function DashboardClient({ profile, activities, progress, toolLog
   const levelName = totalPts < 100 ? "Starter" : totalPts < 500 ? "Explorer" : totalPts < 1000 ? "Builder" : "Expert";
   const newCount = activities.filter(isNew).length;
 
+  // Primary tool is always tools[0], normalised to lowercase
+  const primaryTool = (a: Activity) => (a.tools[0] ?? "").toLowerCase();
+
   const toolRelevant = useMemo(() =>
-    activities.filter(a => activeTool === "all" || a.tools.includes(activeTool)),
-    [activities, activeTool]
+    activities.filter(a => activeTool === "all" || primaryTool(a) === activeTool),
+    [activities, activeTool] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const intentRelevant = useMemo(() =>
@@ -251,13 +251,22 @@ export default function DashboardClient({ profile, activities, progress, toolLog
     const q = searchQ.toLowerCase();
     return activities.filter(a => {
       const status = progressMap[a.id]?.status ?? "not_started";
-      const text = `${a.title} ${a.description} ${a.tools.join(" ")} ${a.level} ${a.category} ${status}`.toLowerCase();
-      const toolOk = activeTool === "all" || a.tools.includes(activeTool);
+      const text = `${a.title} ${a.description} ${primaryTool(a)} ${a.level} ${a.category} ${status}`.toLowerCase();
+      const toolOk = activeTool === "all" || primaryTool(a) === activeTool;
       const intentOk = activeIntent === "all" || a.category === activeIntent;
       const searchOk = !q || text.includes(q);
       return toolOk && intentOk && searchOk;
     });
-  }, [activities, progressMap, searchQ, activeTool, activeIntent]);
+  }, [activities, progressMap, searchQ, activeTool, activeIntent]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Group filtered activities by tool (already sorted by tool + position from server)
+  const filteredByTool = useMemo(() => {
+    const toolOrder = Array.from(new Set(filtered.map(primaryTool)));
+    return toolOrder.map(t => ({
+      tool: t,
+      items: filtered.filter(a => primaryTool(a) === t),
+    }));
+  }, [filtered]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -438,15 +447,29 @@ export default function DashboardClient({ profile, activities, progress, toolLog
               </div>
 
               <div style={{ background: "white", border: `1px solid ${C.line}`, borderRadius: 28, padding: 16, boxShadow: "0 10px 30px rgba(34,29,35,.08)" }}>
-                {/* Cards */}
                 {filtered.length === 0 ? (
-                  <div style={{ background: "white", border: "1px dashed #d7d0c2", borderRadius: 22, padding: 26, textAlign: "center", color: C.muted, fontWeight: 750 }}>
+                  <div style={{ border: "1px dashed #d7d0c2", borderRadius: 22, padding: 26, textAlign: "center", color: C.muted, fontWeight: 750 }}>
                     No matching workflows. Try changing the tool, intent, or search term.
                   </div>
                 ) : (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 16 }}>
-                    {filtered.map(a => (
-                      <ActivityCard key={a.id} activity={a} status={progressMap[a.id]?.status ?? "not_started"} toolLogos={toolLogos} tagLogos={tagLogos} />
+                  <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+                    {filteredByTool.map(({ tool: t, items }) => (
+                      <div key={t}>
+                        {/* Tool group header */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                            <span style={{ width: 8, height: 8, borderRadius: "50%", background: toolDot(t), display: "inline-block" }} />
+                            <span style={{ fontSize: 13, fontWeight: 900, textTransform: "capitalize", color: C.dark, letterSpacing: "-.02em" }}>{t || "Other"}</span>
+                          </div>
+                          <span style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>{items.length} workflow{items.length !== 1 ? "s" : ""}</span>
+                          <div style={{ flex: 1, height: 1, background: C.line }} />
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 16 }}>
+                          {items.map(a => (
+                            <ActivityCard key={a.id} activity={a} status={progressMap[a.id]?.status ?? "not_started"} toolLogos={toolLogos} tagLogos={tagLogos} />
+                          ))}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 )}

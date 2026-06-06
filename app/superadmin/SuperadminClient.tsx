@@ -31,7 +31,7 @@ export default function SuperadminClient({ profile, companies, activities: initA
   const [level,    setLevel]    = useState<Activity["level"]>("Beginner");
   const [time,     setTime]     = useState(15);
   const [points,   setPoints]   = useState(50);
-  const [tools,    setTools]    = useState<string[]>([]);
+  const [tool,     setTool]     = useState<string>(TOOLS[0] ?? "claude");
   const [category, setCategory] = useState("chat");
   const [creating, setCreating] = useState(false);
 
@@ -43,15 +43,53 @@ export default function SuperadminClient({ profile, companies, activities: initA
   async function createActivity(e: React.FormEvent) {
     e.preventDefault();
     setCreating(true);
+    // Position = count of existing activities for this tool (appended at end of tool group)
+    const toolPosition = activities.filter(a => (a.tools[0] ?? "") === tool).length;
     const { data, error } = await supabase.from("activities").insert({
       title, description: desc, level, time_estimate_minutes: time,
-      points, tools, category, published: false, position: activities.length,
+      points, tools: [tool], category, published: false, position: toolPosition,
     }).select().single();
     if (!error && data) {
-      setActivities(prev => [{ ...(data as any), activity_content: null }, ...prev]);
-      setTitle(""); setDesc(""); setTools([]); setShowForm(false);
+      setActivities(prev => [...prev, { ...(data as any), activity_content: null }]);
+      setTitle(""); setDesc(""); setShowForm(false);
     }
     setCreating(false);
+  }
+
+  async function moveActivity(actId: string, direction: "up" | "down") {
+    const act = activities.find(a => a.id === actId);
+    if (!act) return;
+    const actTool = (act.tools[0] ?? "").toLowerCase();
+
+    // Sort the tool group by current position
+    const group = [...activities]
+      .filter(a => (a.tools[0] ?? "").toLowerCase() === actTool)
+      .sort((a, b) => a.position - b.position);
+
+    const idx = group.findIndex(a => a.id === actId);
+    const newIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (newIdx < 0 || newIdx >= group.length) return;
+
+    // Move item to new index then assign clean sequential positions 0,1,2…
+    const reordered = [...group];
+    const [moved] = reordered.splice(idx, 1);
+    reordered.splice(newIdx, 0, moved);
+
+    // Only update rows whose position actually changed
+    const updates = reordered
+      .map((a, i) => ({ id: a.id, position: i }))
+      .filter((u, i) => group[i].id !== u.id || group[i].position !== u.position);
+
+    await Promise.all(
+      updates.map(u => supabase.from("activities").update({ position: u.position }).eq("id", u.id))
+    );
+
+    // Reflect new positions in local state
+    const posMap: Record<string, number> = {};
+    reordered.forEach((a, i) => { posMap[a.id] = i; });
+    setActivities(prev => prev.map(a =>
+      posMap[a.id] !== undefined ? { ...a, position: posMap[a.id] } : a
+    ));
   }
 
   async function togglePublish(act: ActivityRow) {
@@ -151,15 +189,10 @@ export default function SuperadminClient({ profile, companies, activities: initA
                 </div>
               </div>
               <div>
-                <label style={lbl}>Tools</label>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 5 }}>
-                  {TOOLS.map(t => (
-                    <label key={t} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, cursor: "pointer" }}>
-                      <input type="checkbox" checked={tools.includes(t)} onChange={e => setTools(p => e.target.checked ? [...p, t] : p.filter(x => x !== t))} />
-                      {t}
-                    </label>
-                  ))}
-                </div>
+                <label style={lbl}>Tool</label>
+                <select value={tool} onChange={e => setTool(e.target.value)} style={inp}>
+                  {TOOLS.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+                </select>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 <button type="submit" disabled={creating} style={btnAmber}>{creating ? "Creating…" : "Create Activity"}</button>
@@ -169,116 +202,137 @@ export default function SuperadminClient({ profile, companies, activities: initA
           </div>
         )}
 
-        {/* Activity list */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {activities.length === 0 && (
-            <div style={{ ...card, textAlign: "center", color: "#B0ABA5", padding: 48 }}>
-              No activities yet. Create your first one above.
-            </div>
-          )}
-          {activities.map(act => {
-            const expanded = expandedId === act.id;
-            const actAssignments = assignments.filter(a => a.activity_id === act.id);
-            const cc = catColor(act.category);
-
-            return (
-              <div key={act.id} style={{ ...card, padding: 0 }}>
-                {/* Row header */}
-                <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 18px", cursor: "pointer" }}
-                  onClick={() => setExpandedId(expanded ? null : act.id)}>
-                  {/* Category badge */}
-                  <span style={{ padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, background: cc.bg, color: cc.color, flexShrink: 0 }}>
-                    {act.category}
-                  </span>
-
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14.5 }}>{act.title}</div>
-                    <div style={{ fontSize: 11.5, color: "#6B6B6B", marginTop: 2 }}>
-                      {act.level} · {act.time_estimate_minutes}m · {act.points}pts
-                      <span style={{ marginLeft: 8, color: act.activity_content ? "#17A855" : "#F68A29", fontWeight: 700 }}>
-                        {act.activity_content ? "✓ content" : "⚠ no content"}
-                      </span>
-                      {actAssignments.length > 0 && (
-                        <span style={{ marginLeft: 8, color: "#3696FC" }}>· {actAssignments.length} compan{actAssignments.length === 1 ? "y" : "ies"}</span>
-                      )}
-                    </div>
+        {/* Activity list — grouped by tool, sorted by position */}
+        {activities.length === 0 ? (
+          <div style={{ ...card, textAlign: "center", color: "#B0ABA5", padding: 48 }}>
+            No activities yet. Create your first one above.
+          </div>
+        ) : (
+          (() => {
+            // Build sorted groups: tool name → activities sorted by position
+            const normTool = (a: ActivityRow) => (a.tools[0] ?? "").toLowerCase();
+            const toolOrder = Array.from(new Set(
+              [...activities].sort((a, b) => normTool(a).localeCompare(normTool(b))).map(normTool)
+            ));
+            return toolOrder.map(t => {
+              const group = [...activities]
+                .filter(a => normTool(a) === t)
+                .sort((a, b) => a.position - b.position);
+              return (
+                <div key={t} style={{ marginBottom: 24 }}>
+                  {/* Tool group header */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                    <span style={{ fontSize: 13, fontWeight: 900, textTransform: "capitalize", color: "#221D23", letterSpacing: "-.02em" }}>{t}</span>
+                    <span style={{ fontSize: 11.5, color: "#B0ABA5", fontWeight: 600 }}>{group.length} activit{group.length === 1 ? "y" : "ies"}</span>
+                    <div style={{ flex: 1, height: 1, background: "#E8E6DC" }} />
                   </div>
 
-                  <div style={{ display: "flex", gap: 8, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                    <button onClick={() => toggleFeatured(act)} title="Show in New this week section on dashboard" style={{
-                      padding: "5px 12px", borderRadius: 999, border: "1px solid",
-                      borderColor: act.is_featured ? "rgba(255,206,0,.5)" : "#E8E6DC",
-                      background: act.is_featured ? "#FFF6CF" : "#F0EEE8",
-                      color: act.is_featured ? "#7A5F00" : "#6B6B6B",
-                      fontSize: 12, fontWeight: 700, cursor: "pointer",
-                    }}>★ {act.is_featured ? "Added to New" : "Add to New"}</button>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {group.map((act, idx) => {
+                      const expanded = expandedId === act.id;
+                      const actAssignments = assignments.filter(a => a.activity_id === act.id);
+                      const cc = catColor(act.category);
+                      return (
+                        <div key={act.id} style={{ ...card, padding: 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 16px", cursor: "pointer" }}
+                            onClick={() => setExpandedId(expanded ? null : act.id)}>
 
-                    <button onClick={() => togglePublish(act)} style={{
-                      padding: "5px 12px", borderRadius: 999, border: "1px solid",
-                      borderColor: act.published ? "rgba(35,206,104,.3)" : "#E8E6DC",
-                      background: act.published ? "rgba(35,206,104,.08)" : "#F0EEE8",
-                      color: act.published ? "#17A855" : "#6B6B6B",
-                      fontSize: 12, fontWeight: 700, cursor: "pointer",
-                    }}>{act.published ? "Published" : "Draft"}</button>
+                            {/* Position controls */}
+                            <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                              <button onClick={() => moveActivity(act.id, "up")} disabled={idx === 0} style={{ ...posBtnStyle, opacity: idx === 0 ? .3 : 1 }} title="Move up">▲</button>
+                              <button onClick={() => moveActivity(act.id, "down")} disabled={idx === group.length - 1} style={{ ...posBtnStyle, opacity: idx === group.length - 1 ? .3 : 1 }} title="Move down">▼</button>
+                            </div>
 
-                    <Link href={`/superadmin/activity/${act.id}`} style={{
-                      padding: "5px 12px", borderRadius: 999, border: "1px solid #E8E6DC",
-                      background: "white", color: "#221D23", fontSize: 12, fontWeight: 700,
-                      textDecoration: "none",
-                    }}>Edit content</Link>
+                            {/* Position badge */}
+                            <span style={{ width: 22, height: 22, borderRadius: "50%", background: "#F0EEE8", display: "grid", placeItems: "center", fontSize: 10, fontWeight: 900, color: "#6B6B6B", flexShrink: 0 }}>{idx + 1}</span>
 
-                    <button onClick={() => deleteActivity(act.id)} style={{
-                      border: 0, background: "none", color: "#EF4444", cursor: "pointer", fontSize: 16,
-                    }}>×</button>
+                            {/* Category badge */}
+                            <span style={{ padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, background: cc.bg, color: cc.color, flexShrink: 0 }}>{act.category}</span>
+
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, fontSize: 14 }}>{act.title}</div>
+                              <div style={{ fontSize: 11.5, color: "#6B6B6B", marginTop: 1 }}>
+                                {act.level} · {act.time_estimate_minutes}m · {act.points}pts
+                                <span style={{ marginLeft: 8, color: act.activity_content ? "#17A855" : "#F68A29", fontWeight: 700 }}>
+                                  {act.activity_content ? "✓ content" : "⚠ no content"}
+                                </span>
+                                {actAssignments.length > 0 && (
+                                  <span style={{ marginLeft: 8, color: "#3696FC" }}>· {actAssignments.length} co.</span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div style={{ display: "flex", gap: 7, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                              <button onClick={() => toggleFeatured(act)} title="Show in 'New this week'" style={{
+                                padding: "5px 10px", borderRadius: 999, border: "1px solid",
+                                borderColor: act.is_featured ? "rgba(255,206,0,.5)" : "#E8E6DC",
+                                background: act.is_featured ? "#FFF6CF" : "#F0EEE8",
+                                color: act.is_featured ? "#7A5F00" : "#6B6B6B",
+                                fontSize: 11.5, fontWeight: 700, cursor: "pointer",
+                              }}>★ {act.is_featured ? "New" : "+"}</button>
+
+                              <button onClick={() => togglePublish(act)} style={{
+                                padding: "5px 10px", borderRadius: 999, border: "1px solid",
+                                borderColor: act.published ? "rgba(35,206,104,.3)" : "#E8E6DC",
+                                background: act.published ? "rgba(35,206,104,.08)" : "#F0EEE8",
+                                color: act.published ? "#17A855" : "#6B6B6B",
+                                fontSize: 11.5, fontWeight: 700, cursor: "pointer",
+                              }}>{act.published ? "Live" : "Draft"}</button>
+
+                              <Link href={`/superadmin/activity/${act.id}`} style={{
+                                padding: "5px 10px", borderRadius: 999, border: "1px solid #E8E6DC",
+                                background: "white", color: "#221D23", fontSize: 11.5, fontWeight: 700,
+                                textDecoration: "none",
+                              }}>Edit</Link>
+
+                              <button onClick={() => deleteActivity(act.id)} style={{
+                                border: 0, background: "none", color: "#EF4444", cursor: "pointer", fontSize: 16, lineHeight: 1,
+                              }}>×</button>
+                            </div>
+
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#B0ABA5" strokeWidth="2.5"
+                              strokeLinecap="round" strokeLinejoin="round"
+                              style={{ transform: expanded ? "rotate(180deg)" : "rotate(0)", transition: ".15s", flexShrink: 0 }}>
+                              <polyline points="6 9 12 15 18 9"/>
+                            </svg>
+                          </div>
+
+                          {expanded && (
+                            <div style={{ padding: "0 16px 14px", borderTop: "1px solid #F0EEE8" }}>
+                              <div style={{ fontSize: 12, fontWeight: 700, color: "#6B6B6B", margin: "10px 0 7px" }}>
+                                Assign to companies
+                                {actAssignments.length === 0 && <span style={{ fontWeight: 400, marginLeft: 6 }}>· no assignments = visible to everyone</span>}
+                              </div>
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                                {companies.map(co => {
+                                  const assigned = assignments.some(a => a.activity_id === act.id && a.company_id === co.id);
+                                  return (
+                                    <button key={co.id} onClick={() => toggleAssignment(act.id, co.id)} style={{
+                                      display: "flex", alignItems: "center", gap: 7,
+                                      padding: "6px 12px", borderRadius: 999, cursor: "pointer",
+                                      border: "1.5px solid",
+                                      borderColor: assigned ? "#FFCE00" : "#E8E6DC",
+                                      background: assigned ? "#FFF6CF" : "white",
+                                      fontWeight: 700, fontSize: 12, transition: ".12s",
+                                    }}>
+                                      <span style={{ width: 14, height: 14, borderRadius: "50%", background: assigned ? "#FFCE00" : "#F0EEE8", display: "grid", placeItems: "center", fontSize: 9, fontWeight: 900, color: assigned ? "#221D23" : "transparent" }}>✓</span>
+                                      {co.name}
+                                      {co.domain && <span style={{ fontSize: 10, color: "#B0ABA5", fontWeight: 400 }}>{co.domain}</span>}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B0ABA5" strokeWidth="2.5"
-                    strokeLinecap="round" strokeLinejoin="round"
-                    style={{ transform: expanded ? "rotate(180deg)" : "rotate(0)", transition: ".15s", flexShrink: 0 }}>
-                    <polyline points="6 9 12 15 18 9"/>
-                  </svg>
                 </div>
-
-                {/* Expanded: company assignment */}
-                {expanded && (
-                  <div style={{ padding: "0 18px 16px", borderTop: "1px solid #F0EEE8" }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: "#6B6B6B", margin: "12px 0 8px" }}>
-                      Assign to companies
-                      <span style={{ fontWeight: 400, marginLeft: 6 }}>
-                        {actAssignments.length === 0 ? "· no assignments = visible to everyone" : ""}
-                      </span>
-                    </div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-                      {companies.map(co => {
-                        const assigned = assignments.some(a => a.activity_id === act.id && a.company_id === co.id);
-                        return (
-                          <button key={co.id} onClick={() => toggleAssignment(act.id, co.id)} style={{
-                            display: "flex", alignItems: "center", gap: 7,
-                            padding: "6px 13px", borderRadius: 999, cursor: "pointer",
-                            border: "1.5px solid",
-                            borderColor: assigned ? "#FFCE00" : "#E8E6DC",
-                            background: assigned ? "#FFF6CF" : "white",
-                            fontWeight: 700, fontSize: 12.5, transition: ".12s",
-                          }}>
-                            <span style={{
-                              width: 16, height: 16, borderRadius: "50%",
-                              background: assigned ? "#FFCE00" : "#F0EEE8",
-                              display: "grid", placeItems: "center",
-                              fontSize: 9, fontWeight: 900,
-                              color: assigned ? "#221D23" : "transparent",
-                            }}>✓</span>
-                            {co.name}
-                            {co.domain && <span style={{ fontSize: 10.5, color: "#B0ABA5", fontWeight: 400 }}>{co.domain}</span>}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+              );
+            });
+          })()
+        )}
       </main>
     </div>
   );
@@ -296,3 +350,4 @@ const inp: React.CSSProperties = {
 const lbl: React.CSSProperties = { display: "block", fontSize: 11.5, fontWeight: 700, color: "#6B6B6B", marginBottom: 4 };
 const btnAmber: React.CSSProperties = { padding: "9px 18px", borderRadius: 999, border: 0, background: "#FFCE00", color: "#221D23", fontWeight: 800, fontSize: 13, cursor: "pointer" };
 const btnGhost: React.CSSProperties = { padding: "9px 18px", borderRadius: 999, border: "1.5px solid #E8E6DC", background: "white", color: "#6B6B6B", fontWeight: 700, fontSize: 13, cursor: "pointer" };
+const posBtnStyle: React.CSSProperties = { width: 18, height: 14, border: "1px solid #E8E6DC", borderRadius: 4, background: "#F8F8F6", color: "#6B6B6B", fontSize: 8, cursor: "pointer", display: "grid", placeItems: "center", padding: 0 };
