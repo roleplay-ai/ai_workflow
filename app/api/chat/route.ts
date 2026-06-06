@@ -107,7 +107,7 @@ Message 2: A brief, specific intro to Step 1: "${firstStep?.title ?? "the first 
 Output only the two messages separated by "---". Nothing else.`;
 
   const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
+    model: "claude-haiku-4-5",
     max_tokens: 300,
     system: systemPrompt,
     messages: [{ role: "user", content: "start" }],
