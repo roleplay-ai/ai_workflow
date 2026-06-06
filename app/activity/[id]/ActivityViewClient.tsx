@@ -175,7 +175,19 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
         }),
       });
       const data = await res.json();
-      if (data.reply) setMessages(m => [...m, { role: "assistant", content: data.reply }]);
+      if (data.reply) {
+        setMessages(m => [...m, { role: "assistant", content: data.reply }]);
+        // Fire-and-forget log — never blocks the UI
+        supabase.from("chat_logs").insert({
+          user_id: profile.id,
+          activity_id: activity.id,
+          step_index: current,
+          step_title: steps[current]?.title ?? "",
+          user_message: userMessage,
+          ai_response: data.reply,
+          navigated_to_step: typeof data.goToStep === "number" ? data.goToStep : null,
+        });
+      }
       if (typeof data.goToStep === "number") {
         setCurrent(data.goToStep);
         setSlideOpen(false);

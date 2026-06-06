@@ -110,6 +110,18 @@ export type ActivityContent = {
 };
 
 
+export type ChatLog = {
+  id: string;
+  user_id: string;
+  activity_id: string;
+  step_index: number;
+  step_title: string;
+  user_message: string;
+  ai_response: string;
+  navigated_to_step: number | null;
+  created_at: string;
+};
+
 export type UserProgress = {
   id: string;
   user_id: string;
@@ -165,6 +177,11 @@ export type Database = {
         Row: UserProgress;
         Insert: { user_id: string; activity_id: string; status?: UserProgress["status"]; completed_steps?: number[]; quiz_score?: number | null; completed_at?: string | null; updated_at?: string };
         Update: { status?: UserProgress["status"]; completed_steps?: number[]; quiz_score?: number | null; completed_at?: string | null; updated_at?: string; video_watched?: boolean };
+      };
+      chat_logs: {
+        Row: ChatLog;
+        Insert: Omit<ChatLog, "id" | "created_at">;
+        Update: never;
       };
     };
     Views: Record<string, never>;
