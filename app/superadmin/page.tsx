@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import SuperadminClient from "./SuperadminClient";
+import { collectToolSlugs } from "@/lib/tools";
 export const dynamic = "force-dynamic";
 
 export default async function SuperadminPage() {
@@ -34,6 +35,7 @@ export default async function SuperadminPage() {
     { data: activities },
     { data: allAssignments },
     { data: tags },
+    { data: toolLogoRows },
   ] = await Promise.all([
     supabase.from("companies").select("id, name, domain").order("name"),
     supabase.from("activities")
@@ -42,7 +44,13 @@ export default async function SuperadminPage() {
       .order("position"),
     supabase.from("activity_companies").select("activity_id, company_id"),
     supabase.from("activity_tags").select("id, name, icon_url").order("name"),
+    supabase.from("tool_logos").select("tool").order("tool"),
   ]);
+
+  const availableTools = collectToolSlugs(
+    (toolLogoRows ?? []).map(row => row.tool),
+    (activities ?? []).map(a => a.tools ?? []),
+  );
 
   const fullProfile = { ...profile, companies: company };
 
@@ -53,6 +61,7 @@ export default async function SuperadminPage() {
       activities={activities as any ?? []}
       allAssignments={allAssignments ?? []}
       tags={tags ?? []}
+      availableTools={availableTools}
     />
   );
 }

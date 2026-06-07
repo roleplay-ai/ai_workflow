@@ -1,20 +1,11 @@
 import type { ToolLogoMap } from "@/lib/toolLogos";
 
 const TOOL_FALLBACK: Record<string, { bg: string; label: string }> = {
-  gemini: { bg: "linear-gradient(135deg,#4285f4,#a142f4)", label: "G" },
-  chatgpt: { bg: "#10a37f", label: "C" },
-  copilot: { bg: "linear-gradient(135deg,#00a4ef,#7fba00)", label: "Co" },
-  drive: { bg: "#fbbc04", label: "D" },
-  sheets: { bg: "#0f9d58", label: "S" },
-  gmail: { bg: "#ea4335", label: "M" },
-  calendar: { bg: "#1a73e8", label: "Ca" },
-  vapi: { bg: "#111827", label: "V" },
-  wati: { bg: "#22c55e", label: "W" },
-  lovable: { bg: "#ff477e", label: "L" },
-  napkin: { bg: "#8b5cf6", label: "N" },
-  "ai-studio": { bg: "#3b82f6", label: "AI" },
-  notebooklm: { bg: "#fbbc04", label: "NB" },
   claude: { bg: "#D97757", label: "Cl" },
+  chatgpt: { bg: "#10a37f", label: "C" },
+  gemini: { bg: "linear-gradient(135deg,#4285f4,#a142f4)", label: "G" },
+  copilot: { bg: "linear-gradient(135deg,#00a4ef,#7fba00)", label: "Co" },
+  "agentic-workflows": { bg: "linear-gradient(135deg,#623CEA,#3699FC)", label: "AW" },
 };
 
 type Props = {

@@ -6,6 +6,7 @@ import type { Activity, UserProgress, Profile } from "@/lib/supabase/types";
 import Topbar from "@/components/Topbar";
 import ToolIcon from "@/components/ToolIcon";
 import type { ToolLogoMap } from "@/lib/toolLogos";
+import { formatToolLabel } from "@/lib/tools";
 
 type Props = {
   profile: Profile & { companies: { name: string } | null };
@@ -13,6 +14,7 @@ type Props = {
   progress: UserProgress[];
   toolLogos: ToolLogoMap;
   tagLogos: Record<string, string>;
+  toolFilters: string[];
 };
 
 const C = {
@@ -38,6 +40,7 @@ function toolDot(tool: string) {
   if (tool === "chatgpt") return C.green;
   if (tool === "gemini") return C.blue;
   if (tool === "copilot") return C.purple;
+  if (tool === "agentic-workflows") return C.purple;
   return C.yellow;
 }
 
@@ -46,6 +49,7 @@ function botBadge(tool: string) {
   if (tool === "chatgpt") return { bg: C.green, letter: "G" };
   if (tool === "gemini") return { bg: C.blue, letter: "G" };
   if (tool === "copilot") return { bg: C.purple, letter: "M" };
+  if (tool === "agentic-workflows") return { bg: C.purple, letter: "AW" };
   return { bg: C.dark, letter: "AI" };
 }
 
@@ -173,7 +177,7 @@ function ActivityCard({
             {activity.tools[0] && (
               <div style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 9px", borderRadius: 999, border: `1px solid ${C.line}`, background: "white", fontSize: 11.5, fontWeight: 700, color: C.dark }}>
                 <ToolIcon tool={activity.tools[0]} size={16} logos={toolLogos} />
-                {activity.tools[0].charAt(0).toUpperCase() + activity.tools[0].slice(1)}
+                {formatToolLabel(activity.tools[0])}
               </div>
             )}
           </div>
@@ -200,9 +204,7 @@ const INTENT_BTNS = [
   { id: "build", icon: "🛠", label: "Build", desc: "Create apps, dashboards, tools, and reusable workflows." },
 ];
 
-const TOOL_FILTERS = ["all", "claude", "chatgpt", "gemini", "copilot"];
-
-export default function DashboardClient({ profile, activities, progress, toolLogos, tagLogos }: Props) {
+export default function DashboardClient({ profile, activities, progress, toolLogos, tagLogos, toolFilters }: Props) {
   const [searchQ, setSearchQ] = useState("");
   const [activeTool, setActiveTool] = useState("all");
   const [activeIntent, setActiveIntent] = useState("all");
@@ -331,7 +333,7 @@ export default function DashboardClient({ profile, activities, progress, toolLog
 
           {/* Tool chips */}
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
-            {TOOL_FILTERS.map(t => {
+            {toolFilters.map(t => {
               const active = activeTool === t;
               return (
                 <button
@@ -350,7 +352,7 @@ export default function DashboardClient({ profile, activities, progress, toolLog
                   }}
                 >
                   <span style={{ width: 10, height: 10, borderRadius: "50%", border: "1.5px solid currentColor", display: "inline-block", background: toolDot(t) }} />
-                  {t === "all" ? "All tools" : t.charAt(0).toUpperCase() + t.slice(1)}
+                  {t === "all" ? "All tools" : formatToolLabel(t)}
                 </button>
               );
             })}
@@ -459,7 +461,7 @@ export default function DashboardClient({ profile, activities, progress, toolLog
                         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
                             <span style={{ width: 8, height: 8, borderRadius: "50%", background: toolDot(t), display: "inline-block" }} />
-                            <span style={{ fontSize: 13, fontWeight: 900, textTransform: "capitalize", color: C.dark, letterSpacing: "-.02em" }}>{t || "Other"}</span>
+                            <span style={{ fontSize: 13, fontWeight: 900, color: C.dark, letterSpacing: "-.02em" }}>{t ? formatToolLabel(t) : "Other"}</span>
                           </div>
                           <span style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>{items.length} workflow{items.length !== 1 ? "s" : ""}</span>
                           <div style={{ flex: 1, height: 1, background: C.line }} />

@@ -7,6 +7,7 @@ import CelebrationModal from "@/components/CelebrationModal";
 import VideoModal from "@/components/VideoModal";
 import ToolIcon from "@/components/ToolIcon";
 import type { ToolLogoMap } from "@/lib/toolLogos";
+import { formatToolLabel } from "@/lib/tools";
 import MdText from "@/components/MdText";
 import SlideZoom from "@/components/SlideZoom";
 import type { WorkflowStep, Quiz } from "@/types";
@@ -562,7 +563,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
                       }}
                     >
                       <ToolIcon tool={primaryTool} size={18} logos={toolLogos} insetScale={0.9} />
-                      <span style={{ fontSize: 10.5, fontWeight: 700, color: "#475569", textTransform: "capitalize" }}>{primaryTool}</span>
+                      <span style={{ fontSize: 10.5, fontWeight: 700, color: "#475569" }}>{formatToolLabel(primaryTool)}</span>
                     </span>
                   )}
                 </div>

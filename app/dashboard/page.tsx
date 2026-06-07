@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import DashboardClient from "./DashboardClient";
 import { rowsToToolLogoMap } from "@/lib/toolLogos";
+import { buildDashboardToolFilters } from "@/lib/tools";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,10 @@ export default async function DashboardPage() {
   }
 
   const fullProfile = profile ? { ...profile, companies: company } : null;
+  const toolFilters = buildDashboardToolFilters(
+    (toolLogoRows ?? []).map(row => row.tool),
+    (activities ?? []).map(a => a.tools ?? []),
+  );
 
   return (
     <DashboardClient
@@ -59,6 +64,7 @@ export default async function DashboardPage() {
       progress={progress ?? []}
       toolLogos={rowsToToolLogoMap(toolLogoRows ?? [])}
       tagLogos={tagLogos}
+      toolFilters={toolFilters}
     />
   );
 }

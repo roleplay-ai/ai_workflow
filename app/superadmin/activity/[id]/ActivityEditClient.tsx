@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import Topbar from "@/components/Topbar";
 import MultiSelect, { type SelectOption } from "@/components/MultiSelect";
 import type { Profile, Activity, ActivityContent, ActivityStep, PromptTemplate, DownloadFile } from "@/lib/supabase/types";
+import { formatToolLabel, normalizeToolList, normalizeToolSlug, sortToolSlugs } from "@/lib/tools";
 
 type Props = {
   profile: Profile & { companies: { name: string } | null };
@@ -53,7 +54,7 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
   const [infoMsg,      setInfoMsg]      = useState("");
 
   // Info — multi-select state (arrays)
-  const [infoToolsArr,  setInfoToolsArr]  = useState<string[]>(activity.tools ?? []);
+  const [infoToolsArr,  setInfoToolsArr]  = useState<string[]>(normalizeToolList(activity.tools ?? []));
   const [infoTagsArr,   setInfoTagsArr]   = useState<string[]>((activity as any).tags ?? []);
   const [infoCategoryArr, setInfoCategoryArr] = useState<string[]>(activity.category ? [activity.category] : []);
 
@@ -77,11 +78,22 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
   }
 
   async function handleAddTool(name: string, imageFile: File | null) {
-    const logoUrl = imageFile ? (await uploadIcon(imageFile, "tools") ?? "") : "";
-    await supabase.from("tool_logos").upsert({ tool: name, logo_url: logoUrl, updated_at: new Date().toISOString() });
-    const opt = { name, imageUrl: logoUrl || null };
-    setToolOpts(prev => [...prev, opt]);
-    setInfoToolsArr(prev => [...prev, name]);
+    const slug = normalizeToolSlug(name);
+    if (!slug) return;
+    const rawLogoUrl = imageFile ? (await uploadIcon(imageFile, "tools") ?? "") : "";
+    const displayUrl = rawLogoUrl
+      ? `${rawLogoUrl}${rawLogoUrl.includes("?") ? "&" : "?"}t=${Date.now()}`
+      : null;
+    await supabase.from("tool_logos").upsert({ tool: slug, logo_url: rawLogoUrl, updated_at: new Date().toISOString() });
+    const opt = { name: slug, displayName: formatToolLabel(slug), imageUrl: displayUrl };
+    setToolOpts(prev => {
+      if (prev.some(o => o.name === slug)) return prev;
+      return sortToolSlugs([...prev.map(o => o.name), slug]).map(tool => {
+        const existing = prev.find(o => o.name === tool);
+        return existing ?? (tool === slug ? opt : { name: tool, displayName: formatToolLabel(tool), imageUrl: null });
+      });
+    });
+    setInfoToolsArr(prev => prev.includes(slug) ? prev : [...prev, slug]);
   }
 
   async function handleAddTag(name: string, imageFile: File | null) {
@@ -98,10 +110,23 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
   }
 
   async function handleUpdateToolImage(name: string, imageFile: File) {
+    const slug = normalizeToolSlug(name);
+    if (!slug) return;
     const logoUrl = await uploadIcon(imageFile, "tools");
     if (!logoUrl) return;
-    await supabase.from("tool_logos").update({ logo_url: logoUrl, updated_at: new Date().toISOString() }).eq("tool", name);
-    setToolOpts(prev => prev.map(o => o.name === name ? { ...o, imageUrl: logoUrl } : o));
+    const displayUrl = `${logoUrl}${logoUrl.includes("?") ? "&" : "?"}t=${Date.now()}`;
+    const { error } = await supabase.from("tool_logos").upsert({
+      tool: slug,
+      logo_url: logoUrl,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) {
+      setInfoMsg(`Logo saved locally but database error: ${error.message}`);
+      setTimeout(() => setInfoMsg(""), 5000);
+    }
+    setToolOpts(prev => prev.map(o =>
+      normalizeToolSlug(o.name) === slug ? { ...o, name: slug, imageUrl: displayUrl } : o
+    ));
   }
 
   async function handleUpdateTagImage(name: string, imageFile: File) {
@@ -120,7 +145,7 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
       time_estimate_minutes:  infoTime || null,
       points:                 infoPoints,
       category:               infoCategoryArr[0] ?? "",
-      tools:                  infoToolsArr,
+      tools:                  normalizeToolList(infoToolsArr),
       tags:                   infoTagsArr,
       published:              infoPublished,
       position:               infoPosition,
@@ -577,10 +602,10 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
                 mode="multi"
                 selected={infoToolsArr}
                 options={toolOpts}
-                onChange={setInfoToolsArr}
+                onChange={next => setInfoToolsArr(normalizeToolList(next))}
                 onAddNew={handleAddTool}
                 onUpdateImage={handleUpdateToolImage}
-                placeholder="Select tools (ChatGPT, Gemini…)"
+                placeholder="Select tools (Claude, ChatGPT, Gemini…)"
               />
 
               {/* Tags multi-select */}

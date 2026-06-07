@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 
-export type SelectOption = { name: string; imageUrl?: string | null };
+export type SelectOption = { name: string; imageUrl?: string | null; displayName?: string };
 
 type Props = {
   label: string;
@@ -9,7 +9,7 @@ type Props = {
   selected: string[];
   options: SelectOption[];
   onChange: (next: string[]) => void;
-  onAddNew: (name: string, imageFile: File | null) => Promise<void>;
+  onAddNew?: (name: string, imageFile: File | null) => Promise<void>;
   /** Called when an existing option's logo is uploaded/changed */
   onUpdateImage?: (name: string, imageFile: File) => Promise<void>;
   placeholder?: string;
@@ -37,23 +37,31 @@ export default function MultiSelect({
     return () => document.removeEventListener("mousedown", down);
   }, []);
 
+  const findOption = (name: string) =>
+    options.find(o => o.name.toLowerCase() === name.toLowerCase());
+
+  const isSelected = (name: string) =>
+    selected.some(s => s.toLowerCase() === name.toLowerCase());
+
   const filtered = options.filter(o =>
     o.name.toLowerCase().includes(search.toLowerCase())
+    || (o.displayName ?? o.name).toLowerCase().includes(search.toLowerCase())
   );
 
   function pick(name: string) {
+    const canonical = findOption(name)?.name ?? name;
     if (mode === "single") {
-      onChange([name]); setOpen(false); setSearch("");
+      onChange([canonical]); setOpen(false); setSearch("");
     } else {
-      onChange(selected.includes(name)
-        ? selected.filter(s => s !== name)
-        : [...selected, name]
+      onChange(isSelected(canonical)
+        ? selected.filter(s => s.toLowerCase() !== canonical.toLowerCase())
+        : [...selected, canonical]
       );
     }
   }
 
   async function submit() {
-    if (!newName.trim() || saving) return;
+    if (!onAddNew || !newName.trim() || saving) return;
     setSaving(true);
     try { await onAddNew(newName.trim(), newFile); }
     finally { setSaving(false); setNewName(""); setNewFile(null); setAdding(false); }
@@ -66,7 +74,10 @@ export default function MultiSelect({
     finally { setUploadingFor(null); }
   }
 
-  const singleLabel = mode === "single" ? (selected[0] ?? "") : "";
+  const optionLabel = (opt: SelectOption) => opt.displayName ?? opt.name;
+  const selectedLabel = (name: string) => findOption(name)?.displayName ?? name;
+  const singleLabel = mode === "single" ? (selected[0] ? selectedLabel(selected[0]) : "") : "";
+  const logoUrl = (name: string) => findOption(name)?.imageUrl?.trim() || null;
 
   return (
     <div ref={rootRef} style={{ position: "relative" }}>
@@ -85,7 +96,7 @@ export default function MultiSelect({
       >
         {/* chips (multi) */}
         {mode === "multi" && selected.map(name => {
-          const img = options.find(o => o.name === name)?.imageUrl;
+          const img = logoUrl(name);
           return (
             <div key={name} style={{
               display: "flex", alignItems: "center", gap: 4,
@@ -96,7 +107,7 @@ export default function MultiSelect({
                 ? <img src={img} alt={name} style={{ width: 14, height: 14, borderRadius: 2, objectFit: "contain", flexShrink: 0 }} />
                 : <span style={{ width: 14, height: 14, borderRadius: 2, background: "rgba(255,255,255,.18)", display: "grid", placeItems: "center", fontSize: 8, flexShrink: 0 }}>{name[0]?.toUpperCase()}</span>
               }
-              {name}
+              {selectedLabel(name)}
               <span
                 onClick={e => { e.stopPropagation(); onChange(selected.filter(s => s !== name)); }}
                 style={{ cursor: "pointer", opacity: .65, fontSize: 14, lineHeight: 1, marginLeft: 1 }}
@@ -107,7 +118,7 @@ export default function MultiSelect({
 
         {/* single value */}
         {mode === "single" && singleLabel && (() => {
-          const img = options.find(o => o.name === singleLabel)?.imageUrl;
+          const img = logoUrl(selected[0]);
           return (
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               {img && <img src={img} alt={singleLabel} style={{ width: 16, height: 16, borderRadius: 3, objectFit: "contain" }} />}
@@ -148,9 +159,9 @@ export default function MultiSelect({
           )}
 
           {filtered.map(opt => {
-            const isSel       = selected.includes(opt.name);
+            const isSel       = isSelected(opt.name);
             const isUploading = uploadingFor === opt.name;
-            const hasLogo     = !!opt.imageUrl;
+            const hasLogo     = !!opt.imageUrl?.trim();
 
             return (
               <div
@@ -172,7 +183,7 @@ export default function MultiSelect({
                         {opt.name[0]?.toUpperCase()}
                       </div>
                   }
-                  {opt.name}
+                  {optionLabel(opt)}
                 </div>
 
                 {/* ── "Add logo" button for options without an image ── */}
@@ -232,7 +243,7 @@ export default function MultiSelect({
           })}
 
           {/* ── Add new ── */}
-          {!adding ? (
+          {onAddNew && !adding ? (
             <div
               onClick={() => setAdding(true)}
               style={{
@@ -248,7 +259,7 @@ export default function MultiSelect({
               </svg>
               Add new {label.toLowerCase()}
             </div>
-          ) : (
+          ) : onAddNew ? (
             <div style={{ padding: "10px 14px", borderTop: "1px solid #F0EDE8", display: "flex", flexDirection: "column", gap: 8 }}>
               <input
                 autoFocus
@@ -278,7 +289,7 @@ export default function MultiSelect({
                 </button>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       )}
     </div>

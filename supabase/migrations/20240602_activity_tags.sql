@@ -28,10 +28,11 @@ ON CONFLICT (name) DO NOTHING;
 
 -- 4. Default tools in tool_logos (if not already present)
 INSERT INTO tool_logos (tool, logo_url, updated_at) VALUES
-  ('ChatGPT', '', now()),
-  ('Gemini',  '', now()),
-  ('Claude',  '', now()),
-  ('Copilot', '', now())
+  ('claude',              '', now()),
+  ('chatgpt',             '', now()),
+  ('gemini',              '', now()),
+  ('copilot',             '', now()),
+  ('agentic-workflows',   '', now())
 ON CONFLICT (tool) DO NOTHING;
 
 -- 5. Storage bucket for tool/tag icons (create manually in Supabase dashboard

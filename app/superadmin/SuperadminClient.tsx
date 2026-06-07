@@ -4,7 +4,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import Topbar from "@/components/Topbar";
 import type { Profile, Company, Activity, ActivityTag } from "@/lib/supabase/types";
-import { TOOLS } from "@/lib/tools";
+import { DEFAULT_TOOLS, formatToolLabel } from "@/lib/tools";
 
 type ActivityRow = Activity & { activity_content: { id: string } | null };
 
@@ -14,11 +14,12 @@ type Props = {
   activities: ActivityRow[];
   allAssignments: { activity_id: string; company_id: string }[];
   tags: Pick<ActivityTag, "id" | "name" | "icon_url">[];
+  availableTools: string[];
 };
 
 const CATEGORIES = ["chat", "build", "automate"];
 
-export default function SuperadminClient({ profile, companies, activities: initActivities, allAssignments: initAssignments, tags: initTags }: Props) {
+export default function SuperadminClient({ profile, companies, activities: initActivities, allAssignments: initAssignments, tags: initTags, availableTools }: Props) {
   const [activities,   setActivities]   = useState(initActivities);
   const [assignments,  setAssignments]  = useState(initAssignments);
   const [tags,         setTags]         = useState(initTags);
@@ -31,7 +32,7 @@ export default function SuperadminClient({ profile, companies, activities: initA
   const [level,    setLevel]    = useState<Activity["level"]>("Beginner");
   const [time,     setTime]     = useState(15);
   const [points,   setPoints]   = useState(50);
-  const [tool,     setTool]     = useState<string>(TOOLS[0] ?? "claude");
+  const [tool,     setTool]     = useState<string>(availableTools[0] ?? DEFAULT_TOOLS[0]);
   const [category, setCategory] = useState("chat");
   const [creating, setCreating] = useState(false);
 
@@ -152,7 +153,7 @@ export default function SuperadminClient({ profile, companies, activities: initA
             <p style={{ margin: "3px 0 0", color: "#6B6B6B", fontSize: 13 }}>{activities.length} total · create, edit content, assign to companies</p>
           </div>
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-            <Link href="/superadmin/tool-logos" style={{ ...btnGhost, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Tool logos</Link>
+            <Link href="/superadmin/tool-logos" style={{ ...btnGhost, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Manage tools</Link>
             <button onClick={() => setShowForm(v => !v)} style={btnAmber}>+ New Activity</button>
           </div>
         </div>
@@ -191,7 +192,7 @@ export default function SuperadminClient({ profile, companies, activities: initA
               <div>
                 <label style={lbl}>Tool</label>
                 <select value={tool} onChange={e => setTool(e.target.value)} style={inp}>
-                  {TOOLS.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+                  {availableTools.map(t => <option key={t} value={t}>{formatToolLabel(t)}</option>)}
                 </select>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
@@ -222,7 +223,7 @@ export default function SuperadminClient({ profile, companies, activities: initA
                 <div key={t} style={{ marginBottom: 24 }}>
                   {/* Tool group header */}
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                    <span style={{ fontSize: 13, fontWeight: 900, textTransform: "capitalize", color: "#221D23", letterSpacing: "-.02em" }}>{t}</span>
+                    <span style={{ fontSize: 13, fontWeight: 900, color: "#221D23", letterSpacing: "-.02em" }}>{formatToolLabel(t)}</span>
                     <span style={{ fontSize: 11.5, color: "#B0ABA5", fontWeight: 600 }}>{group.length} activit{group.length === 1 ? "y" : "ies"}</span>
                     <div style={{ flex: 1, height: 1, background: "#E8E6DC" }} />
                   </div>

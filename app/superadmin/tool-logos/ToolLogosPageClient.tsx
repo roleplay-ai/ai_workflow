@@ -80,7 +80,7 @@ export default function ToolLogosPageClient({ profile, toolLogos, tags: initTags
           </Link>
           <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, letterSpacing: "-.04em" }}>Tool logos</h1>
           <p style={{ margin: "3px 0 0", color: "#6B6B6B", fontSize: 13 }}>
-            Upload logos for each tool. They appear on dashboard cards and activity pages.
+            Add tools, upload logos, and manage what appears in dashboard filters.
           </p>
         </div>
 

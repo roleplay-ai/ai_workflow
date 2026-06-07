@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import ActivityEditClient from "./ActivityEditClient";
+import { buildToolSelectOptions } from "@/lib/toolLogos";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,7 @@ export default async function ActivityEditPage({ params }: { params: Promise<{ i
     supabase.from("activities").select("category").not("category", "is", null).not("category", "eq", ""),
   ]);
 
-  const toolOptions = (toolLogoRows ?? []).map(r => ({ name: r.tool, imageUrl: r.logo_url || null }));
+  const toolOptions = buildToolSelectOptions(toolLogoRows ?? []);
   const tagOptions  = (tagRows ?? []).map(r => ({ name: r.name, imageUrl: r.icon_url || null }));
   const categories  = [...new Set((catRows ?? []).map(r => r.category).filter(Boolean))] as string[];
 
