@@ -373,9 +373,9 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
               <div style={{ fontSize: 17, fontWeight: 900, letterSpacing: "-.03em" }}>{activity.title}</div>
               <div style={{ fontSize: 11.5, color: "#64748B", fontWeight: 600 }}>{activity.level} · {activity.time_estimate_minutes}m</div>
             </div>
-            <a href="/dashboard" style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, height: 32, padding: "0 10px", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#334155", background: "#F8FAFC", border: "1px solid #CBD5E1", textDecoration: "none" }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = "#94A3B8"; e.currentTarget.style.background = "#F1F5F9"; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "#CBD5E1"; e.currentTarget.style.background = "#F8FAFC"; }}>
+            <a href="/dashboard" style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, height: 32, padding: "0 12px", borderRadius: 8, fontSize: 13, fontWeight: 700, color: "#221D23", background: "#facc15", border: "1px solid #d97706", textDecoration: "none", transition: "background .15s" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "#fbbf24"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "#facc15"; }}>
               ← Dashboard
             </a>
           </div>
