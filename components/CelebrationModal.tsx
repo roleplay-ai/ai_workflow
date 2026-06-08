@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 type Props = {
   activityTitle: string;
@@ -11,6 +11,7 @@ type Props = {
 const CONFETTI_COLORS = ["#FFCE00", "#2563EB", "#14B8A6", "#F68A29", "#22C55E", "#221D23", "#F472B6"];
 
 export default function CelebrationModal({ activityTitle, points, onContinue }: Props) {
+  const [loading, setLoading] = useState(false);
   const confetti = useMemo(
     () =>
       Array.from({ length: 48 }, (_, i) => ({
@@ -77,11 +78,16 @@ export default function CelebrationModal({ activityTitle, points, onContinue }: 
         {points <= 0 && <div className="mb-6" />}
         <button
           type="button"
-          onClick={onContinue}
+          onClick={() => { if (loading) return; setLoading(true); onContinue(); }}
           className="w-full py-3.5 rounded-2xl border-0 font-black text-sm cursor-pointer text-[#221D23] transition-transform hover:scale-[1.02] active:scale-[0.98]"
-          style={{ background: "#FFCE00", boxShadow: "0 10px 28px rgba(255,206,0,.45)" }}
+          style={{ background: "#FFCE00", boxShadow: "0 10px 28px rgba(255,206,0,.45)", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}
         >
-          Back to dashboard
+          {loading ? (
+            <>
+              <div className="card-spinner" style={{ width: 18, height: 18, borderWidth: 2.5, borderColor: "rgba(34,29,35,.2)", borderTopColor: "#221D23" }} />
+              Going to dashboard…
+            </>
+          ) : "Back to dashboard"}
         </button>
       </div>
     </div>

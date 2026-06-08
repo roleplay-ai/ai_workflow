@@ -76,15 +76,17 @@ function ActivityCard({
   toolLogos: ToolLogoMap;
   tagLogos: Record<string, string>;
 }) {
+  const [loading, setLoading] = useState(false);
   const newBadge = isNew(activity) && status !== "completed";
   const showBadge = newBadge || status === "in_progress" || status === "completed";
   const badgeLabel = status === "completed" ? "Completed" : status === "in_progress" ? "In Progress" : "New";
   const vis = visualStyle(activity.category);
 
   return (
-    <Link href={`/activity/${activity.id}`} style={{ textDecoration: "none", color: "inherit", display: "block" }}>
+    <Link href={`/activity/${activity.id}`} style={{ textDecoration: "none", color: "inherit", display: "block" }} onClick={() => setLoading(true)}>
       <article
         style={{
+          position: "relative",
           background: "white",
           border: `1px solid ${C.line}`,
           borderRadius: 24,
@@ -98,6 +100,7 @@ function ActivityCard({
           cursor: "pointer",
         }}
         onMouseEnter={e => {
+          if (loading) return;
           (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)";
           (e.currentTarget as HTMLElement).style.boxShadow = "0 16px 36px rgba(34,29,35,.13)";
         }}
@@ -106,6 +109,16 @@ function ActivityCard({
           (e.currentTarget as HTMLElement).style.boxShadow = "0 10px 30px rgba(34,29,35,.08)";
         }}
       >
+        {loading && (
+          <div style={{
+            position: "absolute", inset: 0, zIndex: 10,
+            background: "rgba(255,255,255,0.82)",
+            borderRadius: 24,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <div className="card-spinner" />
+          </div>
+        )}
         {/* Visual */}
         <div style={{
           position: "relative",
@@ -128,8 +141,8 @@ function ActivityCard({
               ...(badgeLabel === "Completed"
                 ? { background: "white", border: "1px solid rgba(35,206,107,.4)", color: "#15803d" }
                 : badgeLabel === "In Progress"
-                ? { background: "white", border: "1px solid rgba(54,153,252,.4)", color: "#1a6fc4" }
-                : { background: "white", border: `1px solid ${C.line}`, color: "#5e5962" }
+                ? { background: "#facc15", border: "1px solid #d97706", color: "#000" }
+                : { background: "#000", border: "1px solid #000", color: "#facc15" }
               ),
             }}>
               {badgeLabel}
