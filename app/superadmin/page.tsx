@@ -36,6 +36,7 @@ export default async function SuperadminPage() {
     { data: allAssignments },
     { data: tags },
     { data: toolLogoRows },
+    { data: deepDives },
   ] = await Promise.all([
     supabase.from("companies").select("id, name, domain").order("name"),
     supabase.from("activities")
@@ -44,6 +45,7 @@ export default async function SuperadminPage() {
     supabase.from("activity_companies").select("activity_id, company_id"),
     supabase.from("activity_tags").select("id, name, icon_url").order("name"),
     supabase.from("tool_logos").select("tool").order("tool"),
+    supabase.from("tool_deep_dives").select("*").order("position"),
   ]);
 
   const availableTools = collectToolSlugs(
@@ -61,6 +63,7 @@ export default async function SuperadminPage() {
       allAssignments={allAssignments ?? []}
       tags={tags ?? []}
       availableTools={availableTools}
+      deepDives={deepDives ?? []}
     />
   );
 }

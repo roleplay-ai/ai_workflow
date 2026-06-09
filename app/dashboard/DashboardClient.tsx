@@ -2,12 +2,13 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import type { Activity, UserProgress, Profile } from "@/lib/supabase/types";
+import type { Activity, UserProgress, Profile, ToolDeepDive } from "@/lib/supabase/types";
 import Topbar from "@/components/Topbar";
 import ToolIcon from "@/components/ToolIcon";
 import RotatingTools from "@/components/RotatingTools";
 import type { ToolLogoMap } from "@/lib/toolLogos";
 import { activityHasTool, formatToolLabel, normalizeActivityTools } from "@/lib/tools";
+import { deepDiveHref, deepDiveLabel, isHtmlDeepDive } from "@/lib/deepDives";
 
 function byPosition(a: Activity, b: Activity) {
   return a.position - b.position;
@@ -21,6 +22,7 @@ type Props = {
   tagLogos: Record<string, string>;
   functionLogos: Record<string, string>;
   toolFilters: string[];
+  deepDives: ToolDeepDive[];
 };
 
 const C = {
@@ -48,15 +50,6 @@ function toolDot(tool: string) {
   if (tool === "copilot") return C.purple;
   if (tool === "agentic-workflows") return C.purple;
   return C.yellow;
-}
-
-function botBadge(tool: string) {
-  if (tool === "claude") return { bg: C.orange, letter: "C" };
-  if (tool === "chatgpt") return { bg: C.green, letter: "G" };
-  if (tool === "gemini") return { bg: C.blue, letter: "G" };
-  if (tool === "copilot") return { bg: C.purple, letter: "M" };
-  if (tool === "agentic-workflows") return { bg: C.purple, letter: "AW" };
-  return { bg: C.dark, letter: "AI" };
 }
 
 function visualStyle(category: string) {
@@ -234,7 +227,7 @@ const INTENT_BTNS = [
   { id: "build", icon: "🛠", label: "Build", desc: "Create apps, dashboards, tools, and reusable workflows." },
 ];
 
-export default function DashboardClient({ profile, activities, progress, toolLogos, tagLogos, functionLogos, toolFilters }: Props) {
+export default function DashboardClient({ profile, activities, progress, toolLogos, tagLogos, functionLogos, toolFilters, deepDives }: Props) {
   const [searchQ, setSearchQ] = useState("");
   const [activeTool, setActiveTool] = useState("all");
   const [activeIntent, setActiveIntent] = useState("all");
@@ -578,26 +571,55 @@ export default function DashboardClient({ profile, activities, progress, toolLog
               })()}
             </section>
 
-            {/* News card — driven by is_featured activities */}
-            {activities.filter(a => a.is_featured).length > 0 && (
+            {/* Go deeper — HTML pages or external links from superadmin */}
+            {deepDives.filter(d => isHtmlDeepDive(d) || d.url).length > 0 && (
               <section style={{ background: "white", border: `1px solid ${C.line}`, borderRadius: 26, padding: 20, boxShadow: "0 10px 30px rgba(34,29,35,.08)" }}>
-                <h3 style={{ margin: "0 0 14px", letterSpacing: "-.03em", fontSize: 18 }}>This week in AI work</h3>
+                <h3 style={{ margin: "0 0 4px", letterSpacing: "-.03em", fontSize: 18 }}>Go deeper with your tools</h3>
+                <p style={{ margin: "0 0 14px", color: C.muted, fontSize: 12.5, lineHeight: 1.4 }}>
+                  Guides and resources to learn each tool beyond the workflows.
+                </p>
                 <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
-                  {activities.filter(a => a.is_featured).map(a => {
-                    const primary = normalizeActivityTools(a.tools)[0] ?? "claude";
-                    const bot = botBadge(primary);
-                    return (
-                      <Link key={a.id} href={`/activity/${a.id}`} style={{ textDecoration: "none", color: "inherit" }}>
-                        <div style={{ display: "grid", gridTemplateColumns: "34px 1fr", gap: 10, alignItems: "start", padding: 11, border: `1px solid ${C.line}`, borderRadius: 16, background: "#fbfaf7", cursor: "pointer", transition: ".12s" }}
-                          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "#f4f1ea"}
-                          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "#fbfaf7"}
-                        >
-                          <div style={{ width: 34, height: 34, borderRadius: 12, display: "grid", placeItems: "center", background: bot.bg, color: "white", fontWeight: 950, fontSize: 14 }}>{bot.letter}</div>
-                          <div>
-                            <strong style={{ display: "block", fontSize: 13, lineHeight: 1.25, marginBottom: 2 }}>{a.title}</strong>
-                            <span style={{ color: C.muted, fontSize: 12, fontWeight: 650 }}>{typeLabel(a.category)}{a.level ? ` · ${a.level}` : ""}</span>
-                          </div>
+                  {deepDives.filter(d => isHtmlDeepDive(d) || d.url).map(item => {
+                    const href = deepDiveHref(item);
+                    const external = !isHtmlDeepDive(item);
+                    const cardInner = (
+                      <div
+                        style={{ display: "grid", gridTemplateColumns: "34px 1fr auto", gap: 10, alignItems: "start", padding: 11, border: `1px solid ${C.line}`, borderRadius: 16, background: "#fbfaf7", cursor: "pointer", transition: ".12s" }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#f4f1ea"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "#fbfaf7"; }}
+                      >
+                        <div style={{ width: 34, height: 34, borderRadius: 12, display: "grid", placeItems: "center", background: "white", border: `1px solid ${C.line}`, overflow: "hidden" }}>
+                          {item.tool ? (
+                            <ToolIcon tool={item.tool} size={24} logos={toolLogos} insetScale={0.88} />
+                          ) : (
+                            <span style={{ fontSize: 16 }}>{external ? "↗" : "📄"}</span>
+                          )}
                         </div>
+                        <div style={{ minWidth: 0 }}>
+                          <strong style={{ display: "block", fontSize: 13, lineHeight: 1.25, marginBottom: 2 }}>{item.title}</strong>
+                          <span style={{ color: C.muted, fontSize: 12, fontWeight: 650, lineHeight: 1.35 }}>
+                            {deepDiveLabel(item, formatToolLabel)}
+                          </span>
+                        </div>
+                        {external ? (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}>
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                            <polyline points="15 3 21 3 21 9" />
+                            <line x1="10" y1="14" x2="21" y2="3" />
+                          </svg>
+                        ) : (
+                          <span style={{ marginTop: 2, fontSize: 14, color: C.muted, flexShrink: 0 }}>→</span>
+                        )}
+                      </div>
+                    );
+
+                    return external ? (
+                      <a key={item.id} href={href} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "inherit" }}>
+                        {cardInner}
+                      </a>
+                    ) : (
+                      <Link key={item.id} href={href} style={{ textDecoration: "none", color: "inherit" }}>
+                        {cardInner}
                       </Link>
                     );
                   })}

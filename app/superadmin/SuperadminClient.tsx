@@ -3,7 +3,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import Topbar from "@/components/Topbar";
-import type { Profile, Company, Activity, ActivityTag } from "@/lib/supabase/types";
+import ToolDeepDivesManager from "@/components/ToolDeepDivesManager";
+import type { Profile, Company, Activity, ActivityTag, ToolDeepDive } from "@/lib/supabase/types";
 import { DEFAULT_TOOLS, formatToolLabel, normalizeActivityTools } from "@/lib/tools";
 
 type ActivityRow = Activity & { activity_content: { id: string } | null };
@@ -15,11 +16,12 @@ type Props = {
   allAssignments: { activity_id: string; company_id: string }[];
   tags: Pick<ActivityTag, "id" | "name" | "icon_url">[];
   availableTools: string[];
+  deepDives: ToolDeepDive[];
 };
 
 const CATEGORIES = ["chat", "build", "automate"];
 
-export default function SuperadminClient({ profile, companies, activities: initActivities, allAssignments: initAssignments, tags: initTags, availableTools }: Props) {
+export default function SuperadminClient({ profile, companies, activities: initActivities, allAssignments: initAssignments, tags: initTags, availableTools, deepDives }: Props) {
   const [activities,   setActivities]   = useState(initActivities);
   const [assignments,  setAssignments]  = useState(initAssignments);
   const [tags,         setTags]         = useState(initTags);
@@ -310,6 +312,8 @@ export default function SuperadminClient({ profile, companies, activities: initA
             })}
           </div>
         )}
+
+        <ToolDeepDivesManager initialItems={deepDives} availableTools={availableTools} />
       </main>
     </div>
   );

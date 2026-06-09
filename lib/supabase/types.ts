@@ -49,6 +49,21 @@ export type ActivityFunction = {
   created_at: string;
 };
 
+export type ToolDeepDiveLinkType = "external" | "html";
+
+export type ToolDeepDive = {
+  id: string;
+  title: string;
+  url: string | null;
+  link_type: ToolDeepDiveLinkType;
+  html_path: string | null;
+  description: string | null;
+  tool: string | null;
+  position: number;
+  published: boolean;
+  created_at: string;
+};
+
 export type ActivityCompany = {
   activity_id: string;
   company_id: string;
@@ -190,6 +205,11 @@ export type Database = {
         Row: ChatLog;
         Insert: Omit<ChatLog, "id" | "created_at">;
         Update: never;
+      };
+      tool_deep_dives: {
+        Row: ToolDeepDive;
+        Insert: { title: string; url?: string | null; link_type?: ToolDeepDiveLinkType; html_path?: string | null; description?: string | null; tool?: string | null; position?: number; published?: boolean };
+        Update: { title?: string; url?: string | null; link_type?: ToolDeepDiveLinkType; html_path?: string | null; description?: string | null; tool?: string | null; position?: number; published?: boolean };
       };
     };
     Views: Record<string, never>;
