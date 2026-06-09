@@ -40,7 +40,6 @@ export default async function SuperadminPage() {
     supabase.from("companies").select("id, name, domain").order("name"),
     supabase.from("activities")
       .select("*, activity_content(id)")
-      .order("tools")
       .order("position"),
     supabase.from("activity_companies").select("activity_id, company_id"),
     supabase.from("activity_tags").select("id, name, icon_url").order("name"),

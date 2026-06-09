@@ -7,7 +7,11 @@ import Topbar from "@/components/Topbar";
 import ToolIcon from "@/components/ToolIcon";
 import RotatingTools from "@/components/RotatingTools";
 import type { ToolLogoMap } from "@/lib/toolLogos";
-import { activityHasTool, formatToolLabel, normalizeActivityTools, sortToolSlugs } from "@/lib/tools";
+import { activityHasTool, formatToolLabel, normalizeActivityTools } from "@/lib/tools";
+
+function byPosition(a: Activity, b: Activity) {
+  return a.position - b.position;
+}
 
 type Props = {
   profile: Profile & { companies: { name: string } | null };
@@ -248,35 +252,34 @@ export default function DashboardClient({ profile, activities, progress, toolLog
   );
 
   const newList = useMemo(() =>
-    intentRelevant.filter(a => isNew(a) && progressMap[a.id]?.status !== "completed").slice(0, 3),
+    intentRelevant
+      .filter(a => isNew(a) && progressMap[a.id]?.status !== "completed")
+      .sort(byPosition)
+      .slice(0, 3),
     [intentRelevant, progressMap]
   );
 
   const continueList = useMemo(() =>
-    intentRelevant.filter(a => progressMap[a.id]?.status === "in_progress").slice(0, 3),
+    intentRelevant
+      .filter(a => progressMap[a.id]?.status === "in_progress")
+      .sort(byPosition)
+      .slice(0, 3),
     [intentRelevant, progressMap]
   );
 
   const filtered = useMemo(() => {
     const q = searchQ.toLowerCase();
-    return activities.filter(a => {
-      const status = progressMap[a.id]?.status ?? "not_started";
-      const text = `${a.title} ${a.description} ${normalizeActivityTools(a.tools).join(" ")} ${a.level} ${a.category} ${status}`.toLowerCase();
-      const toolOk = activityHasTool(a.tools, activeTool);
-      const intentOk = activeIntent === "all" || a.category === activeIntent;
-      const searchOk = !q || text.includes(q);
-      return toolOk && intentOk && searchOk;
-    });
+    return activities
+      .filter(a => {
+        const status = progressMap[a.id]?.status ?? "not_started";
+        const text = `${a.title} ${a.description} ${normalizeActivityTools(a.tools).join(" ")} ${a.level} ${a.category} ${status}`.toLowerCase();
+        const toolOk = activityHasTool(a.tools, activeTool);
+        const intentOk = activeIntent === "all" || a.category === activeIntent;
+        const searchOk = !q || text.includes(q);
+        return toolOk && intentOk && searchOk;
+      })
+      .sort(byPosition);
   }, [activities, progressMap, searchQ, activeTool, activeIntent]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Group filtered activities by tool — multi-tool activities appear in each matching group
-  const filteredByTool = useMemo(() => {
-    const toolOrder = sortToolSlugs(filtered.flatMap(a => a.tools ?? []));
-    return toolOrder.map(t => ({
-      tool: t,
-      items: filtered.filter(a => activityHasTool(a.tools, t)),
-    }));
-  }, [filtered]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -462,24 +465,9 @@ export default function DashboardClient({ profile, activities, progress, toolLog
                     No matching workflows. Try changing the tool, intent, or search term.
                   </div>
                 ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
-                    {filteredByTool.map(({ tool: t, items }) => (
-                      <div key={t}>
-                        {/* Tool group header */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                            <span style={{ width: 8, height: 8, borderRadius: "50%", background: toolDot(t), display: "inline-block" }} />
-                            <span style={{ fontSize: 13, fontWeight: 900, color: C.dark, letterSpacing: "-.02em" }}>{t ? formatToolLabel(t) : "Other"}</span>
-                          </div>
-                          <span style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>{items.length} workflow{items.length !== 1 ? "s" : ""}</span>
-                          <div style={{ flex: 1, height: 1, background: C.line }} />
-                        </div>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 16 }}>
-                          {items.map(a => (
-                            <ActivityCard key={a.id} activity={a} status={progressMap[a.id]?.status ?? "not_started"} toolLogos={toolLogos} tagLogos={tagLogos} />
-                          ))}
-                        </div>
-                      </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 16 }}>
+                    {filtered.map(a => (
+                      <ActivityCard key={a.id} activity={a} status={progressMap[a.id]?.status ?? "not_started"} toolLogos={toolLogos} tagLogos={tagLogos} />
                     ))}
                   </div>
                 )}
