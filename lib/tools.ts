@@ -44,6 +44,19 @@ export function sortToolSlugs(tools: Iterable<string>): string[] {
   return [...defaults, ...custom];
 }
 
+export function normalizeActivityTools(tools: string[] | null | undefined): string[] {
+  return normalizeToolList(tools ?? []);
+}
+
+export function activityHasTool(
+  tools: string[] | null | undefined,
+  toolSlug: string,
+): boolean {
+  const normalized = normalizeToolSlug(toolSlug);
+  if (!normalized || normalized === "all") return true;
+  return normalizeActivityTools(tools).includes(normalized);
+}
+
 export function collectToolSlugs(
   registeredTools: Iterable<string>,
   activityTools: Iterable<string[]>,
@@ -54,8 +67,10 @@ export function collectToolSlugs(
     if (slug) all.add(slug);
   }
   for (const tools of activityTools) {
-    const primary = tools[0];
-    if (primary) all.add(normalizeToolSlug(primary));
+    for (const tool of tools ?? []) {
+      const slug = normalizeToolSlug(tool);
+      if (slug) all.add(slug);
+    }
   }
   return sortToolSlugs(all);
 }

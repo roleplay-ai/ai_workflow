@@ -5,8 +5,9 @@ import { createClient } from "@/lib/supabase/client";
 import type { Activity, UserProgress, Profile } from "@/lib/supabase/types";
 import Topbar from "@/components/Topbar";
 import ToolIcon from "@/components/ToolIcon";
+import RotatingTools from "@/components/RotatingTools";
 import type { ToolLogoMap } from "@/lib/toolLogos";
-import { formatToolLabel } from "@/lib/tools";
+import { activityHasTool, formatToolLabel, normalizeActivityTools, sortToolSlugs } from "@/lib/tools";
 
 type Props = {
   profile: Profile & { companies: { name: string } | null };
@@ -185,15 +186,12 @@ function ActivityCard({
 
         {/* Meta row */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: "auto" }}>
-          {/* Tool logo + name (single tool) */}
-          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-            {activity.tools[0] && (
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 9px", borderRadius: 999, border: `1px solid ${C.line}`, background: "white", fontSize: 11.5, fontWeight: 700, color: C.dark }}>
-                <ToolIcon tool={activity.tools[0]} size={16} logos={toolLogos} />
-                {formatToolLabel(activity.tools[0])}
-              </div>
-            )}
-          </div>
+          <RotatingTools
+            tools={normalizeActivityTools(activity.tools)}
+            toolLogos={toolLogos}
+            borderColor={C.line}
+            labelColor={C.dark}
+          />
           {/* Type chip */}
           <div style={{
             display: "inline-flex", alignItems: "center", gap: 7,
@@ -239,11 +237,8 @@ export default function DashboardClient({ profile, activities, progress, toolLog
   const levelName = totalPts < 100 ? "Starter" : totalPts < 500 ? "Explorer" : totalPts < 1000 ? "Builder" : "Expert";
   const newCount = activities.filter(isNew).length;
 
-  // Primary tool is always tools[0], normalised to lowercase
-  const primaryTool = (a: Activity) => (a.tools[0] ?? "").toLowerCase();
-
   const toolRelevant = useMemo(() =>
-    activities.filter(a => activeTool === "all" || primaryTool(a) === activeTool),
+    activities.filter(a => activityHasTool(a.tools, activeTool)),
     [activities, activeTool] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
@@ -266,20 +261,20 @@ export default function DashboardClient({ profile, activities, progress, toolLog
     const q = searchQ.toLowerCase();
     return activities.filter(a => {
       const status = progressMap[a.id]?.status ?? "not_started";
-      const text = `${a.title} ${a.description} ${primaryTool(a)} ${a.level} ${a.category} ${status}`.toLowerCase();
-      const toolOk = activeTool === "all" || primaryTool(a) === activeTool;
+      const text = `${a.title} ${a.description} ${normalizeActivityTools(a.tools).join(" ")} ${a.level} ${a.category} ${status}`.toLowerCase();
+      const toolOk = activityHasTool(a.tools, activeTool);
       const intentOk = activeIntent === "all" || a.category === activeIntent;
       const searchOk = !q || text.includes(q);
       return toolOk && intentOk && searchOk;
     });
   }, [activities, progressMap, searchQ, activeTool, activeIntent]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Group filtered activities by tool (already sorted by tool + position from server)
+  // Group filtered activities by tool — multi-tool activities appear in each matching group
   const filteredByTool = useMemo(() => {
-    const toolOrder = Array.from(new Set(filtered.map(primaryTool)));
+    const toolOrder = sortToolSlugs(filtered.flatMap(a => a.tools ?? []));
     return toolOrder.map(t => ({
       tool: t,
-      items: filtered.filter(a => primaryTool(a) === t),
+      items: filtered.filter(a => activityHasTool(a.tools, t)),
     }));
   }, [filtered]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -586,7 +581,7 @@ export default function DashboardClient({ profile, activities, progress, toolLog
                 <h3 style={{ margin: "0 0 14px", letterSpacing: "-.03em", fontSize: 18 }}>This week in AI work</h3>
                 <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
                   {activities.filter(a => a.is_featured).map(a => {
-                    const primary = a.tools[0] ?? "claude";
+                    const primary = normalizeActivityTools(a.tools)[0] ?? "claude";
                     const bot = botBadge(primary);
                     return (
                       <Link key={a.id} href={`/activity/${a.id}`} style={{ textDecoration: "none", color: "inherit" }}>

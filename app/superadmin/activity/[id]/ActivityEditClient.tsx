@@ -1,17 +1,19 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import Topbar from "@/components/Topbar";
 import MultiSelect, { type SelectOption } from "@/components/MultiSelect";
 import type { Profile, Activity, ActivityContent, ActivityStep, PromptTemplate, DownloadFile } from "@/lib/supabase/types";
 import { formatToolLabel, normalizeToolList, normalizeToolSlug, sortToolSlugs } from "@/lib/tools";
+import { mergeToolSelectOptions, rowsToToolLogoMap, type ToolLogoMap } from "@/lib/toolLogos";
 
 type Props = {
   profile: Profile & { companies: { name: string } | null };
   activity: Activity & { activity_content: ActivityContent | null };
   activitySteps: ActivityStep[];
   toolOptions: SelectOption[];
+  toolLogos: ToolLogoMap;
   tagOptions:  SelectOption[];
   categories:  string[];
 };
@@ -35,7 +37,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "downloads", label: "📥 Downloads"},
 ];
 
-export default function ActivityEditClient({ profile, activity, activitySteps: initSteps, toolOptions: initToolOpts, tagOptions: initTagOpts, categories: initCategories }: Props) {
+export default function ActivityEditClient({ profile, activity, activitySteps: initSteps, toolOptions: initToolOpts, toolLogos: initToolLogos, tagOptions: initTagOpts, categories: initCategories }: Props) {
   const supabase   = createClient();
   const content    = activity.activity_content;
   const [tab, setTab] = useState<Tab>("info");
@@ -59,9 +61,19 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
   const [infoCategoryArr, setInfoCategoryArr] = useState<string[]>(activity.category ? [activity.category] : []);
 
   // Option lists (grow when new items are added via the dropdowns)
-  const [toolOpts, setToolOpts] = useState<SelectOption[]>(initToolOpts);
+  const [toolLogos, setToolLogos] = useState<ToolLogoMap>(initToolLogos);
+  const [toolOpts, setToolOpts] = useState<SelectOption[]>(() => mergeToolSelectOptions(initToolOpts, initToolLogos));
   const [tagOpts,  setTagOpts]  = useState<SelectOption[]>(initTagOpts);
   const [catOpts,  setCatOpts]  = useState<SelectOption[]>(initCategories.map(c => ({ name: c })));
+
+  useEffect(() => {
+    supabase.from("tool_logos").select("tool, logo_url").then(({ data }) => {
+      if (!data) return;
+      const logos = rowsToToolLogoMap(data);
+      setToolLogos(logos);
+      setToolOpts(prev => mergeToolSelectOptions(prev, logos));
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── helpers: upload icon + persist new option to DB ─────────────────────────
   async function uploadIcon(file: File, folder: string): Promise<string | null> {
@@ -85,6 +97,7 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
       ? `${rawLogoUrl}${rawLogoUrl.includes("?") ? "&" : "?"}t=${Date.now()}`
       : null;
     await supabase.from("tool_logos").upsert({ tool: slug, logo_url: rawLogoUrl, updated_at: new Date().toISOString() });
+    if (displayUrl) setToolLogos(prev => ({ ...prev, [slug]: displayUrl }));
     const opt = { name: slug, displayName: formatToolLabel(slug), imageUrl: displayUrl };
     setToolOpts(prev => {
       if (prev.some(o => o.name === slug)) return prev;
@@ -124,6 +137,7 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
       setInfoMsg(`Logo saved locally but database error: ${error.message}`);
       setTimeout(() => setInfoMsg(""), 5000);
     }
+    setToolLogos(prev => ({ ...prev, [slug]: displayUrl }));
     setToolOpts(prev => prev.map(o =>
       normalizeToolSlug(o.name) === slug ? { ...o, name: slug, imageUrl: displayUrl } : o
     ));
@@ -602,6 +616,7 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
                 mode="multi"
                 selected={infoToolsArr}
                 options={toolOpts}
+                toolLogos={toolLogos}
                 onChange={next => setInfoToolsArr(normalizeToolList(next))}
                 onAddNew={handleAddTool}
                 onUpdateImage={handleUpdateToolImage}
