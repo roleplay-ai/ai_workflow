@@ -27,6 +27,7 @@ export type Activity = {
   points: number;
   tools: string[];
   tags: string[];
+  functions: string[];
   position: number;
   published: boolean;
   is_featured: boolean;
@@ -38,6 +39,28 @@ export type ActivityTag = {
   id: string;
   name: string;
   icon_url: string | null;
+  created_at: string;
+};
+
+export type ActivityFunction = {
+  id: string;
+  name: string;
+  icon_url: string | null;
+  created_at: string;
+};
+
+export type ToolDeepDiveLinkType = "external" | "html";
+
+export type ToolDeepDive = {
+  id: string;
+  title: string;
+  url: string | null;
+  link_type: ToolDeepDiveLinkType;
+  html_path: string | null;
+  description: string | null;
+  tool: string | null;
+  position: number;
+  published: boolean;
   created_at: string;
 };
 
@@ -150,8 +173,8 @@ export type Database = {
       };
       activities: {
         Row: Activity;
-        Insert: { title: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; position?: number; published?: boolean; is_featured?: boolean; category?: string };
-        Update: { title?: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; position?: number; published?: boolean; is_featured?: boolean; category?: string };
+        Insert: { title: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; tags?: string[]; functions?: string[]; position?: number; published?: boolean; is_featured?: boolean; category?: string };
+        Update: { title?: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; tags?: string[]; functions?: string[]; position?: number; published?: boolean; is_featured?: boolean; category?: string };
       };
       activity_companies: {
         Row: ActivityCompany;
@@ -182,6 +205,11 @@ export type Database = {
         Row: ChatLog;
         Insert: Omit<ChatLog, "id" | "created_at">;
         Update: never;
+      };
+      tool_deep_dives: {
+        Row: ToolDeepDive;
+        Insert: { title: string; url?: string | null; link_type?: ToolDeepDiveLinkType; html_path?: string | null; description?: string | null; tool?: string | null; position?: number; published?: boolean };
+        Update: { title?: string; url?: string | null; link_type?: ToolDeepDiveLinkType; html_path?: string | null; description?: string | null; tool?: string | null; position?: number; published?: boolean };
       };
     };
     Views: Record<string, never>;

@@ -1,19 +1,22 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import Topbar from "@/components/Topbar";
 import MultiSelect, { type SelectOption } from "@/components/MultiSelect";
 import type { Profile, Activity, ActivityContent, ActivityStep, PromptTemplate, DownloadFile } from "@/lib/supabase/types";
 import { formatToolLabel, normalizeToolList, normalizeToolSlug, sortToolSlugs } from "@/lib/tools";
+import { mergeToolSelectOptions, rowsToToolLogoMap, type ToolLogoMap } from "@/lib/toolLogos";
 
 type Props = {
   profile: Profile & { companies: { name: string } | null };
   activity: Activity & { activity_content: ActivityContent | null };
   activitySteps: ActivityStep[];
   toolOptions: SelectOption[];
-  tagOptions:  SelectOption[];
-  categories:  string[];
+  toolLogos: ToolLogoMap;
+  tagOptions:      SelectOption[];
+  functionOptions: SelectOption[];
+  categories:      string[];
 };
 
 type EditableStep = Omit<ActivityStep, "created_at"> & {
@@ -35,7 +38,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "downloads", label: "📥 Downloads"},
 ];
 
-export default function ActivityEditClient({ profile, activity, activitySteps: initSteps, toolOptions: initToolOpts, tagOptions: initTagOpts, categories: initCategories }: Props) {
+export default function ActivityEditClient({ profile, activity, activitySteps: initSteps, toolOptions: initToolOpts, toolLogos: initToolLogos, tagOptions: initTagOpts, functionOptions: initFunctionOpts, categories: initCategories }: Props) {
   const supabase   = createClient();
   const content    = activity.activity_content;
   const [tab, setTab] = useState<Tab>("info");
@@ -55,13 +58,25 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
 
   // Info — multi-select state (arrays)
   const [infoToolsArr,  setInfoToolsArr]  = useState<string[]>(normalizeToolList(activity.tools ?? []));
-  const [infoTagsArr,   setInfoTagsArr]   = useState<string[]>((activity as any).tags ?? []);
-  const [infoCategoryArr, setInfoCategoryArr] = useState<string[]>(activity.category ? [activity.category] : []);
+  const [infoTagsArr,       setInfoTagsArr]       = useState<string[]>(activity.tags ?? []);
+  const [infoFunctionsArr,  setInfoFunctionsArr]  = useState<string[]>(activity.functions ?? []);
+  const [infoCategoryArr,   setInfoCategoryArr]   = useState<string[]>(activity.category ? [activity.category] : []);
 
   // Option lists (grow when new items are added via the dropdowns)
-  const [toolOpts, setToolOpts] = useState<SelectOption[]>(initToolOpts);
-  const [tagOpts,  setTagOpts]  = useState<SelectOption[]>(initTagOpts);
-  const [catOpts,  setCatOpts]  = useState<SelectOption[]>(initCategories.map(c => ({ name: c })));
+  const [toolLogos, setToolLogos] = useState<ToolLogoMap>(initToolLogos);
+  const [toolOpts, setToolOpts] = useState<SelectOption[]>(() => mergeToolSelectOptions(initToolOpts, initToolLogos));
+  const [tagOpts,      setTagOpts]      = useState<SelectOption[]>(initTagOpts);
+  const [functionOpts, setFunctionOpts] = useState<SelectOption[]>(initFunctionOpts);
+  const [catOpts,      setCatOpts]      = useState<SelectOption[]>(initCategories.map(c => ({ name: c })));
+
+  useEffect(() => {
+    supabase.from("tool_logos").select("tool, logo_url").then(({ data }) => {
+      if (!data) return;
+      const logos = rowsToToolLogoMap(data);
+      setToolLogos(logos);
+      setToolOpts(prev => mergeToolSelectOptions(prev, logos));
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── helpers: upload icon + persist new option to DB ─────────────────────────
   async function uploadIcon(file: File, folder: string): Promise<string | null> {
@@ -85,6 +100,7 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
       ? `${rawLogoUrl}${rawLogoUrl.includes("?") ? "&" : "?"}t=${Date.now()}`
       : null;
     await supabase.from("tool_logos").upsert({ tool: slug, logo_url: rawLogoUrl, updated_at: new Date().toISOString() });
+    if (displayUrl) setToolLogos(prev => ({ ...prev, [slug]: displayUrl }));
     const opt = { name: slug, displayName: formatToolLabel(slug), imageUrl: displayUrl };
     setToolOpts(prev => {
       if (prev.some(o => o.name === slug)) return prev;
@@ -102,6 +118,14 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
     const opt = { name, imageUrl: iconUrl };
     setTagOpts(prev => [...prev, opt]);
     setInfoTagsArr(prev => [...prev, name]);
+  }
+
+  async function handleAddFunction(name: string, imageFile: File | null) {
+    const iconUrl = imageFile ? (await uploadIcon(imageFile, "functions") ?? null) : null;
+    await supabase.from("activity_functions").insert({ name, icon_url: iconUrl });
+    const opt = { name, imageUrl: iconUrl };
+    setFunctionOpts(prev => [...prev, opt]);
+    setInfoFunctionsArr(prev => [...prev, name]);
   }
 
   async function handleAddCategory(name: string, _imageFile: File | null) {
@@ -124,6 +148,7 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
       setInfoMsg(`Logo saved locally but database error: ${error.message}`);
       setTimeout(() => setInfoMsg(""), 5000);
     }
+    setToolLogos(prev => ({ ...prev, [slug]: displayUrl }));
     setToolOpts(prev => prev.map(o =>
       normalizeToolSlug(o.name) === slug ? { ...o, name: slug, imageUrl: displayUrl } : o
     ));
@@ -134,6 +159,13 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
     if (!iconUrl) return;
     await supabase.from("activity_tags").update({ icon_url: iconUrl }).eq("name", name);
     setTagOpts(prev => prev.map(o => o.name === name ? { ...o, imageUrl: iconUrl } : o));
+  }
+
+  async function handleUpdateFunctionImage(name: string, imageFile: File) {
+    const iconUrl = await uploadIcon(imageFile, "functions");
+    if (!iconUrl) return;
+    await supabase.from("activity_functions").update({ icon_url: iconUrl }).eq("name", name);
+    setFunctionOpts(prev => prev.map(o => o.name === name ? { ...o, imageUrl: iconUrl } : o));
   }
 
   async function saveInfo() {
@@ -147,6 +179,7 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
       category:               infoCategoryArr[0] ?? "",
       tools:                  normalizeToolList(infoToolsArr),
       tags:                   infoTagsArr,
+      functions:              infoFunctionsArr,
       published:              infoPublished,
       position:               infoPosition,
     }).eq("id", activity.id);
@@ -602,6 +635,7 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
                 mode="multi"
                 selected={infoToolsArr}
                 options={toolOpts}
+                toolLogos={toolLogos}
                 onChange={next => setInfoToolsArr(normalizeToolList(next))}
                 onAddNew={handleAddTool}
                 onUpdateImage={handleUpdateToolImage}
@@ -618,6 +652,18 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
                 onAddNew={handleAddTag}
                 onUpdateImage={handleUpdateTagImage}
                 placeholder="Select tags (Chat, Email, PPT…)"
+              />
+
+              {/* Functions multi-select */}
+              <MultiSelect
+                label="Functions"
+                mode="multi"
+                selected={infoFunctionsArr}
+                options={functionOpts}
+                onChange={setInfoFunctionsArr}
+                onAddNew={handleAddFunction}
+                onUpdateImage={handleUpdateFunctionImage}
+                placeholder="Select functions (HR, Finance, Marketing…)"
               />
 
               {/* Published toggle */}

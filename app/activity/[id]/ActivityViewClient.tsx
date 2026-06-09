@@ -5,9 +5,9 @@ import Topbar from "@/components/Topbar";
 import QuizModal from "@/components/QuizModal";
 import CelebrationModal from "@/components/CelebrationModal";
 import VideoModal from "@/components/VideoModal";
-import ToolIcon from "@/components/ToolIcon";
+import RotatingTools from "@/components/RotatingTools";
 import type { ToolLogoMap } from "@/lib/toolLogos";
-import { formatToolLabel } from "@/lib/tools";
+import { normalizeActivityTools } from "@/lib/tools";
 import MdText from "@/components/MdText";
 import SlideZoom from "@/components/SlideZoom";
 import type { WorkflowStep, Quiz } from "@/types";
@@ -92,8 +92,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
 
   const step = steps[current];
   const slideUrl = step?.slideUrl ?? null;
-  const activityTools = activity.tools ?? [];
-  const primaryTool = activityTools[0] ?? null;
+  const activityTools = normalizeActivityTools(activity.tools);
   const pct = steps.length ? ((current + 1) / steps.length) * 100 : 0;
 
   useEffect(() => {
@@ -361,8 +360,14 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
         backdropFilter: "blur(18px)", zIndex: 10,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-          {primaryTool ? (
-            <ToolIcon tool={primaryTool} size={36} logos={toolLogos} insetScale={0.9} />
+          {activityTools.length > 0 ? (
+            <RotatingTools
+              tools={activityTools}
+              toolLogos={toolLogos}
+              variant="icon"
+              iconSize={36}
+              insetScale={0.9}
+            />
           ) : (
             <div style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 900, fontSize: 14, background: "linear-gradient(135deg,#2563EB,#14B8A6)", boxShadow: "0 10px 22px rgba(37,99,235,.22)", flexShrink: 0 }}>
               {(activity.title?.trim()[0] ?? "A").toUpperCase()}
@@ -548,23 +553,17 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
               <div style={{ padding: "14px 16px 12px", borderBottom: "1px solid #E8EEF4" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
                   <div style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".1em", color: "#94A3B8" }}>ACTIVITY</div>
-                  {primaryTool && (
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 5,
-                        height: 26,
-                        padding: "0 8px 0 4px",
-                        borderRadius: 999,
-                        border: "1px solid #E2E8F0",
-                        background: "white",
-                        flexShrink: 0,
-                      }}
-                    >
-                      <ToolIcon tool={primaryTool} size={18} logos={toolLogos} insetScale={0.9} />
-                      <span style={{ fontSize: 10.5, fontWeight: 700, color: "#475569" }}>{formatToolLabel(primaryTool)}</span>
-                    </span>
+                  {activityTools.length > 0 && (
+                    <RotatingTools
+                      tools={activityTools}
+                      toolLogos={toolLogos}
+                      iconSize={18}
+                      insetScale={0.9}
+                      borderColor="#E2E8F0"
+                      labelColor="#475569"
+                      labelSize={10.5}
+                      chipStyle={{ height: 26, padding: "0 8px 0 4px" }}
+                    />
                   )}
                 </div>
                 <div style={{ fontSize: 15, fontWeight: 900, letterSpacing: "-.03em", color: "#0F172A", lineHeight: 1.2 }}>{activity.title}</div>

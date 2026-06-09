@@ -1,5 +1,8 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import ToolIcon from "@/components/ToolIcon";
+import { normalizeToolSlug } from "@/lib/tools";
+import { resolveToolLogoUrl, type ToolLogoMap } from "@/lib/toolLogos";
 
 export type SelectOption = { name: string; imageUrl?: string | null; displayName?: string };
 
@@ -8,6 +11,8 @@ type Props = {
   mode?: "multi" | "single";
   selected: string[];
   options: SelectOption[];
+  /** Tool logo map — used for Tools dropdown (same source as dashboard) */
+  toolLogos?: ToolLogoMap;
   onChange: (next: string[]) => void;
   onAddNew?: (name: string, imageFile: File | null) => Promise<void>;
   /** Called when an existing option's logo is uploaded/changed */
@@ -16,7 +21,7 @@ type Props = {
 };
 
 export default function MultiSelect({
-  label, mode = "multi", selected, options, onChange, onAddNew, onUpdateImage, placeholder,
+  label, mode = "multi", selected, options, toolLogos, onChange, onAddNew, onUpdateImage, placeholder,
 }: Props) {
   const [open,          setOpen]         = useState(false);
   const [search,        setSearch]       = useState("");
@@ -77,7 +82,33 @@ export default function MultiSelect({
   const optionLabel = (opt: SelectOption) => opt.displayName ?? opt.name;
   const selectedLabel = (name: string) => findOption(name)?.displayName ?? name;
   const singleLabel = mode === "single" ? (selected[0] ? selectedLabel(selected[0]) : "") : "";
-  const logoUrl = (name: string) => findOption(name)?.imageUrl?.trim() || null;
+
+  const resolveImageUrl = (name: string, imageUrl?: string | null) => {
+    const fromOpt = imageUrl?.trim();
+    if (fromOpt) return fromOpt;
+    if (toolLogos) return resolveToolLogoUrl(name, toolLogos);
+    return null;
+  };
+
+  const logoUrl = (name: string) => resolveImageUrl(name, findOption(name)?.imageUrl);
+
+  const OptionIcon = ({ name, size, insetScale = 1 }: { name: string; size: number; insetScale?: number }) => {
+    if (toolLogos) {
+      return <ToolIcon tool={name} size={size} logos={toolLogos} insetScale={insetScale} />;
+    }
+    const url = logoUrl(name);
+    if (url) {
+      return (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt={name} style={{ width: size, height: size, borderRadius: size <= 16 ? 3 : 5, objectFit: "contain", flexShrink: 0 }} />
+      );
+    }
+    return (
+      <div style={{ width: size, height: size, borderRadius: 5, background: "#E8E6DC", display: "grid", placeItems: "center", fontSize: Math.max(8, size * 0.45), fontWeight: 800, color: "#6B6B6B", flexShrink: 0 }}>
+        {name[0]?.toUpperCase()}
+      </div>
+    );
+  };
 
   return (
     <div ref={rootRef} style={{ position: "relative" }}>
@@ -96,15 +127,15 @@ export default function MultiSelect({
       >
         {/* chips (multi) */}
         {mode === "multi" && selected.map(name => {
-          const img = logoUrl(name);
+          const hasImg = !!logoUrl(name);
           return (
             <div key={name} style={{
               display: "flex", alignItems: "center", gap: 4,
               padding: "2px 8px 2px 5px", borderRadius: 999,
               background: "#221D23", color: "white", fontSize: 11.5, fontWeight: 700,
             }}>
-              {img
-                ? <img src={img} alt={name} style={{ width: 14, height: 14, borderRadius: 2, objectFit: "contain", flexShrink: 0 }} />
+              {hasImg
+                ? <OptionIcon name={name} size={14} insetScale={0.9} />
                 : <span style={{ width: 14, height: 14, borderRadius: 2, background: "rgba(255,255,255,.18)", display: "grid", placeItems: "center", fontSize: 8, flexShrink: 0 }}>{name[0]?.toUpperCase()}</span>
               }
               {selectedLabel(name)}
@@ -117,15 +148,12 @@ export default function MultiSelect({
         })}
 
         {/* single value */}
-        {mode === "single" && singleLabel && (() => {
-          const img = logoUrl(selected[0]);
-          return (
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              {img && <img src={img} alt={singleLabel} style={{ width: 16, height: 16, borderRadius: 3, objectFit: "contain" }} />}
-              <span style={{ fontSize: 13, fontWeight: 600, color: "#221D23" }}>{singleLabel}</span>
-            </div>
-          );
-        })()}
+        {mode === "single" && singleLabel && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {logoUrl(selected[0]) && <OptionIcon name={selected[0]} size={16} insetScale={0.9} />}
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#221D23" }}>{singleLabel}</span>
+          </div>
+        )}
 
         {/* search input */}
         <input
@@ -161,11 +189,11 @@ export default function MultiSelect({
           {filtered.map(opt => {
             const isSel       = isSelected(opt.name);
             const isUploading = uploadingFor === opt.name;
-            const hasLogo     = !!opt.imageUrl?.trim();
+            const hasLogo     = !!resolveImageUrl(opt.name, opt.imageUrl);
 
             return (
               <div
-                key={opt.name}
+                key={normalizeToolSlug(opt.name) || opt.name}
                 style={{
                   display: "flex", alignItems: "center", gap: 10,
                   padding: "8px 12px 8px 14px",
@@ -177,12 +205,7 @@ export default function MultiSelect({
               >
                 {/* image / letter fallback — clicking this area selects the option */}
                 <div onClick={() => pick(opt.name)} style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, cursor: "pointer", fontSize: 13, fontWeight: isSel ? 700 : 500 }}>
-                  {hasLogo
-                    ? <img src={opt.imageUrl!} alt={opt.name} style={{ width: 22, height: 22, borderRadius: 5, objectFit: "contain", flexShrink: 0 }} />
-                    : <div style={{ width: 22, height: 22, borderRadius: 5, background: "#E8E6DC", display: "grid", placeItems: "center", fontSize: 10, fontWeight: 800, color: "#6B6B6B", flexShrink: 0 }}>
-                        {opt.name[0]?.toUpperCase()}
-                      </div>
-                  }
+                  <OptionIcon name={opt.name} size={22} insetScale={0.88} />
                   {optionLabel(opt)}
                 </div>
 

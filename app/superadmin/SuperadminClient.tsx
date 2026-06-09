@@ -3,8 +3,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import Topbar from "@/components/Topbar";
-import type { Profile, Company, Activity, ActivityTag } from "@/lib/supabase/types";
-import { DEFAULT_TOOLS, formatToolLabel } from "@/lib/tools";
+import ToolDeepDivesManager from "@/components/ToolDeepDivesManager";
+import type { Profile, Company, Activity, ActivityTag, ToolDeepDive } from "@/lib/supabase/types";
+import { DEFAULT_TOOLS, formatToolLabel, normalizeActivityTools } from "@/lib/tools";
 
 type ActivityRow = Activity & { activity_content: { id: string } | null };
 
@@ -15,11 +16,12 @@ type Props = {
   allAssignments: { activity_id: string; company_id: string }[];
   tags: Pick<ActivityTag, "id" | "name" | "icon_url">[];
   availableTools: string[];
+  deepDives: ToolDeepDive[];
 };
 
 const CATEGORIES = ["chat", "build", "automate"];
 
-export default function SuperadminClient({ profile, companies, activities: initActivities, allAssignments: initAssignments, tags: initTags, availableTools }: Props) {
+export default function SuperadminClient({ profile, companies, activities: initActivities, allAssignments: initAssignments, tags: initTags, availableTools, deepDives }: Props) {
   const [activities,   setActivities]   = useState(initActivities);
   const [assignments,  setAssignments]  = useState(initAssignments);
   const [tags,         setTags]         = useState(initTags);
@@ -44,11 +46,10 @@ export default function SuperadminClient({ profile, companies, activities: initA
   async function createActivity(e: React.FormEvent) {
     e.preventDefault();
     setCreating(true);
-    // Position = count of existing activities for this tool (appended at end of tool group)
-    const toolPosition = activities.filter(a => (a.tools[0] ?? "") === tool).length;
+    const nextPosition = activities.reduce((max, a) => Math.max(max, a.position), -1) + 1;
     const { data, error } = await supabase.from("activities").insert({
       title, description: desc, level, time_estimate_minutes: time,
-      points, tools: [tool], category, published: false, position: toolPosition,
+      points, tools: [tool], category, published: false, position: nextPosition,
     }).select().single();
     if (!error && data) {
       setActivities(prev => [...prev, { ...(data as any), activity_content: null }]);
@@ -60,12 +61,8 @@ export default function SuperadminClient({ profile, companies, activities: initA
   async function moveActivity(actId: string, direction: "up" | "down") {
     const act = activities.find(a => a.id === actId);
     if (!act) return;
-    const actTool = (act.tools[0] ?? "").toLowerCase();
 
-    // Sort the tool group by current position
-    const group = [...activities]
-      .filter(a => (a.tools[0] ?? "").toLowerCase() === actTool)
-      .sort((a, b) => a.position - b.position);
+    const group = [...activities].sort((a, b) => a.position - b.position);
 
     const idx = group.findIndex(a => a.id === actId);
     const newIdx = direction === "up" ? idx - 1 : idx + 1;
@@ -203,137 +200,120 @@ export default function SuperadminClient({ profile, companies, activities: initA
           </div>
         )}
 
-        {/* Activity list — grouped by tool, sorted by position */}
+        {/* Activity list — flat, sorted by position */}
         {activities.length === 0 ? (
           <div style={{ ...card, textAlign: "center", color: "#B0ABA5", padding: 48 }}>
             No activities yet. Create your first one above.
           </div>
         ) : (
-          (() => {
-            // Build sorted groups: tool name → activities sorted by position
-            const normTool = (a: ActivityRow) => (a.tools[0] ?? "").toLowerCase();
-            const toolOrder = Array.from(new Set(
-              [...activities].sort((a, b) => normTool(a).localeCompare(normTool(b))).map(normTool)
-            ));
-            return toolOrder.map(t => {
-              const group = [...activities]
-                .filter(a => normTool(a) === t)
-                .sort((a, b) => a.position - b.position);
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {[...activities].sort((a, b) => a.position - b.position).map((act, idx, sorted) => {
+              const expanded = expandedId === act.id;
+              const actAssignments = assignments.filter(a => a.activity_id === act.id);
+              const actTools = normalizeActivityTools(act.tools);
+              const cc = catColor(act.category);
               return (
-                <div key={t} style={{ marginBottom: 24 }}>
-                  {/* Tool group header */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                    <span style={{ fontSize: 13, fontWeight: 900, color: "#221D23", letterSpacing: "-.02em" }}>{formatToolLabel(t)}</span>
-                    <span style={{ fontSize: 11.5, color: "#B0ABA5", fontWeight: 600 }}>{group.length} activit{group.length === 1 ? "y" : "ies"}</span>
-                    <div style={{ flex: 1, height: 1, background: "#E8E6DC" }} />
+                <div key={act.id} style={{ ...card, padding: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 16px", cursor: "pointer" }}
+                    onClick={() => setExpandedId(expanded ? null : act.id)}>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                      <button onClick={() => moveActivity(act.id, "up")} disabled={idx === 0} style={{ ...posBtnStyle, opacity: idx === 0 ? .3 : 1 }} title="Move up">▲</button>
+                      <button onClick={() => moveActivity(act.id, "down")} disabled={idx === sorted.length - 1} style={{ ...posBtnStyle, opacity: idx === sorted.length - 1 ? .3 : 1 }} title="Move down">▼</button>
+                    </div>
+
+                    <span style={{ width: 22, height: 22, borderRadius: "50%", background: "#F0EEE8", display: "grid", placeItems: "center", fontSize: 10, fontWeight: 900, color: "#6B6B6B", flexShrink: 0 }}>{idx + 1}</span>
+
+                    <span style={{ padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, background: cc.bg, color: cc.color, flexShrink: 0 }}>{act.category}</span>
+
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14 }}>{act.title}</div>
+                      <div style={{ fontSize: 11.5, color: "#6B6B6B", marginTop: 1 }}>
+                        {actTools.length > 0 && (
+                          <span style={{ fontWeight: 700, color: "#221D23" }}>
+                            {actTools.map(formatToolLabel).join(" · ")}
+                            <span style={{ margin: "0 6px", color: "#D4D0C8" }}>|</span>
+                          </span>
+                        )}
+                        {act.level} · {act.time_estimate_minutes}m · {act.points}pts
+                        <span style={{ marginLeft: 8, color: act.activity_content ? "#17A855" : "#F68A29", fontWeight: 700 }}>
+                          {act.activity_content ? "✓ content" : "⚠ no content"}
+                        </span>
+                        {actAssignments.length > 0 && (
+                          <span style={{ marginLeft: 8, color: "#3696FC" }}>· {actAssignments.length} co.</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", gap: 7, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                      <button onClick={() => toggleFeatured(act)} title="Show in 'New this week'" style={{
+                        padding: "5px 10px", borderRadius: 999, border: "1px solid",
+                        borderColor: act.is_featured ? "rgba(255,206,0,.5)" : "#E8E6DC",
+                        background: act.is_featured ? "#FFF6CF" : "#F0EEE8",
+                        color: act.is_featured ? "#7A5F00" : "#6B6B6B",
+                        fontSize: 11.5, fontWeight: 700, cursor: "pointer",
+                      }}>★ {act.is_featured ? "New" : "+"}</button>
+
+                      <button onClick={() => togglePublish(act)} style={{
+                        padding: "5px 10px", borderRadius: 999, border: "1px solid",
+                        borderColor: act.published ? "rgba(35,206,104,.3)" : "#E8E6DC",
+                        background: act.published ? "rgba(35,206,104,.08)" : "#F0EEE8",
+                        color: act.published ? "#17A855" : "#6B6B6B",
+                        fontSize: 11.5, fontWeight: 700, cursor: "pointer",
+                      }}>{act.published ? "Live" : "Draft"}</button>
+
+                      <Link href={`/superadmin/activity/${act.id}`} style={{
+                        padding: "5px 10px", borderRadius: 999, border: "1px solid #E8E6DC",
+                        background: "white", color: "#221D23", fontSize: 11.5, fontWeight: 700,
+                        textDecoration: "none",
+                      }}>Edit</Link>
+
+                      <button onClick={() => deleteActivity(act.id)} style={{
+                        border: 0, background: "none", color: "#EF4444", cursor: "pointer", fontSize: 16, lineHeight: 1,
+                      }}>×</button>
+                    </div>
+
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#B0ABA5" strokeWidth="2.5"
+                      strokeLinecap="round" strokeLinejoin="round"
+                      style={{ transform: expanded ? "rotate(180deg)" : "rotate(0)", transition: ".15s", flexShrink: 0 }}>
+                      <polyline points="6 9 12 15 18 9"/>
+                    </svg>
                   </div>
 
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {group.map((act, idx) => {
-                      const expanded = expandedId === act.id;
-                      const actAssignments = assignments.filter(a => a.activity_id === act.id);
-                      const cc = catColor(act.category);
-                      return (
-                        <div key={act.id} style={{ ...card, padding: 0 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 16px", cursor: "pointer" }}
-                            onClick={() => setExpandedId(expanded ? null : act.id)}>
-
-                            {/* Position controls */}
-                            <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                              <button onClick={() => moveActivity(act.id, "up")} disabled={idx === 0} style={{ ...posBtnStyle, opacity: idx === 0 ? .3 : 1 }} title="Move up">▲</button>
-                              <button onClick={() => moveActivity(act.id, "down")} disabled={idx === group.length - 1} style={{ ...posBtnStyle, opacity: idx === group.length - 1 ? .3 : 1 }} title="Move down">▼</button>
-                            </div>
-
-                            {/* Position badge */}
-                            <span style={{ width: 22, height: 22, borderRadius: "50%", background: "#F0EEE8", display: "grid", placeItems: "center", fontSize: 10, fontWeight: 900, color: "#6B6B6B", flexShrink: 0 }}>{idx + 1}</span>
-
-                            {/* Category badge */}
-                            <span style={{ padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, background: cc.bg, color: cc.color, flexShrink: 0 }}>{act.category}</span>
-
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontWeight: 700, fontSize: 14 }}>{act.title}</div>
-                              <div style={{ fontSize: 11.5, color: "#6B6B6B", marginTop: 1 }}>
-                                {act.level} · {act.time_estimate_minutes}m · {act.points}pts
-                                <span style={{ marginLeft: 8, color: act.activity_content ? "#17A855" : "#F68A29", fontWeight: 700 }}>
-                                  {act.activity_content ? "✓ content" : "⚠ no content"}
-                                </span>
-                                {actAssignments.length > 0 && (
-                                  <span style={{ marginLeft: 8, color: "#3696FC" }}>· {actAssignments.length} co.</span>
-                                )}
-                              </div>
-                            </div>
-
-                            <div style={{ display: "flex", gap: 7, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                              <button onClick={() => toggleFeatured(act)} title="Show in 'New this week'" style={{
-                                padding: "5px 10px", borderRadius: 999, border: "1px solid",
-                                borderColor: act.is_featured ? "rgba(255,206,0,.5)" : "#E8E6DC",
-                                background: act.is_featured ? "#FFF6CF" : "#F0EEE8",
-                                color: act.is_featured ? "#7A5F00" : "#6B6B6B",
-                                fontSize: 11.5, fontWeight: 700, cursor: "pointer",
-                              }}>★ {act.is_featured ? "New" : "+"}</button>
-
-                              <button onClick={() => togglePublish(act)} style={{
-                                padding: "5px 10px", borderRadius: 999, border: "1px solid",
-                                borderColor: act.published ? "rgba(35,206,104,.3)" : "#E8E6DC",
-                                background: act.published ? "rgba(35,206,104,.08)" : "#F0EEE8",
-                                color: act.published ? "#17A855" : "#6B6B6B",
-                                fontSize: 11.5, fontWeight: 700, cursor: "pointer",
-                              }}>{act.published ? "Live" : "Draft"}</button>
-
-                              <Link href={`/superadmin/activity/${act.id}`} style={{
-                                padding: "5px 10px", borderRadius: 999, border: "1px solid #E8E6DC",
-                                background: "white", color: "#221D23", fontSize: 11.5, fontWeight: 700,
-                                textDecoration: "none",
-                              }}>Edit</Link>
-
-                              <button onClick={() => deleteActivity(act.id)} style={{
-                                border: 0, background: "none", color: "#EF4444", cursor: "pointer", fontSize: 16, lineHeight: 1,
-                              }}>×</button>
-                            </div>
-
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#B0ABA5" strokeWidth="2.5"
-                              strokeLinecap="round" strokeLinejoin="round"
-                              style={{ transform: expanded ? "rotate(180deg)" : "rotate(0)", transition: ".15s", flexShrink: 0 }}>
-                              <polyline points="6 9 12 15 18 9"/>
-                            </svg>
-                          </div>
-
-                          {expanded && (
-                            <div style={{ padding: "0 16px 14px", borderTop: "1px solid #F0EEE8" }}>
-                              <div style={{ fontSize: 12, fontWeight: 700, color: "#6B6B6B", margin: "10px 0 7px" }}>
-                                Assign to companies
-                                {actAssignments.length === 0 && <span style={{ fontWeight: 400, marginLeft: 6 }}>· no assignments = visible to everyone</span>}
-                              </div>
-                              <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-                                {companies.map(co => {
-                                  const assigned = assignments.some(a => a.activity_id === act.id && a.company_id === co.id);
-                                  return (
-                                    <button key={co.id} onClick={() => toggleAssignment(act.id, co.id)} style={{
-                                      display: "flex", alignItems: "center", gap: 7,
-                                      padding: "6px 12px", borderRadius: 999, cursor: "pointer",
-                                      border: "1.5px solid",
-                                      borderColor: assigned ? "#FFCE00" : "#E8E6DC",
-                                      background: assigned ? "#FFF6CF" : "white",
-                                      fontWeight: 700, fontSize: 12, transition: ".12s",
-                                    }}>
-                                      <span style={{ width: 14, height: 14, borderRadius: "50%", background: assigned ? "#FFCE00" : "#F0EEE8", display: "grid", placeItems: "center", fontSize: 9, fontWeight: 900, color: assigned ? "#221D23" : "transparent" }}>✓</span>
-                                      {co.name}
-                                      {co.domain && <span style={{ fontSize: 10, color: "#B0ABA5", fontWeight: 400 }}>{co.domain}</span>}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                  {expanded && (
+                    <div style={{ padding: "0 16px 14px", borderTop: "1px solid #F0EEE8" }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#6B6B6B", margin: "10px 0 7px" }}>
+                        Assign to companies
+                        {actAssignments.length === 0 && <span style={{ fontWeight: 400, marginLeft: 6 }}>· no assignments = visible to everyone</span>}
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                        {companies.map(co => {
+                          const assigned = assignments.some(a => a.activity_id === act.id && a.company_id === co.id);
+                          return (
+                            <button key={co.id} onClick={() => toggleAssignment(act.id, co.id)} style={{
+                              display: "flex", alignItems: "center", gap: 7,
+                              padding: "6px 12px", borderRadius: 999, cursor: "pointer",
+                              border: "1.5px solid",
+                              borderColor: assigned ? "#FFCE00" : "#E8E6DC",
+                              background: assigned ? "#FFF6CF" : "white",
+                              fontWeight: 700, fontSize: 12, transition: ".12s",
+                            }}>
+                              <span style={{ width: 14, height: 14, borderRadius: "50%", background: assigned ? "#FFCE00" : "#F0EEE8", display: "grid", placeItems: "center", fontSize: 9, fontWeight: 900, color: assigned ? "#221D23" : "transparent" }}>✓</span>
+                              {co.name}
+                              {co.domain && <span style={{ fontSize: 10, color: "#B0ABA5", fontWeight: 400 }}>{co.domain}</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
-            });
-          })()
+            })}
+          </div>
         )}
+
+        <ToolDeepDivesManager initialItems={deepDives} availableTools={availableTools} />
       </main>
     </div>
   );
