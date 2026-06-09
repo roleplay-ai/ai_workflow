@@ -23,9 +23,10 @@ export default async function ToolLogosPage() {
     ? await supabase.from("companies").select("name").eq("id", profile.company_id).single()
     : { data: null };
 
-  const [{ data: toolLogoRows }, { data: tags }] = await Promise.all([
+  const [{ data: toolLogoRows }, { data: tags }, { data: functions }] = await Promise.all([
     supabase.from("tool_logos").select("tool, logo_url"),
     supabase.from("activity_tags").select("id, name, icon_url").order("name"),
+    supabase.from("activity_functions").select("id, name, icon_url").order("name"),
   ]);
 
   return (
@@ -33,6 +34,7 @@ export default async function ToolLogosPage() {
       profile={{ ...profile, companies: company } as any}
       toolLogos={rowsToToolLogoMap(toolLogoRows ?? [])}
       tags={tags ?? []}
+      functions={functions ?? []}
     />
   );
 }

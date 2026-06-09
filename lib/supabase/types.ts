@@ -27,6 +27,7 @@ export type Activity = {
   points: number;
   tools: string[];
   tags: string[];
+  functions: string[];
   position: number;
   published: boolean;
   is_featured: boolean;
@@ -35,6 +36,13 @@ export type Activity = {
 };
 
 export type ActivityTag = {
+  id: string;
+  name: string;
+  icon_url: string | null;
+  created_at: string;
+};
+
+export type ActivityFunction = {
   id: string;
   name: string;
   icon_url: string | null;
@@ -150,8 +158,8 @@ export type Database = {
       };
       activities: {
         Row: Activity;
-        Insert: { title: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; position?: number; published?: boolean; is_featured?: boolean; category?: string };
-        Update: { title?: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; position?: number; published?: boolean; is_featured?: boolean; category?: string };
+        Insert: { title: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; tags?: string[]; functions?: string[]; position?: number; published?: boolean; is_featured?: boolean; category?: string };
+        Update: { title?: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; tags?: string[]; functions?: string[]; position?: number; published?: boolean; is_featured?: boolean; category?: string };
       };
       activity_companies: {
         Row: ActivityCompany;

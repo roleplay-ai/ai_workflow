@@ -31,6 +31,7 @@ export default async function DashboardPage() {
     { data: progress },
     { data: toolLogoRows },
     { data: tagRows },
+    { data: functionRows },
   ] = await Promise.all([
     supabase
       .from("activities")
@@ -43,11 +44,17 @@ export default async function DashboardPage() {
       .eq("user_id", user.id),
     supabase.from("tool_logos").select("tool, logo_url"),
     supabase.from("activity_tags").select("name, icon_url"),
+    supabase.from("activity_functions").select("name, icon_url"),
   ]);
 
   const tagLogos: Record<string, string> = {};
   for (const row of tagRows ?? []) {
     if (row.icon_url) tagLogos[(row.name as string).toLowerCase()] = row.icon_url as string;
+  }
+
+  const functionLogos: Record<string, string> = {};
+  for (const row of functionRows ?? []) {
+    if (row.icon_url) functionLogos[(row.name as string).toLowerCase()] = row.icon_url as string;
   }
 
   const fullProfile = profile ? { ...profile, companies: company } : null;
@@ -63,6 +70,7 @@ export default async function DashboardPage() {
       progress={progress ?? []}
       toolLogos={rowsToToolLogoMap(toolLogoRows ?? [])}
       tagLogos={tagLogos}
+      functionLogos={functionLogos}
       toolFilters={toolFilters}
     />
   );

@@ -19,6 +19,7 @@ type Props = {
   progress: UserProgress[];
   toolLogos: ToolLogoMap;
   tagLogos: Record<string, string>;
+  functionLogos: Record<string, string>;
   toolFilters: string[];
 };
 
@@ -70,22 +71,34 @@ function typeLabel(category: string) {
   return "Chat";
 }
 
+type CardFlowKind = "tag" | "function" | "tool";
+
+function cardFlowItems(activity: Activity): { items: string[]; kind: CardFlowKind } {
+  if (activity.tags.length > 0) return { items: activity.tags, kind: "tag" };
+  const fns = activity.functions ?? [];
+  if (fns.length > 0) return { items: fns, kind: "function" };
+  return { items: activity.tools, kind: "tool" };
+}
+
 function ActivityCard({
   activity,
   status,
   toolLogos,
   tagLogos,
+  functionLogos,
 }: {
   activity: Activity;
   status: string;
   toolLogos: ToolLogoMap;
   tagLogos: Record<string, string>;
+  functionLogos: Record<string, string>;
 }) {
   const [loading, setLoading] = useState(false);
   const newBadge = isNew(activity) && status !== "completed";
   const showBadge = newBadge || status === "in_progress" || status === "completed";
   const badgeLabel = status === "completed" ? "Completed" : status === "in_progress" ? "In Progress" : "New";
   const vis = visualStyle(activity.category);
+  const { items: flowItems, kind: flowKind } = cardFlowItems(activity);
 
   return (
     <Link href={`/activity/${activity.id}`} style={{ textDecoration: "none", color: "inherit", display: "block" }} onClick={() => setLoading(true)}>
@@ -156,9 +169,11 @@ function ActivityCard({
           {/* Flow — tag logos */}
           <div style={{ position: "relative", width: "100%", display: "flex", justifyContent: "center", alignItems: "center", gap: 12, padding: "0 6px" }}>
             <div style={{ position: "absolute", left: "14%", right: "14%", top: "50%", transform: "translateY(-50%)", borderTop: "2px dashed rgba(34,29,35,.2)", zIndex: 1 }} />
-            {(activity.tags.length > 0 ? activity.tags : activity.tools).slice(0, 4).map((item, i) => {
-              const isTag = activity.tags.length > 0;
-              const url = isTag ? tagLogos[item.toLowerCase()] : toolLogos[item.toLowerCase()];
+            {flowItems.slice(0, 4).map((item, i) => {
+              const key = item.toLowerCase();
+              const url = flowKind === "tag" ? tagLogos[key]
+                : flowKind === "function" ? functionLogos[key]
+                : toolLogos[key];
               return (
                 <div key={i} style={{
                   width: 42, height: 42, borderRadius: 14,
@@ -171,10 +186,10 @@ function ActivityCard({
                   {url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={url} alt={item} width={24} height={24} style={{ objectFit: "contain", borderRadius: 4 }} />
-                  ) : isTag ? (
-                    <span style={{ fontSize: 10, fontWeight: 800, color: C.muted }}>{item.slice(0, 3).toUpperCase()}</span>
-                  ) : (
+                  ) : flowKind === "tool" ? (
                     <ToolIcon tool={item} size={22} logos={toolLogos} />
+                  ) : (
+                    <span style={{ fontSize: 10, fontWeight: 800, color: C.muted }}>{item.slice(0, 3).toUpperCase()}</span>
                   )}
                 </div>
               );
@@ -219,7 +234,7 @@ const INTENT_BTNS = [
   { id: "build", icon: "🛠", label: "Build", desc: "Create apps, dashboards, tools, and reusable workflows." },
 ];
 
-export default function DashboardClient({ profile, activities, progress, toolLogos, tagLogos, toolFilters }: Props) {
+export default function DashboardClient({ profile, activities, progress, toolLogos, tagLogos, functionLogos, toolFilters }: Props) {
   const [searchQ, setSearchQ] = useState("");
   const [activeTool, setActiveTool] = useState("all");
   const [activeIntent, setActiveIntent] = useState("all");
@@ -421,7 +436,7 @@ export default function DashboardClient({ profile, activities, progress, toolLog
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 16 }}>
                   {newList.map(a => (
-                    <ActivityCard key={a.id} activity={a} status={progressMap[a.id]?.status ?? "not_started"} toolLogos={toolLogos} tagLogos={tagLogos} />
+                    <ActivityCard key={a.id} activity={a} status={progressMap[a.id]?.status ?? "not_started"} toolLogos={toolLogos} tagLogos={tagLogos} functionLogos={functionLogos} />
                   ))}
                 </div>
               </section>
@@ -444,7 +459,7 @@ export default function DashboardClient({ profile, activities, progress, toolLog
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 16 }}>
                   {continueList.map(a => (
-                    <ActivityCard key={a.id} activity={a} status="in_progress" toolLogos={toolLogos} tagLogos={tagLogos} />
+                    <ActivityCard key={a.id} activity={a} status="in_progress" toolLogos={toolLogos} tagLogos={tagLogos} functionLogos={functionLogos} />
                   ))}
                 </div>
               </section>
@@ -467,7 +482,7 @@ export default function DashboardClient({ profile, activities, progress, toolLog
                 ) : (
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 16 }}>
                     {filtered.map(a => (
-                      <ActivityCard key={a.id} activity={a} status={progressMap[a.id]?.status ?? "not_started"} toolLogos={toolLogos} tagLogos={tagLogos} />
+                      <ActivityCard key={a.id} activity={a} status={progressMap[a.id]?.status ?? "not_started"} toolLogos={toolLogos} tagLogos={tagLogos} functionLogos={functionLogos} />
                     ))}
                   </div>
                 )}
