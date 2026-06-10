@@ -33,6 +33,7 @@ export type Activity = {
   is_featured: boolean;
   category: string;
   created_at: string;
+  thumbnail_url: string | null;
 };
 
 export type ActivityTag = {

@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
 import DashboardClient from "./DashboardClient";
 import { rowsToToolLogoMap } from "@/lib/toolLogos";
 import { buildDashboardToolFilters } from "@/lib/tools";
@@ -9,26 +8,44 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
 
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("id, email, role, company_id, full_name, avatar_url, created_at")
-    .eq("id", user.id)
-    .single();
+  // Fetch user-specific data only when authenticated
+  let profile = null;
+  let company = null;
+  let progress: unknown[] = [];
 
-  if (profileError) {
-    console.error("[dashboard] profile error:", profileError.message);
+  if (user) {
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .select("id, email, role, company_id, full_name, avatar_url, created_at")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError) {
+      console.error("[dashboard] profile error:", profileError.message);
+    }
+
+    profile = profileData;
+
+    if (profile?.company_id) {
+      const { data: companyData } = await supabase
+        .from("companies")
+        .select("name")
+        .eq("id", profile.company_id)
+        .single();
+      company = companyData;
+    }
+
+    const { data: progressData } = await supabase
+      .from("user_progress")
+      .select("*")
+      .eq("user_id", user.id);
+    progress = progressData ?? [];
   }
 
-  const { data: company } = profile?.company_id
-    ? await supabase.from("companies").select("name").eq("id", profile.company_id).single()
-    : { data: null };
-
-  // RLS on activities handles company filtering via user_can_access_activity()
+  // Activities and static data fetched for all visitors
   const [
     { data: activities },
-    { data: progress },
     { data: toolLogoRows },
     { data: tagRows },
     { data: functionRows },
@@ -39,10 +56,6 @@ export default async function DashboardPage() {
       .select("*, activity_content(id)")
       .eq("published", true)
       .order("position"),
-    supabase
-      .from("user_progress")
-      .select("*")
-      .eq("user_id", user.id),
     supabase.from("tool_logos").select("tool, logo_url"),
     supabase.from("activity_tags").select("name, icon_url"),
     supabase.from("activity_functions").select("name, icon_url"),
@@ -69,12 +82,13 @@ export default async function DashboardPage() {
     <DashboardClient
       profile={fullProfile as any}
       activities={activities as any ?? []}
-      progress={progress ?? []}
+      progress={progress as any}
       toolLogos={rowsToToolLogoMap(toolLogoRows ?? [])}
       tagLogos={tagLogos}
       functionLogos={functionLogos}
       toolFilters={toolFilters}
       deepDives={deepDives ?? []}
+      isLoggedIn={!!user}
     />
   );
 }
