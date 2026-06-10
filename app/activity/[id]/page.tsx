@@ -9,17 +9,6 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, email, role, company_id, full_name, avatar_url, created_at")
-    .eq("id", user.id)
-    .single();
-
-  const { data: company } = profile?.company_id
-    ? await supabase.from("companies").select("name").eq("id", profile.company_id).single()
-    : { data: null };
 
   const { data: activity, error: activityError } = await supabase
     .from("activities")
@@ -29,25 +18,49 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
 
   if (activityError || !activity) redirect("/dashboard");
 
+  // Guests cannot open locked activities
+  if (!user && activity.is_locked) redirect("/dashboard");
+
+  let profile = null;
+  let company = null;
+  let progress = null;
+
+  if (user) {
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("id, email, role, company_id, full_name, avatar_url, created_at")
+      .eq("id", user.id)
+      .single();
+
+    profile = profileData;
+
+    const [{ data: companyData }, { data: progressData }] = await Promise.all([
+      profile?.company_id
+        ? supabase.from("companies").select("name").eq("id", profile.company_id).single()
+        : Promise.resolve({ data: null }),
+      supabase
+        .from("user_progress")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("activity_id", id)
+        .maybeSingle(),
+    ]);
+
+    company = companyData;
+    progress = progressData;
+  }
+
   const { data: activitySteps } = await supabase
     .from("activity_steps")
     .select("*")
     .eq("activity_id", id)
     .order("step_number", { ascending: true });
 
-  const [{ data: progress }, { data: toolLogoRows }] = await Promise.all([
-    supabase
-      .from("user_progress")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("activity_id", id)
-      .maybeSingle(),
-    supabase.from("tool_logos").select("tool, logo_url"),
-  ]);
+  const { data: toolLogoRows } = await supabase.from("tool_logos").select("tool, logo_url");
 
   return (
     <ActivityViewClient
-      profile={{ ...(profile as any), companies: company }}
+      profile={profile ? { ...(profile as any), companies: company } : null}
       activity={activity as any}
       activitySteps={(activitySteps ?? []) as any}
       progress={progress as any}

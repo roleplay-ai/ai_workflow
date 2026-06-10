@@ -16,7 +16,7 @@ import type { Profile, Activity, ActivityContent, ActivityStep, UserProgress } f
 import panelStyles from "./activity-panel.module.css";
 
 type Props = {
-  profile: Profile & { companies: { name: string } | null };
+  profile: (Profile & { companies: { name: string } | null }) | null;
   activity: Activity & { activity_content: ActivityContent | null };
   activitySteps: ActivityStep[];
   progress: UserProgress | null;
@@ -136,9 +136,9 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
     return () => { vid.src = ""; };
   }, [content?.video_url]);
 
-  // Create progress row on first load
+  // Create progress row on first load (only for authenticated users)
   useEffect(() => {
-    if (!progress) {
+    if (!progress && profile) {
       supabase.from("user_progress").insert({
         user_id: profile.id,
         activity_id: activity.id,
@@ -154,10 +154,9 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
     if (initDone.current) return;
     initDone.current = true;
     const welcome = `Hi! I'm **Nudgie**, your AI coach for **${activity.title}**. I'll guide you through each step — ask me anything along the way.`;
-    setMessages([
-      { role: "assistant", content: welcome },
-      { role: "assistant", content: buildCoachMessage(steps[0]) },
-    ]);
+    const msgs: typeof messages = [{ role: "assistant", content: welcome }];
+    if (steps.length > 0) msgs.push({ role: "assistant", content: buildCoachMessage(steps[0]) });
+    setMessages(msgs);
     setInitializing(false);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -177,8 +176,8 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
       const data = await res.json();
       if (data.reply) {
         setMessages(m => [...m, { role: "assistant", content: data.reply }]);
-        // Fire-and-forget log — never blocks the UI
-        supabase.from("chat_logs").insert({
+        // Fire-and-forget log — never blocks the UI (skip for guests)
+        if (profile) supabase.from("chat_logs").insert({
           user_id: profile.id,
           activity_id: activity.id,
           step_index: current,
@@ -227,7 +226,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
     if (progress) {
       const { data } = await supabase.from("user_progress").update(payload).eq("id", progress.id).select().single();
       if (data) setProgress(data as UserProgress);
-    } else {
+    } else if (profile) {
       const { data } = await supabase.from("user_progress").insert({ user_id: profile.id, activity_id: activity.id, ...payload }).select().single();
       if (data) setProgress(data as UserProgress);
     }
@@ -246,7 +245,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
     if (progress) {
       const { data } = await supabase.from("user_progress").update(payload).eq("id", progress.id).select().single();
       if (data) setProgress(data as UserProgress);
-    } else {
+    } else if (profile) {
       const { data } = await supabase.from("user_progress")
         .insert({ user_id: profile.id, activity_id: activity.id, ...payload })
         .select().single();
@@ -340,7 +339,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
   if (steps.length === 0) {
     return (
       <div style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
-        <Topbar profile={profile} role={profile.role} onSignOut={handleSignOut} />
+        <Topbar profile={profile} role={profile?.role} onSignOut={handleSignOut} />
         <div style={{ maxWidth: 720, margin: "60px auto", padding: "0 24px", textAlign: "center", color: "#6B6B6B" }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>🚧</div>
           <h2 style={{ fontWeight: 900, fontSize: 22, color: "#221D23", marginBottom: 8 }}>{activity.title}</h2>

@@ -839,6 +839,7 @@
 
 .ndb-root .rail {
   margin-top: 38px;
+  overflow: visible;
 }
 
 .ndb-root .rail-header {
@@ -880,10 +881,53 @@
   grid-auto-columns: minmax(280px, 305px);
   gap: 18px;
   overflow-x: auto;
-  scroll-snap-type: x proximity;
-  padding: 24px 38px 34px 22px;
-  scrollbar-width: thin;
-  scrollbar-color: #D3CEC4 transparent;
+  padding: 28px 54px 36px;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, black 54px, black calc(100% - 54px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, black 54px, black calc(100% - 54px), transparent 100%);
+}
+
+.ndb-root .cards-row::-webkit-scrollbar { display: none; }
+
+.ndb-root .rail-card-slot {
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  transition: transform 0.22s ease, opacity 0.22s ease;
+}
+
+.ndb-root .rail-card-slot:not(.is-active) {
+  transform: scale(0.88);
+  transform-origin: center center;
+  opacity: 0.55;
+}
+
+.ndb-root .rail-card-slot.is-active,
+.ndb-root .rail-card-slot:hover {
+  transform: scale(1);
+  transform-origin: center center;
+  position: relative;
+  z-index: 2;
+  opacity: 1;
+}
+
+.ndb-root .rail-card-slot.is-active .workflow-card,
+.ndb-root .rail-card-slot:hover .workflow-card {
+  box-shadow: 0 26px 55px rgba(34, 29, 35, 0.16);
+}
+
+/* While any card is hovered, collapse the JS-active card if it's not the one being hovered */
+.ndb-root .cards-row:has(.rail-card-slot:hover) .rail-card-slot.is-active:not(:hover) {
+  transform: scale(0.88);
+  transform-origin: center center;
+  opacity: 0.55;
+}
+
+.ndb-root .rail-card-slot .workflow-card {
+  flex: 1;
+  width: 100%;
+  scroll-snap-align: unset;
 }
 
 .ndb-root .cards-row::-webkit-scrollbar        { height: 8px; }
@@ -892,8 +936,9 @@
 
 .ndb-root .row-arrow {
   position: absolute;
-  top: 44%;
+  top: 50%;
   transform: translateY(-50%);
+  z-index: 10;
   width: 36px;
   height: 56px;
   border-radius: 999px;
@@ -905,20 +950,172 @@
   font-size: 24px;
   font-weight: 900;
   cursor: pointer;
-  z-index: 20;
   box-shadow: var(--shadow);
   font-family: inherit;
   transition: transform 0.15s;
 }
 
+.ndb-root .row-arrow.left  { left: 0; }
+.ndb-root .row-arrow.right { right: 0; }
 .ndb-root .row-arrow:hover { transform: translateY(-50%) scale(1.08); }
-.ndb-root .row-arrow.left  { left: -18px; }
-.ndb-root .row-arrow.right { right: -18px; }
+
+/* ── Functions carousel ──────────────────────────────────────────────────── */
+
+.ndb-root .functions-rail { margin-top: 8px; }
+
+.ndb-root .fn-cards-row {
+  display: flex;
+  gap: 18px;
+  overflow-x: auto;
+  padding: 4px 0 16px;
+  scrollbar-width: none;
+}
+.ndb-root .fn-cards-row::-webkit-scrollbar { display: none; }
+
+/* Activity-card style — poster is 16:9 to match function thumbnail art */
+.ndb-root .fn-activity-card {
+  flex-shrink: 0;
+  width: 268px;
+  background: #fff;
+  border: 1.5px solid #E5E0D8;
+  border-radius: 20px;
+  overflow: hidden;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  padding: 0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.ndb-root .fn-activity-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 40px rgba(34,29,35,0.13);
+  border-color: #D0C7BA;
+}
+.ndb-root .fn-activity-card.selected {
+  border-color: var(--fn-color, #623CEA);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--fn-color, #623CEA) 20%, transparent),
+              0 16px 40px rgba(34,29,35,0.13);
+}
+
+.ndb-root .fn-card-poster {
+  aspect-ratio: 16 / 9;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ndb-root .fn-card-poster.has-thumbnail {
+  background: none !important;
+  border-radius: 20px 20px 0 0;
+}
+.ndb-root .fn-card-poster.has-thumbnail .fn-card-thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: calc(100% + 2px);
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+  border-radius: 20px 20px 0 0;
+}
+.ndb-root .fn-card-thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+.ndb-root .fn-card-icon-large {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  opacity: 0.75;
+  position: relative;
+  z-index: 1;
+}
+.ndb-root .fn-card-initials {
+  font-size: 36px;
+  font-weight: 900;
+  letter-spacing: -.04em;
+  opacity: 0.45;
+  position: relative;
+  z-index: 1;
+}
+.ndb-root .fn-card-check {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--fn-color, #623CEA);
+  color: white;
+  font-size: 13px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(34,29,35,.25);
+  z-index: 2;
+}
+
+.ndb-root .fn-card-body {
+  padding: 13px 15px 14px;
+}
+.ndb-root .fn-card-name {
+  font-size: 14px;
+  font-weight: 800;
+  color: #221D23;
+  margin-bottom: 6px;
+  letter-spacing: -.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ndb-root .fn-card-count {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #746F78;
+}
+.ndb-root .fn-card-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Pagination row ──────────────────────────────────────────────────────── */
+
+.ndb-root .pagination-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 54px 24px;
+  margin-top: -8px;
+}
+.ndb-root .page-info {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #746F78;
+}
+.ndb-root .page-btns {
+  display: flex;
+  gap: 8px;
+}
+.ndb-root .pagination-btn {
+  font-size: 13px;
+  font-weight: 700;
+}
 
 /* ── Workflow card ────────────────────────────────────────────────────────── */
 
 .ndb-root .workflow-card {
-  scroll-snap-align: start;
   min-height: 350px;
   background: var(--white);
   border: 1px solid var(--border);
@@ -942,6 +1139,28 @@
   position: relative;
   overflow: hidden;
   background: var(--warm);
+}
+
+.ndb-root .card-poster.has-thumbnail,
+.ndb-root .poster-visual.has-thumbnail {
+  height: auto;
+  aspect-ratio: 16 / 9;
+}
+
+.ndb-root .card-poster.has-thumbnail::before,
+.ndb-root .poster-visual.has-thumbnail::before {
+  display: none;
+}
+
+.ndb-root .card-thumbnail {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  z-index: 2;
 }
 
 .ndb-root .card-poster.blue   { background: #EAF4FF; }
@@ -1376,15 +1595,15 @@
   .ndb-root .hero-showcase { padding: 16px 0; overflow-x: auto; scrollbar-width: none; }
   .ndb-root .hero-showcase::-webkit-scrollbar { display: none; }
   .ndb-root .hero-poster { flex-basis: 78% !important; min-height: 410px; }
-  .ndb-root .poster-visual { height: 245px; }
+  .ndb-root .poster-visual:not(.has-thumbnail) { height: 245px; }
   .ndb-root .poster-content h2 { font-size: 21px; }
   .ndb-root .filter-panel { top: 62px; }
   .ndb-root .filter-head { display: block; }
   .ndb-root .content { padding: 0 12px 34px; }
-  .ndb-root .cards-row { grid-auto-columns: minmax(260px, 82vw); gap: 14px; }
+  .ndb-root .cards-row { grid-auto-columns: minmax(260px, 82vw); gap: 14px; padding-inline: 16px; scroll-padding-inline: 16px; -webkit-mask-image: none; mask-image: none; }
   .ndb-root .row-arrow { display: none; }
   .ndb-root .workflow-card { min-height: 342px; }
-  .ndb-root .card-poster { height: 200px; }
+  .ndb-root .card-poster:not(.has-thumbnail) { height: 200px; }
   .ndb-root .tool-grid { grid-template-columns: 1fr; }
   .ndb-root .tools-band { padding: 22px; border-radius: 22px; }
   .ndb-root #workflows, .ndb-root .tools-band, .ndb-root .pov { scroll-margin-top: 164px; }

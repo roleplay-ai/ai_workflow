@@ -3,8 +3,10 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import type { Activity, UserProgress, Profile, ToolDeepDive } from "@/lib/supabase/types";
-import type { ToolLogoMap } from "@/lib/toolLogos";
-import { activityHasTool, formatToolLabel, normalizeActivityTools } from "@/lib/tools";
+import { resolveToolLogoUrl, type ToolLogoMap } from "@/lib/toolLogos";
+import { deepDiveHref, deepDiveLabel } from "@/lib/deepDives";
+import { formatToolLabel, normalizeActivityTools } from "@/lib/tools";
+import RotatingTools from "@/components/RotatingTools";
 import "./netflix-dashboard.css";
 
 type Props = {
@@ -14,6 +16,7 @@ type Props = {
   toolLogos: ToolLogoMap;
   tagLogos: Record<string, string>;
   functionLogos: Record<string, string>;
+  functionThumbnails: Record<string, string>;
   toolFilters: string[];
   deepDives: ToolDeepDive[];
   isLoggedIn: boolean;
@@ -67,16 +70,6 @@ function fnColor(fn: string): string {
   return "#746F78";
 }
 
-function fnSubtitle(fn: string): string {
-  const f = fn.toLowerCase();
-  if (f.includes("finance") || f.includes("account")) return "Workflows for financial analysis, reporting, and data.";
-  if (f.includes("hr") || f.includes("human resources") || f.includes("people")) return "Workflows for hiring, performance, and people management.";
-  if (f.includes("legal") || f.includes("compliance")) return "Workflows for contracts, policy, and risk review.";
-  if (f.includes("market") || f.includes("brand") || f.includes("content")) return "Workflows for campaigns, copy, and content strategy.";
-  if (f.includes("sales")) return "Workflows for pipeline, outreach, and deal management.";
-  if (f.includes("support") || f.includes("customer")) return "Workflows for tickets, responses, and service quality.";
-  return `AI-guided workflows for ${fn} teams.`;
-}
 
 function timeLabel(a: Activity): string {
   if (a.time_estimate_minutes) return `${a.time_estimate_minutes} min`;
@@ -122,16 +115,6 @@ function Scene({ theme }: { theme: SceneTheme }) {
   );
 }
 
-// ── Pill ──────────────────────────────────────────────────────────────────
-
-function Pill({ label, color }: { label: string; color: string }) {
-  return (
-    <span className="pill" style={{ color, borderColor: `${color}40` }}>
-      {label}
-    </span>
-  );
-}
-
 // ── SignUpCard modal ──────────────────────────────────────────────────────
 
 function SignUpCard({ onClose }: { onClose: () => void }) {
@@ -160,29 +143,39 @@ function SignUpCard({ onClose }: { onClose: () => void }) {
           }}
           aria-label="Close"
         >×</button>
-        <div style={{ fontSize: 36, marginBottom: 16, color: "#FFCE00" }}>✦</div>
+        <div style={{ fontSize: 36, marginBottom: 16 }}>🔒</div>
         <h2 style={{ fontWeight: 900, fontSize: 22, marginBottom: 12, lineHeight: 1.3 }}>
-          Sign up free. Unlock every workflow.
+          This workflow is locked
         </h2>
-        <p style={{ color: "#A09AA6", marginBottom: 32, lineHeight: 1.65, fontSize: 15 }}>
-          Get access to every guided workflow, tool comparison, and AI mastery tip in the studio.
+        <p style={{ color: "#A09AA6", marginBottom: 28, lineHeight: 1.65, fontSize: 15 }}>
+          Sign in or create a free account to access this and every other guided workflow in the studio.
         </p>
         <Link
           href="/login"
           style={{
             display: "block", background: "#FFCE00", color: "#221D23",
-            fontWeight: 800, padding: "15px 32px", borderRadius: 12,
-            textDecoration: "none", marginBottom: 14, fontSize: 16,
-            transition: "opacity 0.15s",
+            fontWeight: 800, padding: "14px 32px", borderRadius: 12,
+            textDecoration: "none", marginBottom: 10, fontSize: 15,
           }}
         >
-          Get started — it&apos;s free
+          Sign in
+        </Link>
+        <Link
+          href="/login"
+          style={{
+            display: "block", background: "rgba(255,255,255,0.08)", color: "#F8F8F6",
+            fontWeight: 700, padding: "14px 32px", borderRadius: 12,
+            textDecoration: "none", marginBottom: 18, fontSize: 15,
+            border: "1.5px solid rgba(255,255,255,0.12)",
+          }}
+        >
+          Create a free account
         </Link>
         <button
           onClick={onClose}
           style={{
             background: "transparent", border: "none", color: "#746F78",
-            cursor: "pointer", fontSize: 14, padding: "8px",
+            cursor: "pointer", fontSize: 13, padding: "4px",
           }}
         >
           Continue browsing
@@ -199,37 +192,66 @@ function WorkflowCard({
   focusStyle,
   isLoggedIn,
   onSignUpRequired,
+  toolLogos,
 }: {
   activity: Activity;
   focusStyle: React.CSSProperties;
   isLoggedIn: boolean;
   onSignUpRequired: () => void;
+  toolLogos: ToolLogoMap;
 }) {
-  const theme  = getTheme(activity.id);
-  const tools  = normalizeActivityTools(activity.tools);
-  const fns    = activity.functions ?? [];
-  const chip   = timeLabel(activity);
+  const theme      = getTheme(activity.id);
+  const tools      = normalizeActivityTools(activity.tools);
+  const chip       = timeLabel(activity);
+  const isLocked   = !isLoggedIn && !!activity.is_locked;
 
   const inner = (
     <>
       {activity.is_featured && <span className="new-badge">New</span>}
-      <div className={`card-poster ${theme.posterColor}`}>
+      <div className={`card-poster ${theme.posterColor}${activity.thumbnail_url ? " has-thumbnail" : ""}`}>
         {activity.thumbnail_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
+            className="card-thumbnail"
             src={activity.thumbnail_url}
             alt={activity.title}
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 2 }}
           />
         ) : (
           <Scene theme={theme} />
         )}
+        {isLocked && (
+          <div style={{
+            position: "absolute", inset: 0, zIndex: 4,
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            background: "rgba(34,29,35,0.52)", backdropFilter: "blur(3px)",
+            borderRadius: "inherit", gap: 6,
+          }}>
+            <div style={{
+              width: 38, height: 38, borderRadius: "50%",
+              background: "rgba(255,255,255,0.15)", border: "1.5px solid rgba(255,255,255,0.25)",
+              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17,
+            }}>🔒</div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.85)", letterSpacing: ".02em" }}>
+              Sign in to unlock
+            </span>
+          </div>
+        )}
       </div>
       <div className="card-body">
         <div className="meta-line">
-          {tools[0] && <Pill label={formatToolLabel(tools[0])} color={toolColor(tools[0])} />}
-          {fns[0]   && <Pill label={fns[0]}                    color={fnColor(fns[0])} />}
-          {chip     && <span className="time-chip">{chip}</span>}
+          {tools.length > 0 && (
+            <RotatingTools
+              tools={tools}
+              toolLogos={toolLogos}
+              iconSize={14}
+              insetScale={0.9}
+              borderColor="#E5E0D8"
+              labelColor="#221D23"
+              labelSize={10}
+              chipStyle={{ padding: "6px 9px 6px 6px", fontWeight: 900 }}
+            />
+          )}
+          {chip && <span className="time-chip">{chip}</span>}
         </div>
         <h3 className="card-title">{activity.title}</h3>
         <p className="card-desc">{activity.description}</p>
@@ -237,7 +259,7 @@ function WorkflowCard({
     </>
   );
 
-  if (!isLoggedIn) {
+  if (isLocked) {
     return (
       <div
         className="workflow-card"
@@ -259,51 +281,279 @@ function WorkflowCard({
   );
 }
 
+// ── AllWorkflowsSection ───────────────────────────────────────────────────
+
+const PAGE_SIZE = 10;
+
+function AllWorkflowsSection({
+  activities, selectedFunction, selectedTool, isLoggedIn, onSignUpRequired, toolLogos,
+}: {
+  activities: Activity[];
+  selectedFunction: string | null;
+  selectedTool: string | null;
+  isLoggedIn: boolean;
+  onSignUpRequired: () => void;
+  toolLogos: ToolLogoMap;
+}) {
+  const [page, setPage] = useState(0);
+
+  // Reset to first page when either filter changes
+  useEffect(() => { setPage(0); }, [selectedFunction, selectedTool]);
+
+  const filtered = useMemo(() => {
+    let result = activities;
+    if (selectedFunction) {
+      result = result.filter(a =>
+        (a.functions ?? []).some(f => f.toLowerCase() === selectedFunction.toLowerCase())
+      );
+    }
+    if (selectedTool) {
+      result = result.filter(a =>
+        normalizeActivityTools(a.tools).some(t => t.toLowerCase() === selectedTool.toLowerCase())
+      );
+    }
+    return result;
+  }, [activities, selectedFunction, selectedTool]);
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const pageItems  = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  // Build title: "All [Function] [Tool] Workflows"
+  const titleParts: string[] = ["All"];
+  if (selectedFunction) titleParts.push(selectedFunction);
+  if (selectedTool)     titleParts.push(formatToolLabel(selectedTool));
+  titleParts.push("Workflows");
+  const title = titleParts.join(" ");
+
+  const activeFilters = [
+    selectedFunction ?? null,
+    selectedTool ? formatToolLabel(selectedTool) : null,
+  ].filter(Boolean) as string[];
+  const subtitle = `${filtered.length} workflow${filtered.length !== 1 ? "s" : ""}${activeFilters.length ? ` · ${activeFilters.join(" · ")}` : ""}`;
+
+  if (filtered.length === 0) return (
+    <section className="rail" id="all-workflows">
+      <div className="rail-header">
+        <div className="rail-title">
+          <h2>{title}</h2>
+          <p>No workflows found{activeFilters.length ? ` for "${activeFilters.join('" + "')}"` : ""}.</p>
+        </div>
+      </div>
+    </section>
+  );
+
+  return (
+    <div id="all-workflows">
+      <HorizontalRail
+        key={`${selectedFunction ?? "all"}-${selectedTool ?? "all"}-${page}`}
+        title={title}
+        subtitle={subtitle}
+        activities={pageItems}
+        isLoggedIn={isLoggedIn}
+        onSignUpRequired={onSignUpRequired}
+        toolLogos={toolLogos}
+      />
+      {totalPages > 1 && (
+        <div className="pagination-row">
+          <span className="page-info">Page {page + 1} of {totalPages}</span>
+          <div className="page-btns">
+            {page > 0 && (
+              <button className="btn btn-ghost pagination-btn" onClick={() => setPage(p => p - 1)}>← Previous</button>
+            )}
+            {page < totalPages - 1 && (
+              <button className="btn btn-ghost pagination-btn" onClick={() => setPage(p => p + 1)}>More workflows →</button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── FunctionCard ──────────────────────────────────────────────────────────
+
+function FunctionCard({
+  name, count, thumbnail, icon, selected, color, onClick,
+}: {
+  name: string;
+  count: number;
+  thumbnail: string | null;
+  icon: string | null;
+  selected: boolean;
+  color: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className={`fn-activity-card${thumbnail ? " has-thumbnail" : ""}${selected ? " selected" : ""}`}
+      onClick={onClick}
+      style={{ "--fn-color": color } as React.CSSProperties}
+    >
+      <div
+        className={`fn-card-poster${thumbnail ? " has-thumbnail" : ""}`}
+        style={thumbnail ? undefined : { background: `linear-gradient(145deg, ${color}28 0%, ${color}50 100%)` }}
+      >
+        {thumbnail ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={thumbnail} alt="" className="fn-card-thumb" />
+        ) : icon ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={icon} alt="" className="fn-card-icon-large" />
+        ) : (
+          <span className="fn-card-initials" style={{ color }}>{name.slice(0, 2).toUpperCase()}</span>
+        )}
+        {selected && (
+          <div className="fn-card-check">✓</div>
+        )}
+      </div>
+      <div className="fn-card-body">
+        <div className="fn-card-name">{name}</div>
+        <div className="fn-card-count">
+          <span className="fn-card-dot" style={{ background: color }} />
+          {count} workflow{count !== 1 ? "s" : ""}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+// ── FunctionsCarousel ─────────────────────────────────────────────────────
+
+function FunctionsCarousel({
+  activities, selectedFunction, onSelect, functionLogos, functionThumbnails,
+}: {
+  activities: Activity[];
+  selectedFunction: string | null;
+  onSelect: (fn: string | null) => void;
+  functionLogos: Record<string, string>;
+  functionThumbnails: Record<string, string>;
+}) {
+  const functions = useMemo(() => {
+    const map = new Map<string, number>();
+    activities.forEach(a => (a.functions ?? []).forEach(fn => {
+      const k = fn.trim();
+      if (k) map.set(k, (map.get(k) ?? 0) + 1);
+    }));
+    return [...map.entries()].sort((a, b) => b[1] - a[1]);
+  }, [activities]);
+
+  if (functions.length === 0) return null;
+
+  return (
+    <section className="rail functions-rail">
+      <div className="rail-header">
+        <div className="rail-title">
+          <h2>Browse by function</h2>
+          <p>Select a function to filter All Workflows above.</p>
+        </div>
+        {selectedFunction && (
+          <button className="see-all" onClick={() => onSelect(null)}>Clear filter ✕</button>
+        )}
+      </div>
+      <div className="fn-cards-row">
+        {functions.map(([fn, count]) => {
+          const key = fn.toLowerCase();
+          return (
+            <FunctionCard
+              key={fn}
+              name={fn}
+              count={count}
+              thumbnail={functionThumbnails?.[key] ?? null}
+              icon={functionLogos?.[key] ?? null}
+              selected={selectedFunction === fn}
+              color={fnColor(fn)}
+              onClick={() => onSelect(selectedFunction === fn ? null : fn)}
+            />
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 // ── HorizontalRail ────────────────────────────────────────────────────────
 
 function HorizontalRail({
-  title, subtitle, activities, isLoggedIn, onSignUpRequired,
+  title, subtitle, activities, isLoggedIn, onSignUpRequired, toolLogos,
 }: {
   title: string;
   subtitle: string;
   activities: Activity[];
   isLoggedIn: boolean;
   onSignUpRequired: () => void;
+  toolLogos: ToolLogoMap;
 }) {
   const rowRef = useRef<HTMLDivElement>(null);
   const [focusedIdx, setFocusedIdx] = useState(0);
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  const focusedIdxRef = useRef(0);
+  const programmaticRef = useRef(false);
+  const isPausedRef = useRef(false);
+  const rowPadding = 54;
 
-  function findCenter(row: HTMLDivElement): number {
-    const cards = Array.from(row.querySelectorAll<HTMLElement>(".workflow-card"));
-    const mid   = row.getBoundingClientRect().left + row.clientWidth / 2;
-    let best = 0, bestD = Infinity;
-    cards.forEach((c, i) => {
-      const d = Math.abs(c.getBoundingClientRect().left + c.clientWidth / 2 - mid);
-      if (d < bestD) { bestD = d; best = i; }
+  function setFocused(i: number) {
+    focusedIdxRef.current = i;
+    setFocusedIdx(i);
+  }
+
+  function findLeadingCard(row: HTMLDivElement): number {
+    const slots = Array.from(row.querySelectorAll<HTMLElement>(".rail-card-slot"));
+    if (slots.length === 0) return 0;
+    const anchor = row.scrollLeft + rowPadding;
+    let best = 0;
+    let bestDist = Infinity;
+    slots.forEach((slot, i) => {
+      const d = Math.abs(slot.offsetLeft - anchor);
+      if (d < bestDist) { bestDist = d; best = i; }
     });
     return best;
+  }
+
+  function scrollToIndex(index: number) {
+    const row = rowRef.current;
+    if (!row) return;
+    // Prevent onScroll from overwriting focusedIdx during the smooth animation
+    programmaticRef.current = true;
+    setTimeout(() => { programmaticRef.current = false; }, 600);
+    if (index === 0) {
+      row.scrollTo({ left: 0, behavior: "smooth" });
+    } else {
+      const slots = Array.from(row.querySelectorAll<HTMLElement>(".rail-card-slot"));
+      const slot = slots[index];
+      if (!slot) return;
+      row.scrollTo({ left: Math.max(0, slot.offsetLeft - rowPadding), behavior: "smooth" });
+    }
+    setFocused(index);
   }
 
   useEffect(() => {
     const row = rowRef.current;
     if (!row) return;
-    setFocusedIdx(findCenter(row));
+    row.scrollLeft = 0;
+    setFocused(0);
     let t: ReturnType<typeof setTimeout>;
-    const onScroll = () => { clearTimeout(t); t = setTimeout(() => setFocusedIdx(findCenter(row)), 80); };
+    const onScroll = () => {
+      if (programmaticRef.current) return;
+      clearTimeout(t);
+      t = setTimeout(() => setFocused(findLeadingCard(row)), 80);
+    };
     row.addEventListener("scroll", onScroll, { passive: true });
     return () => { row.removeEventListener("scroll", onScroll); clearTimeout(t); };
   }, [activities]);
 
+  useEffect(() => {
+    if (activities.length <= 1) return;
+    const id = setInterval(() => {
+      if (isPausedRef.current) return;
+      const next = (focusedIdxRef.current + 1) % activities.length;
+      scrollToIndex(next);
+    }, 3000);
+    return () => clearInterval(id);
+  }, [activities.length]);
+
   function scrollTo(dir: number) {
-    const row = rowRef.current;
-    if (!row) return;
-    const cards = Array.from(row.querySelectorAll<HTMLElement>(".workflow-card"));
-    const next  = Math.min(cards.length - 1, Math.max(0, focusedIdx + dir));
-    const card  = cards[next];
-    if (card) {
-      row.scrollTo({ left: card.offsetLeft - (row.clientWidth - card.clientWidth) / 2, behavior: "smooth" });
-      setFocusedIdx(next);
-    }
+    const next = Math.min(activities.length - 1, Math.max(0, focusedIdxRef.current + dir));
+    scrollToIndex(next);
   }
 
   if (activities.length === 0) return null;
@@ -319,17 +569,25 @@ function HorizontalRail({
       </div>
       <div className="rail-window">
         <button className="row-arrow left" onClick={() => scrollTo(-1)}>‹</button>
-        <div className="cards-row" ref={rowRef}>
+        <div
+          className="cards-row"
+          ref={rowRef}
+          onMouseLeave={() => { setHoveredIdx(null); isPausedRef.current = false; }}
+        >
           {activities.map((a, i) => {
-            const active  = i === focusedIdx;
+            const active = i === (hoveredIdx !== null ? hoveredIdx : focusedIdx);
             const style: React.CSSProperties = {
-              opacity:    active ? 1 : 0.64,
-              transform:  active ? "scale(1.08)" : "scale(0.94)",
-              zIndex:     active ? 8 : 1,
-              boxShadow:  active ? "0 26px 55px rgba(34, 29, 35, 0.16)" : "none",
               borderColor: active ? "#D0C7BA" : "#E5E0D8",
             };
-            return <WorkflowCard key={a.id} activity={a} focusStyle={style} isLoggedIn={isLoggedIn} onSignUpRequired={onSignUpRequired} />;
+            return (
+              <div
+                key={a.id}
+                className={`rail-card-slot${active ? " is-active" : ""}`}
+                onMouseEnter={() => { setHoveredIdx(i); isPausedRef.current = true; }}
+              >
+                <WorkflowCard activity={a} focusStyle={style} isLoggedIn={isLoggedIn} onSignUpRequired={onSignUpRequired} toolLogos={toolLogos} />
+              </div>
+            );
           })}
         </div>
         <button className="row-arrow right" onClick={() => scrollTo(1)}>›</button>
@@ -345,11 +603,13 @@ function HeroSection({
   allFunctions,
   heroToolOptions,
   onShowWorkflows,
+  toolLogos,
 }: {
   heroActivities: Activity[];
   allFunctions: string[];
   heroToolOptions: string[];
   onShowWorkflows: (tool: string, fn: string) => void;
+  toolLogos: ToolLogoMap;
 }) {
   const [activeIdx,    setActiveIdx]    = useState(0);
   const [heroTool,     setHeroTool]     = useState("");
@@ -415,7 +675,6 @@ function HeroSection({
           {heroActivities.map((a, i) => {
             const theme = getTheme(a.id);
             const tools = normalizeActivityTools(a.tools);
-            const fns   = a.functions ?? [];
             const chip  = timeLabel(a);
             const isActive = i === activeIdx;
 
@@ -431,13 +690,13 @@ function HeroSection({
                   boxShadow: isActive ? "0 28px 55px rgba(34, 29, 35, 0.24)" : "0 16px 30px rgba(34, 29, 35, 0.08)",
                 }}
               >
-                <div className={`poster-visual ${theme.posterColor}`}>
+                <div className={`poster-visual ${theme.posterColor}${a.thumbnail_url ? " has-thumbnail" : ""}`}>
                   {a.thumbnail_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
+                      className="card-thumbnail"
                       src={a.thumbnail_url}
                       alt={a.title}
-                      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 2 }}
                     />
                   ) : (
                     <Scene theme={theme} />
@@ -445,9 +704,19 @@ function HeroSection({
                 </div>
                 <div className="poster-content">
                   <div className="poster-meta">
-                    {tools[0] && <Pill label={formatToolLabel(tools[0])} color={toolColor(tools[0])} />}
-                    {fns[0]   && <Pill label={fns[0]}                    color={fnColor(fns[0])} />}
-                    {chip     && <span className="time-chip">{chip}</span>}
+                    {tools.length > 0 && (
+                      <RotatingTools
+                        tools={tools}
+                        toolLogos={toolLogos}
+                        iconSize={14}
+                        insetScale={0.9}
+                        borderColor="#E5E0D8"
+                        labelColor="#221D23"
+                        labelSize={10}
+                        chipStyle={{ padding: "6px 9px 6px 6px", fontWeight: 900 }}
+                      />
+                    )}
+                    {chip && <span className="time-chip">{chip}</span>}
                   </div>
                   <h2>{a.title}</h2>
                   <p>{a.description}</p>
@@ -461,41 +730,85 @@ function HeroSection({
   );
 }
 
-// ── ToolsBand (static) ───────────────────────────────────────────────────
+function toolInitials(tool: string): string {
+  const words = formatToolLabel(tool).split(/\s+/).filter(Boolean);
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+  return formatToolLabel(tool).slice(0, 3);
+}
 
-function ToolsBand({ activities }: { activities: Activity[] }) {
-  const counts: Record<string, number> = {};
-  activities.forEach(a => normalizeActivityTools(a.tools).forEach(t => { counts[t] = (counts[t] ?? 0) + 1; }));
+// ── ToolsBand (from published deep dives) ────────────────────────────────
 
-  const tools = [
-    { slug: "claude",  label: "Claude",  desc: "Strong for long documents, artifacts, writing, and structured reasoning.", init: "C",   color: "#623CEA" },
-    { slug: "chatgpt", label: "ChatGPT", desc: "Useful for everyday work, custom GPTs, research, images, and multimodal tasks.", init: "GPT", color: "#23CE68" },
-    { slug: "gemini",  label: "Gemini",  desc: "Useful for Google Workspace, research, and connected productivity tasks.", init: "Ge",  color: "#3696FC" },
-    { slug: "copilot", label: "Copilot", desc: "Useful inside Microsoft 365 for documents, meetings, and enterprise workflows.", init: "Co",  color: "#F68A29" },
-  ];
+function ToolsBand({
+  deepDives,
+  toolLogos,
+}: {
+  deepDives: ToolDeepDive[];
+  toolLogos: ToolLogoMap;
+}) {
+  if (deepDives.length === 0) return null;
 
   return (
     <section className="tools-band" id="tools">
       <div className="rail-header">
         <div className="rail-title">
           <h2>Know your tool</h2>
-          <p>Make tool choice feel visual, simple, and practical.</p>
+          <p>Deep dives on the AI tools behind these workflows.</p>
         </div>
       </div>
       <div className="tool-grid">
-        {tools.map(t => (
-          <article key={t.slug} className="tool-card">
-            <div>
-              <div className="tool-logo" style={{ color: t.color }}>{t.init}</div>
-              <h3>{t.label}</h3>
-              <p>{t.desc}</p>
-            </div>
-            <div className="tool-link">
-              <span>{counts[t.slug] ?? 0} workflows</span>
-              <span>→</span>
-            </div>
-          </article>
-        ))}
+        {deepDives.map(item => {
+          const slug = item.tool ?? "";
+          const href = deepDiveHref(item);
+          const isExternal = (item.link_type ?? "external") === "external";
+          const color = slug ? toolColor(slug) : "#FFCE00";
+          const logoUrl = slug ? resolveToolLogoUrl(slug, toolLogos) : null;
+          const desc = item.description ?? deepDiveLabel(item, formatToolLabel);
+
+          const inner = (
+            <>
+              <div>
+                <div className="tool-logo" style={{ color }}>
+                  {logoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={logoUrl} alt="" style={{ width: 32, height: 32, objectFit: "contain" }} />
+                  ) : slug ? (
+                    toolInitials(slug)
+                  ) : (
+                    "AI"
+                  )}
+                </div>
+                <h3>{item.title}</h3>
+                <p>{desc}</p>
+              </div>
+              <div className="tool-link">
+                <span>Explore →</span>
+              </div>
+            </>
+          );
+
+          const cardStyle: React.CSSProperties = { textDecoration: "none", color: "inherit" };
+
+          if (isExternal) {
+            return (
+              <a
+                key={item.id}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="tool-card"
+                style={cardStyle}
+              >
+                {inner}
+              </a>
+            );
+          }
+
+          return (
+            <Link key={item.id} href={href} className="tool-card" style={cardStyle}>
+              {inner}
+            </Link>
+          );
+        })}
       </div>
     </section>
   );
@@ -536,10 +849,10 @@ function POVSection() {
 
 // ── DashboardClient ──────────────────────────────────────────────────────
 
-export default function DashboardClient({ profile, activities, toolFilters, isLoggedIn }: Props) {
-  const [activeTool, setActiveTool]         = useState("all");
-  const [activeFunction, setActiveFunction] = useState("all");
-  const [showSignUp, setShowSignUp]         = useState(false);
+export default function DashboardClient({ profile, activities, toolFilters, deepDives, toolLogos, functionLogos, functionThumbnails, isLoggedIn }: Props) {
+  const [selectedFunction, setSelectedFunction] = useState<string | null>(null);
+  const [selectedTool,     setSelectedTool]     = useState<string | null>(null);
+  const [showSignUp, setShowSignUp]             = useState(false);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -547,7 +860,7 @@ export default function DashboardClient({ profile, activities, toolFilters, isLo
     window.location.href = "/login";
   }
 
-  // Unique functions sorted by frequency
+  // Unique functions (for HeroSection dropdowns)
   const allFunctions = useMemo(() => {
     const map = new Map<string, number>();
     activities.forEach(a => (a.functions ?? []).forEach(fn => {
@@ -557,8 +870,15 @@ export default function DashboardClient({ profile, activities, toolFilters, isLo
     return [...map.entries()].sort((a, b) => b[1] - a[1]).map(([n]) => n);
   }, [activities]);
 
-  // Hero carousel: is_featured first, then newest
+  // Hero carousel: superadmin-pinned slots first, fallback to is_featured then newest
   const heroActivities = useMemo(() => {
+    // Prefer activities with explicit hero_position slots (1, 2, 3)
+    const slotted = activities
+      .filter(a => a.hero_position != null)
+      .sort((a, b) => (a.hero_position ?? 99) - (b.hero_position ?? 99))
+      .slice(0, 3);
+    if (slotted.length > 0) return slotted;
+    // Fallback: is_featured first, then newest
     const featured = activities.filter(a => a.is_featured);
     if (featured.length >= 3) return featured.slice(0, 3);
     const rest = activities
@@ -567,28 +887,16 @@ export default function DashboardClient({ profile, activities, toolFilters, isLo
     return [...featured, ...rest].slice(0, 3);
   }, [activities]);
 
-  // Filtered by active tool + function
-  const filtered = useMemo(() => activities.filter(a => {
-    const tOk = activeTool === "all"     || activityHasTool(a.tools, activeTool);
-    const fOk = activeFunction === "all" || (a.functions ?? []).some(f => f.toLowerCase() === activeFunction.toLowerCase());
-    return tOk && fOk;
-  }), [activities, activeTool, activeFunction]);
+  // Section 1: New
+  const newActivities = useMemo(() => activities.filter(a => a.is_featured), [activities]);
 
-  // "New this week" = featured activities in filtered set
-  const newThisWeek = useMemo(() => filtered.filter(a => a.is_featured), [filtered]);
-
-  // Per-function rails
-  const fnRails = useMemo(() => {
-    const fns = activeFunction === "all" ? allFunctions : [activeFunction];
-    return fns
-      .map(fn => ({ fn, items: filtered.filter(a => (a.functions ?? []).some(f => f.toLowerCase() === fn.toLowerCase())) }))
-      .filter(r => r.items.length > 0);
-  }, [allFunctions, filtered, activeFunction]);
+  // Section 2: AI Tools Mastery
+  const masteryActivities = useMemo(() => activities.filter(a => a.is_mastery), [activities]);
 
   function handleShowWorkflows(tool: string, fn: string) {
-    if (tool) setActiveTool(tool);
-    if (fn)   setActiveFunction(fn);
-    document.getElementById("workflows")?.scrollIntoView({ behavior: "smooth" });
+    if (tool) setSelectedTool(tool);
+    if (fn)   setSelectedFunction(fn);
+    document.getElementById("all-workflows")?.scrollIntoView({ behavior: "smooth" });
   }
 
   const heroToolOptions = toolFilters.filter(t => t !== "all");
@@ -640,68 +948,56 @@ export default function DashboardClient({ profile, activities, toolFilters, isLo
         allFunctions={allFunctions}
         heroToolOptions={heroToolOptions}
         onShowWorkflows={handleShowWorkflows}
+        toolLogos={toolLogos}
       />
 
       {/* ── Content ── */}
       <main className="content">
 
-        {/* Filter panel */}
-        <section className="filter-panel">
-          <div className="filter-head">
-            <h2>Browse by AI tool</h2>
-            <span>{filtered.length} visual workflow guide{filtered.length !== 1 ? "s" : ""}</span>
-          </div>
-          <div className="filter-pills">
-            {toolFilters.map(t => {
-              const slug = t === "claude" ? " claude" : t === "chatgpt" ? " chatgpt" : t === "gemini" ? " gemini" : t === "copilot" ? " copilot" : "";
-              return (
-                <button
-                  key={t}
-                  className={`filter-btn${activeTool === t ? " active" : ""}`}
-                  onClick={() => { setActiveTool(t); if (t !== "all") setActiveFunction("all"); }}
-                >
-                  <span className={`tool-dot${slug}`} />
-                  {t === "all" ? "All" : formatToolLabel(t)}
-                </button>
-              );
-            })}
-            {activeFunction !== "all" && (
-              <button
-                className="filter-btn active"
-                onClick={() => setActiveFunction("all")}
-                style={{ background: fnColor(activeFunction) + "22", borderColor: fnColor(activeFunction), color: fnColor(activeFunction) }}
-              >
-                {activeFunction} ✕
-              </button>
-            )}
-          </div>
-        </section>
+        {/* Section 1: New */}
+        {newActivities.length > 0 && (
+          <HorizontalRail
+            title="New"
+            subtitle="Latest workflows added by our team."
+            activities={newActivities}
+            isLoggedIn={isLoggedIn}
+            onSignUpRequired={() => setShowSignUp(true)}
+            toolLogos={toolLogos}
+          />
+        )}
 
-        {/* Rails */}
-        <div id="workflows">
-          {newThisWeek.length > 0 && (
-            <HorizontalRail
-              title="New this week"
-              subtitle="Fresh workflows with visual workplace scenes."
-              activities={newThisWeek}
-              isLoggedIn={isLoggedIn}
-              onSignUpRequired={() => setShowSignUp(true)}
-            />
-          )}
+        {/* Section 2: AI Tools Mastery */}
+        {masteryActivities.length > 0 && (
+          <HorizontalRail
+            title="AI Tools Mastery"
+            subtitle="Handpicked workflows to help you go deeper with AI tools."
+            activities={masteryActivities}
+            isLoggedIn={isLoggedIn}
+            onSignUpRequired={() => setShowSignUp(true)}
+            toolLogos={toolLogos}
+          />
+        )}
 
-          {fnRails.map(({ fn, items }) => (
-            <HorizontalRail
-              key={fn}
-              title={fn}
-              subtitle={fnSubtitle(fn)}
-              activities={items}
-              isLoggedIn={isLoggedIn}
-              onSignUpRequired={() => setShowSignUp(true)}
-            />
-          ))}
-        </div>
+        {/* Section 3: All Workflows (paginated, filtered by function + tool) */}
+        <AllWorkflowsSection
+          activities={activities}
+          selectedFunction={selectedFunction}
+          selectedTool={selectedTool}
+          isLoggedIn={isLoggedIn}
+          onSignUpRequired={() => setShowSignUp(true)}
+          toolLogos={toolLogos}
+        />
 
-        <ToolsBand activities={activities} />
+        {/* Section 4: Functions carousel (filters section 3) */}
+        <FunctionsCarousel
+          activities={activities}
+          selectedFunction={selectedFunction}
+          onSelect={fn => setSelectedFunction(fn)}
+          functionLogos={functionLogos}
+          functionThumbnails={functionThumbnails}
+        />
+
+        <ToolsBand deepDives={deepDives} toolLogos={toolLogos} />
         <POVSection />
       </main>
 

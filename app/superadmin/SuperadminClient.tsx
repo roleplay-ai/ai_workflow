@@ -100,6 +100,29 @@ export default function SuperadminClient({ profile, companies, activities: initA
     setActivities(prev => prev.map(a => a.id === act.id ? { ...a, is_featured: !a.is_featured } : a));
   }
 
+  async function toggleLock(act: ActivityRow) {
+    await supabase.from("activities").update({ is_locked: !act.is_locked }).eq("id", act.id);
+    setActivities(prev => prev.map(a => a.id === act.id ? { ...a, is_locked: !a.is_locked } : a));
+  }
+
+  async function toggleMastery(act: ActivityRow) {
+    await supabase.from("activities").update({ is_mastery: !act.is_mastery }).eq("id", act.id);
+    setActivities(prev => prev.map(a => a.id === act.id ? { ...a, is_mastery: !a.is_mastery } : a));
+  }
+
+  async function setHeroSlot(act: ActivityRow, slot: number | null) {
+    // If assigning a slot, clear it from whichever activity currently holds it
+    if (slot !== null) {
+      const current = activities.find(a => a.hero_position === slot && a.id !== act.id);
+      if (current) {
+        await supabase.from("activities").update({ hero_position: null }).eq("id", current.id);
+        setActivities(prev => prev.map(a => a.id === current.id ? { ...a, hero_position: null } : a));
+      }
+    }
+    await supabase.from("activities").update({ hero_position: slot }).eq("id", act.id);
+    setActivities(prev => prev.map(a => a.id === act.id ? { ...a, hero_position: slot } : a));
+  }
+
   async function deleteActivity(id: string) {
     if (!confirm("Delete this activity?")) return;
     await supabase.from("activities").delete().eq("id", id);
@@ -150,6 +173,7 @@ export default function SuperadminClient({ profile, companies, activities: initA
             <p style={{ margin: "3px 0 0", color: "#6B6B6B", fontSize: 13 }}>{activities.length} total · create, edit content, assign to companies</p>
           </div>
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            <Link href="/superadmin/functions" style={{ ...btnGhost, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Manage functions</Link>
             <Link href="/superadmin/tool-logos" style={{ ...btnGhost, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Manage tools</Link>
             <button onClick={() => setShowForm(v => !v)} style={btnAmber}>+ New Activity</button>
           </div>
@@ -246,6 +270,14 @@ export default function SuperadminClient({ profile, companies, activities: initA
                     </div>
 
                     <div style={{ display: "flex", gap: 7, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                      <button onClick={() => toggleLock(act)} title={act.is_locked ? "Unlock (guests can open)" : "Lock (guests blocked)"} style={{
+                        padding: "5px 10px", borderRadius: 999, border: "1px solid",
+                        borderColor: act.is_locked ? "rgba(239,68,68,.3)" : "#E8E6DC",
+                        background: act.is_locked ? "rgba(239,68,68,.08)" : "#F0EEE8",
+                        color: act.is_locked ? "#DC2626" : "#6B6B6B",
+                        fontSize: 11.5, fontWeight: 700, cursor: "pointer",
+                      }}>{act.is_locked ? "🔒 Locked" : "🔓 Open"}</button>
+
                       <button onClick={() => toggleFeatured(act)} title="Show in 'New this week'" style={{
                         padding: "5px 10px", borderRadius: 999, border: "1px solid",
                         borderColor: act.is_featured ? "rgba(255,206,0,.5)" : "#E8E6DC",
@@ -253,6 +285,33 @@ export default function SuperadminClient({ profile, companies, activities: initA
                         color: act.is_featured ? "#7A5F00" : "#6B6B6B",
                         fontSize: 11.5, fontWeight: 700, cursor: "pointer",
                       }}>★ {act.is_featured ? "New" : "+"}</button>
+
+                      <button onClick={() => toggleMastery(act)} title="Show in 'AI Tools Mastery'" style={{
+                        padding: "5px 10px", borderRadius: 999, border: "1px solid",
+                        borderColor: act.is_mastery ? "rgba(98,60,234,.35)" : "#E8E6DC",
+                        background: act.is_mastery ? "rgba(98,60,234,.08)" : "#F0EEE8",
+                        color: act.is_mastery ? "#623CEA" : "#6B6B6B",
+                        fontSize: 11.5, fontWeight: 700, cursor: "pointer",
+                      }}>⚡ {act.is_mastery ? "Mastery" : "+"}</button>
+
+                      <select
+                        value={act.hero_position ?? ""}
+                        onChange={e => void setHeroSlot(act, e.target.value ? Number(e.target.value) : null)}
+                        title="Pin to hero banner slot (top 3 cards)"
+                        style={{
+                          padding: "5px 10px", borderRadius: 999, border: "1px solid",
+                          borderColor: act.hero_position ? "rgba(54,150,252,.4)" : "#E8E6DC",
+                          background: act.hero_position ? "rgba(54,150,252,.08)" : "#F0EEE8",
+                          color: act.hero_position ? "#1A6FC4" : "#6B6B6B",
+                          fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                          appearance: "none", WebkitAppearance: "none",
+                        }}
+                      >
+                        <option value="">🎯 Hero</option>
+                        <option value="1">Slot 1</option>
+                        <option value="2">Slot 2</option>
+                        <option value="3">Slot 3</option>
+                      </select>
 
                       <button onClick={() => togglePublish(act)} style={{
                         padding: "5px 10px", borderRadius: 999, border: "1px solid",

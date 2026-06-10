@@ -38,9 +38,12 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // Not logged in → login page
+  // Not logged in — only block admin/superadmin routes; everything else is guest-accessible
   if (!user) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    if (path.startsWith("/admin") || path.startsWith("/superadmin")) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+    return supabaseResponse;
   }
 
   // Everything else: let the page handle its own role check
