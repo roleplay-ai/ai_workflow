@@ -6,6 +6,7 @@ import type { Activity, UserProgress, Profile, ToolDeepDive } from "@/lib/supaba
 import { resolveToolLogoUrl, type ToolLogoMap } from "@/lib/toolLogos";
 import { deepDiveHref, deepDiveLabel } from "@/lib/deepDives";
 import { activityHasTool, formatToolLabel, normalizeActivityTools } from "@/lib/tools";
+import RotatingTools from "@/components/RotatingTools";
 import "./netflix-dashboard.css";
 
 type Props = {
@@ -123,16 +124,6 @@ function Scene({ theme }: { theme: SceneTheme }) {
   );
 }
 
-// ── Pill ──────────────────────────────────────────────────────────────────
-
-function Pill({ label, color }: { label: string; color: string }) {
-  return (
-    <span className="pill" style={{ color, borderColor: `${color}40` }}>
-      {label}
-    </span>
-  );
-}
-
 // ── SignUpCard modal ──────────────────────────────────────────────────────
 
 function SignUpCard({ onClose }: { onClose: () => void }) {
@@ -210,15 +201,16 @@ function WorkflowCard({
   focusStyle,
   isLoggedIn,
   onSignUpRequired,
+  toolLogos,
 }: {
   activity: Activity;
   focusStyle: React.CSSProperties;
   isLoggedIn: boolean;
   onSignUpRequired: () => void;
+  toolLogos: ToolLogoMap;
 }) {
   const theme      = getTheme(activity.id);
   const tools      = normalizeActivityTools(activity.tools);
-  const fns        = activity.functions ?? [];
   const chip       = timeLabel(activity);
   const isLocked   = !isLoggedIn && !!activity.is_locked;
 
@@ -256,9 +248,19 @@ function WorkflowCard({
       </div>
       <div className="card-body">
         <div className="meta-line">
-          {tools[0] && <Pill label={formatToolLabel(tools[0])} color={toolColor(tools[0])} />}
-          {fns[0]   && <Pill label={fns[0]}                    color={fnColor(fns[0])} />}
-          {chip     && <span className="time-chip">{chip}</span>}
+          {tools.length > 0 && (
+            <RotatingTools
+              tools={tools}
+              toolLogos={toolLogos}
+              iconSize={14}
+              insetScale={0.9}
+              borderColor="#E5E0D8"
+              labelColor="#221D23"
+              labelSize={10}
+              chipStyle={{ padding: "6px 9px 6px 6px", fontWeight: 900 }}
+            />
+          )}
+          {chip && <span className="time-chip">{chip}</span>}
         </div>
         <h3 className="card-title">{activity.title}</h3>
         <p className="card-desc">{activity.description}</p>
@@ -291,13 +293,14 @@ function WorkflowCard({
 // ── HorizontalRail ────────────────────────────────────────────────────────
 
 function HorizontalRail({
-  title, subtitle, activities, isLoggedIn, onSignUpRequired,
+  title, subtitle, activities, isLoggedIn, onSignUpRequired, toolLogos,
 }: {
   title: string;
   subtitle: string;
   activities: Activity[];
   isLoggedIn: boolean;
   onSignUpRequired: () => void;
+  toolLogos: ToolLogoMap;
 }) {
   const rowRef = useRef<HTMLDivElement>(null);
   const [focusedIdx, setFocusedIdx] = useState(0);
@@ -401,7 +404,7 @@ function HorizontalRail({
                 className={`rail-card-slot${active ? " is-active" : ""}`}
                 onMouseEnter={() => { setHoveredIdx(i); isPausedRef.current = true; }}
               >
-                <WorkflowCard activity={a} focusStyle={style} isLoggedIn={isLoggedIn} onSignUpRequired={onSignUpRequired} />
+                <WorkflowCard activity={a} focusStyle={style} isLoggedIn={isLoggedIn} onSignUpRequired={onSignUpRequired} toolLogos={toolLogos} />
               </div>
             );
           })}
@@ -419,11 +422,13 @@ function HeroSection({
   allFunctions,
   heroToolOptions,
   onShowWorkflows,
+  toolLogos,
 }: {
   heroActivities: Activity[];
   allFunctions: string[];
   heroToolOptions: string[];
   onShowWorkflows: (tool: string, fn: string) => void;
+  toolLogos: ToolLogoMap;
 }) {
   const [activeIdx,    setActiveIdx]    = useState(0);
   const [heroTool,     setHeroTool]     = useState("");
@@ -489,7 +494,6 @@ function HeroSection({
           {heroActivities.map((a, i) => {
             const theme = getTheme(a.id);
             const tools = normalizeActivityTools(a.tools);
-            const fns   = a.functions ?? [];
             const chip  = timeLabel(a);
             const isActive = i === activeIdx;
 
@@ -519,9 +523,19 @@ function HeroSection({
                 </div>
                 <div className="poster-content">
                   <div className="poster-meta">
-                    {tools[0] && <Pill label={formatToolLabel(tools[0])} color={toolColor(tools[0])} />}
-                    {fns[0]   && <Pill label={fns[0]}                    color={fnColor(fns[0])} />}
-                    {chip     && <span className="time-chip">{chip}</span>}
+                    {tools.length > 0 && (
+                      <RotatingTools
+                        tools={tools}
+                        toolLogos={toolLogos}
+                        iconSize={14}
+                        insetScale={0.9}
+                        borderColor="#E5E0D8"
+                        labelColor="#221D23"
+                        labelSize={10}
+                        chipStyle={{ padding: "6px 9px 6px 6px", fontWeight: 900 }}
+                      />
+                    )}
+                    {chip && <span className="time-chip">{chip}</span>}
                   </div>
                   <h2>{a.title}</h2>
                   <p>{a.description}</p>
@@ -758,6 +772,7 @@ export default function DashboardClient({ profile, activities, toolFilters, deep
         allFunctions={allFunctions}
         heroToolOptions={heroToolOptions}
         onShowWorkflows={handleShowWorkflows}
+        toolLogos={toolLogos}
       />
 
       {/* ── Content ── */}
@@ -804,6 +819,7 @@ export default function DashboardClient({ profile, activities, toolFilters, deep
               activities={newThisWeek}
               isLoggedIn={isLoggedIn}
               onSignUpRequired={() => setShowSignUp(true)}
+              toolLogos={toolLogos}
             />
           )}
 
@@ -815,6 +831,7 @@ export default function DashboardClient({ profile, activities, toolFilters, deep
               activities={items}
               isLoggedIn={isLoggedIn}
               onSignUpRequired={() => setShowSignUp(true)}
+              toolLogos={toolLogos}
             />
           ))}
         </div>
