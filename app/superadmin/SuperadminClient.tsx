@@ -105,6 +105,11 @@ export default function SuperadminClient({ profile, companies, activities: initA
     setActivities(prev => prev.map(a => a.id === act.id ? { ...a, is_locked: !a.is_locked } : a));
   }
 
+  async function toggleMastery(act: ActivityRow) {
+    await supabase.from("activities").update({ is_mastery: !act.is_mastery }).eq("id", act.id);
+    setActivities(prev => prev.map(a => a.id === act.id ? { ...a, is_mastery: !a.is_mastery } : a));
+  }
+
   async function deleteActivity(id: string) {
     if (!confirm("Delete this activity?")) return;
     await supabase.from("activities").delete().eq("id", id);
@@ -155,6 +160,7 @@ export default function SuperadminClient({ profile, companies, activities: initA
             <p style={{ margin: "3px 0 0", color: "#6B6B6B", fontSize: 13 }}>{activities.length} total · create, edit content, assign to companies</p>
           </div>
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            <Link href="/superadmin/functions" style={{ ...btnGhost, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Manage functions</Link>
             <Link href="/superadmin/tool-logos" style={{ ...btnGhost, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Manage tools</Link>
             <button onClick={() => setShowForm(v => !v)} style={btnAmber}>+ New Activity</button>
           </div>
@@ -266,6 +272,14 @@ export default function SuperadminClient({ profile, companies, activities: initA
                         color: act.is_featured ? "#7A5F00" : "#6B6B6B",
                         fontSize: 11.5, fontWeight: 700, cursor: "pointer",
                       }}>★ {act.is_featured ? "New" : "+"}</button>
+
+                      <button onClick={() => toggleMastery(act)} title="Show in 'AI Tools Mastery'" style={{
+                        padding: "5px 10px", borderRadius: 999, border: "1px solid",
+                        borderColor: act.is_mastery ? "rgba(98,60,234,.35)" : "#E8E6DC",
+                        background: act.is_mastery ? "rgba(98,60,234,.08)" : "#F0EEE8",
+                        color: act.is_mastery ? "#623CEA" : "#6B6B6B",
+                        fontSize: 11.5, fontWeight: 700, cursor: "pointer",
+                      }}>⚡ {act.is_mastery ? "Mastery" : "+"}</button>
 
                       <button onClick={() => togglePublish(act)} style={{
                         padding: "5px 10px", borderRadius: 999, border: "1px solid",

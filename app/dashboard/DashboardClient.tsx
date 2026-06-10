@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Activity, UserProgress, Profile, ToolDeepDive } from "@/lib/supabase/types";
 import { resolveToolLogoUrl, type ToolLogoMap } from "@/lib/toolLogos";
 import { deepDiveHref, deepDiveLabel } from "@/lib/deepDives";
-import { activityHasTool, formatToolLabel, normalizeActivityTools } from "@/lib/tools";
+import { formatToolLabel, normalizeActivityTools } from "@/lib/tools";
 import RotatingTools from "@/components/RotatingTools";
 import "./netflix-dashboard.css";
 
@@ -16,6 +16,7 @@ type Props = {
   toolLogos: ToolLogoMap;
   tagLogos: Record<string, string>;
   functionLogos: Record<string, string>;
+  functionThumbnails: Record<string, string>;
   toolFilters: string[];
   deepDives: ToolDeepDive[];
   isLoggedIn: boolean;
@@ -69,16 +70,6 @@ function fnColor(fn: string): string {
   return "#746F78";
 }
 
-function fnSubtitle(fn: string): string {
-  const f = fn.toLowerCase();
-  if (f.includes("finance") || f.includes("account")) return "Workflows for financial analysis, reporting, and data.";
-  if (f.includes("hr") || f.includes("human resources") || f.includes("people")) return "Workflows for hiring, performance, and people management.";
-  if (f.includes("legal") || f.includes("compliance")) return "Workflows for contracts, policy, and risk review.";
-  if (f.includes("market") || f.includes("brand") || f.includes("content")) return "Workflows for campaigns, copy, and content strategy.";
-  if (f.includes("sales")) return "Workflows for pipeline, outreach, and deal management.";
-  if (f.includes("support") || f.includes("customer")) return "Workflows for tickets, responses, and service quality.";
-  return `AI-guided workflows for ${fn} teams.`;
-}
 
 function timeLabel(a: Activity): string {
   if (a.time_estimate_minutes) return `${a.time_estimate_minutes} min`;
@@ -287,6 +278,177 @@ function WorkflowCard({
     <Link href={`/activity/${activity.id}`} className="workflow-card" style={focusStyle}>
       {inner}
     </Link>
+  );
+}
+
+// ── AllWorkflowsSection ───────────────────────────────────────────────────
+
+const PAGE_SIZE = 10;
+
+function AllWorkflowsSection({
+  activities, selectedFunction, isLoggedIn, onSignUpRequired, toolLogos,
+}: {
+  activities: Activity[];
+  selectedFunction: string | null;
+  isLoggedIn: boolean;
+  onSignUpRequired: () => void;
+  toolLogos: ToolLogoMap;
+}) {
+  const [page, setPage] = useState(0);
+
+  // Reset to first page when function changes
+  useEffect(() => { setPage(0); }, [selectedFunction]);
+
+  const filtered = useMemo(() => (
+    selectedFunction
+      ? activities.filter(a => (a.functions ?? []).some(f => f.toLowerCase() === selectedFunction.toLowerCase()))
+      : activities
+  ), [activities, selectedFunction]);
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const pageItems  = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const title      = selectedFunction ? `All ${selectedFunction} Workflows` : "All Workflows";
+  const subtitle   = selectedFunction
+    ? `${filtered.length} workflow${filtered.length !== 1 ? "s" : ""} in ${selectedFunction}`
+    : `${filtered.length} workflow${filtered.length !== 1 ? "s" : ""}`;
+
+  if (filtered.length === 0) return (
+    <section className="rail" id="all-workflows">
+      <div className="rail-header">
+        <div className="rail-title">
+          <h2>{title}</h2>
+          <p>No workflows found{selectedFunction ? ` for "${selectedFunction}"` : ""}.</p>
+        </div>
+      </div>
+    </section>
+  );
+
+  return (
+    <div id="all-workflows">
+      <HorizontalRail
+        key={`${selectedFunction ?? "all"}-${page}`}
+        title={title}
+        subtitle={subtitle}
+        activities={pageItems}
+        isLoggedIn={isLoggedIn}
+        onSignUpRequired={onSignUpRequired}
+        toolLogos={toolLogos}
+      />
+      {totalPages > 1 && (
+        <div className="pagination-row">
+          <span className="page-info">Page {page + 1} of {totalPages}</span>
+          <div className="page-btns">
+            {page > 0 && (
+              <button className="btn btn-ghost pagination-btn" onClick={() => setPage(p => p - 1)}>← Previous</button>
+            )}
+            {page < totalPages - 1 && (
+              <button className="btn btn-ghost pagination-btn" onClick={() => setPage(p => p + 1)}>More workflows →</button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── FunctionCard ──────────────────────────────────────────────────────────
+
+function FunctionCard({
+  name, count, thumbnail, icon, selected, color, onClick,
+}: {
+  name: string;
+  count: number;
+  thumbnail: string | null;
+  icon: string | null;
+  selected: boolean;
+  color: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className={`fn-activity-card${thumbnail ? " has-thumbnail" : ""}${selected ? " selected" : ""}`}
+      onClick={onClick}
+      style={{ "--fn-color": color } as React.CSSProperties}
+    >
+      <div
+        className={`fn-card-poster${thumbnail ? " has-thumbnail" : ""}`}
+        style={thumbnail ? undefined : { background: `linear-gradient(145deg, ${color}28 0%, ${color}50 100%)` }}
+      >
+        {thumbnail ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={thumbnail} alt="" className="fn-card-thumb" />
+        ) : icon ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={icon} alt="" className="fn-card-icon-large" />
+        ) : (
+          <span className="fn-card-initials" style={{ color }}>{name.slice(0, 2).toUpperCase()}</span>
+        )}
+        {selected && (
+          <div className="fn-card-check">✓</div>
+        )}
+      </div>
+      <div className="fn-card-body">
+        <div className="fn-card-name">{name}</div>
+        <div className="fn-card-count">
+          <span className="fn-card-dot" style={{ background: color }} />
+          {count} workflow{count !== 1 ? "s" : ""}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+// ── FunctionsCarousel ─────────────────────────────────────────────────────
+
+function FunctionsCarousel({
+  activities, selectedFunction, onSelect, functionLogos, functionThumbnails,
+}: {
+  activities: Activity[];
+  selectedFunction: string | null;
+  onSelect: (fn: string | null) => void;
+  functionLogos: Record<string, string>;
+  functionThumbnails: Record<string, string>;
+}) {
+  const functions = useMemo(() => {
+    const map = new Map<string, number>();
+    activities.forEach(a => (a.functions ?? []).forEach(fn => {
+      const k = fn.trim();
+      if (k) map.set(k, (map.get(k) ?? 0) + 1);
+    }));
+    return [...map.entries()].sort((a, b) => b[1] - a[1]);
+  }, [activities]);
+
+  if (functions.length === 0) return null;
+
+  return (
+    <section className="rail functions-rail">
+      <div className="rail-header">
+        <div className="rail-title">
+          <h2>Browse by function</h2>
+          <p>Select a function to filter All Workflows above.</p>
+        </div>
+        {selectedFunction && (
+          <button className="see-all" onClick={() => onSelect(null)}>Clear filter ✕</button>
+        )}
+      </div>
+      <div className="fn-cards-row">
+        {functions.map(([fn, count]) => {
+          const key = fn.toLowerCase();
+          return (
+            <FunctionCard
+              key={fn}
+              name={fn}
+              count={count}
+              thumbnail={functionThumbnails?.[key] ?? null}
+              icon={functionLogos?.[key] ?? null}
+              selected={selectedFunction === fn}
+              color={fnColor(fn)}
+              onClick={() => onSelect(selectedFunction === fn ? null : fn)}
+            />
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -668,10 +830,9 @@ function POVSection() {
 
 // ── DashboardClient ──────────────────────────────────────────────────────
 
-export default function DashboardClient({ profile, activities, toolFilters, deepDives, toolLogos, isLoggedIn }: Props) {
-  const [activeTool, setActiveTool]         = useState("all");
-  const [activeFunction, setActiveFunction] = useState("all");
-  const [showSignUp, setShowSignUp]         = useState(false);
+export default function DashboardClient({ profile, activities, toolFilters, deepDives, toolLogos, functionLogos, functionThumbnails, isLoggedIn }: Props) {
+  const [selectedFunction, setSelectedFunction] = useState<string | null>(null);
+  const [showSignUp, setShowSignUp]             = useState(false);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -679,7 +840,7 @@ export default function DashboardClient({ profile, activities, toolFilters, deep
     window.location.href = "/login";
   }
 
-  // Unique functions sorted by frequency
+  // Unique functions (for HeroSection dropdowns)
   const allFunctions = useMemo(() => {
     const map = new Map<string, number>();
     activities.forEach(a => (a.functions ?? []).forEach(fn => {
@@ -699,28 +860,15 @@ export default function DashboardClient({ profile, activities, toolFilters, deep
     return [...featured, ...rest].slice(0, 3);
   }, [activities]);
 
-  // Filtered by active tool + function
-  const filtered = useMemo(() => activities.filter(a => {
-    const tOk = activeTool === "all"     || activityHasTool(a.tools, activeTool);
-    const fOk = activeFunction === "all" || (a.functions ?? []).some(f => f.toLowerCase() === activeFunction.toLowerCase());
-    return tOk && fOk;
-  }), [activities, activeTool, activeFunction]);
+  // Section 1: New
+  const newActivities = useMemo(() => activities.filter(a => a.is_featured), [activities]);
 
-  // "New this week" = featured activities in filtered set
-  const newThisWeek = useMemo(() => filtered.filter(a => a.is_featured), [filtered]);
+  // Section 2: AI Tools Mastery
+  const masteryActivities = useMemo(() => activities.filter(a => a.is_mastery), [activities]);
 
-  // Per-function rails
-  const fnRails = useMemo(() => {
-    const fns = activeFunction === "all" ? allFunctions : [activeFunction];
-    return fns
-      .map(fn => ({ fn, items: filtered.filter(a => (a.functions ?? []).some(f => f.toLowerCase() === fn.toLowerCase())) }))
-      .filter(r => r.items.length > 0);
-  }, [allFunctions, filtered, activeFunction]);
-
-  function handleShowWorkflows(tool: string, fn: string) {
-    if (tool) setActiveTool(tool);
-    if (fn)   setActiveFunction(fn);
-    document.getElementById("workflows")?.scrollIntoView({ behavior: "smooth" });
+  function handleShowWorkflows(_tool: string, fn: string) {
+    if (fn) setSelectedFunction(fn);
+    document.getElementById("all-workflows")?.scrollIntoView({ behavior: "smooth" });
   }
 
   const heroToolOptions = toolFilters.filter(t => t !== "all");
@@ -778,63 +926,47 @@ export default function DashboardClient({ profile, activities, toolFilters, deep
       {/* ── Content ── */}
       <main className="content">
 
-        {/* Filter panel */}
-        <section className="filter-panel">
-          <div className="filter-head">
-            <h2>Browse by AI tool</h2>
-            <span>{filtered.length} visual workflow guide{filtered.length !== 1 ? "s" : ""}</span>
-          </div>
-          <div className="filter-pills">
-            {toolFilters.map(t => {
-              const slug = t === "claude" ? " claude" : t === "chatgpt" ? " chatgpt" : t === "gemini" ? " gemini" : t === "copilot" ? " copilot" : "";
-              return (
-                <button
-                  key={t}
-                  className={`filter-btn${activeTool === t ? " active" : ""}`}
-                  onClick={() => { setActiveTool(t); if (t !== "all") setActiveFunction("all"); }}
-                >
-                  <span className={`tool-dot${slug}`} />
-                  {t === "all" ? "All" : formatToolLabel(t)}
-                </button>
-              );
-            })}
-            {activeFunction !== "all" && (
-              <button
-                className="filter-btn active"
-                onClick={() => setActiveFunction("all")}
-                style={{ background: fnColor(activeFunction) + "22", borderColor: fnColor(activeFunction), color: fnColor(activeFunction) }}
-              >
-                {activeFunction} ✕
-              </button>
-            )}
-          </div>
-        </section>
+        {/* Section 1: New */}
+        {newActivities.length > 0 && (
+          <HorizontalRail
+            title="New"
+            subtitle="Latest workflows added by our team."
+            activities={newActivities}
+            isLoggedIn={isLoggedIn}
+            onSignUpRequired={() => setShowSignUp(true)}
+            toolLogos={toolLogos}
+          />
+        )}
 
-        {/* Rails */}
-        <div id="workflows">
-          {newThisWeek.length > 0 && (
-            <HorizontalRail
-              title="New this week"
-              subtitle="Fresh workflows with visual workplace scenes."
-              activities={newThisWeek}
-              isLoggedIn={isLoggedIn}
-              onSignUpRequired={() => setShowSignUp(true)}
-              toolLogos={toolLogos}
-            />
-          )}
+        {/* Section 2: AI Tools Mastery */}
+        {masteryActivities.length > 0 && (
+          <HorizontalRail
+            title="AI Tools Mastery"
+            subtitle="Handpicked workflows to help you go deeper with AI tools."
+            activities={masteryActivities}
+            isLoggedIn={isLoggedIn}
+            onSignUpRequired={() => setShowSignUp(true)}
+            toolLogos={toolLogos}
+          />
+        )}
 
-          {fnRails.map(({ fn, items }) => (
-            <HorizontalRail
-              key={fn}
-              title={fn}
-              subtitle={fnSubtitle(fn)}
-              activities={items}
-              isLoggedIn={isLoggedIn}
-              onSignUpRequired={() => setShowSignUp(true)}
-              toolLogos={toolLogos}
-            />
-          ))}
-        </div>
+        {/* Section 3: All Workflows (paginated, filtered by selected function) */}
+        <AllWorkflowsSection
+          activities={activities}
+          selectedFunction={selectedFunction}
+          isLoggedIn={isLoggedIn}
+          onSignUpRequired={() => setShowSignUp(true)}
+          toolLogos={toolLogos}
+        />
+
+        {/* Section 4: Functions carousel (filters section 3) */}
+        <FunctionsCarousel
+          activities={activities}
+          selectedFunction={selectedFunction}
+          onSelect={fn => setSelectedFunction(fn)}
+          functionLogos={functionLogos}
+          functionThumbnails={functionThumbnails}
+        />
 
         <ToolsBand deepDives={deepDives} toolLogos={toolLogos} />
         <POVSection />

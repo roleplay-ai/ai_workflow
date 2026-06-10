@@ -32,6 +32,7 @@ export type Activity = {
   published: boolean;
   is_featured: boolean;
   is_locked: boolean;
+  is_mastery: boolean;
   category: string;
   created_at: string;
   thumbnail_url: string | null;
@@ -48,6 +49,7 @@ export type ActivityFunction = {
   id: string;
   name: string;
   icon_url: string | null;
+  thumbnail_url: string | null;
   created_at: string;
 };
 

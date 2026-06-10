@@ -154,10 +154,9 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
     if (initDone.current) return;
     initDone.current = true;
     const welcome = `Hi! I'm **Nudgie**, your AI coach for **${activity.title}**. I'll guide you through each step — ask me anything along the way.`;
-    setMessages([
-      { role: "assistant", content: welcome },
-      { role: "assistant", content: buildCoachMessage(steps[0]) },
-    ]);
+    const msgs: typeof messages = [{ role: "assistant", content: welcome }];
+    if (steps.length > 0) msgs.push({ role: "assistant", content: buildCoachMessage(steps[0]) });
+    setMessages(msgs);
     setInitializing(false);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

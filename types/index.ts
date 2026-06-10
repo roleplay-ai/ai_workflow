@@ -41,7 +41,9 @@ export function buildCoachMessage(step: Pick<WorkflowStep,
   "title" |
   "what_to_do" |
   "coach_next"
->): string {
+> | null | undefined): string {
+  if (!step) return "Follow along with the activity when you're ready.";
+
   const lines: string[] = [];
 
   if (step.what_to_do?.length) {
