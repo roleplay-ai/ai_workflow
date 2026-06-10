@@ -872,25 +872,22 @@
 }
 
 .ndb-root .rail-window {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  position: relative;
 }
 
 .ndb-root .cards-row {
-  flex: 1;
-  min-width: 0;
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: minmax(280px, 305px);
   gap: 18px;
   overflow-x: auto;
-  scroll-snap-type: x proximity;
-  scroll-padding-inline: 16px;
-  padding: 20px 16px 32px;
-  scrollbar-width: thin;
-  scrollbar-color: #D3CEC4 transparent;
+  padding: 28px 54px 36px;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, black 54px, black calc(100% - 54px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, black 54px, black calc(100% - 54px), transparent 100%);
 }
+
+.ndb-root .cards-row::-webkit-scrollbar { display: none; }
 
 .ndb-root .rail-card-slot {
   scroll-snap-align: start;
@@ -901,19 +898,30 @@
 }
 
 .ndb-root .rail-card-slot:not(.is-active) {
-  transform: scale(0.94);
+  transform: scale(0.88);
   transform-origin: center center;
+  opacity: 0.55;
 }
 
-.ndb-root .rail-card-slot.is-active {
+.ndb-root .rail-card-slot.is-active,
+.ndb-root .rail-card-slot:hover {
   transform: scale(1);
   transform-origin: center center;
   position: relative;
   z-index: 2;
+  opacity: 1;
 }
 
-.ndb-root .rail-card-slot.is-active .workflow-card {
+.ndb-root .rail-card-slot.is-active .workflow-card,
+.ndb-root .rail-card-slot:hover .workflow-card {
   box-shadow: 0 26px 55px rgba(34, 29, 35, 0.16);
+}
+
+/* While any card is hovered, collapse the JS-active card if it's not the one being hovered */
+.ndb-root .cards-row:has(.rail-card-slot:hover) .rail-card-slot.is-active:not(:hover) {
+  transform: scale(0.88);
+  transform-origin: center center;
+  opacity: 0.55;
 }
 
 .ndb-root .rail-card-slot .workflow-card {
@@ -927,7 +935,10 @@
 .ndb-root .cards-row::-webkit-scrollbar-thumb  { background: #D3CEC4; border-radius: 999px; }
 
 .ndb-root .row-arrow {
-  flex-shrink: 0;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
   width: 36px;
   height: 56px;
   border-radius: 999px;
@@ -944,7 +955,9 @@
   transition: transform 0.15s;
 }
 
-.ndb-root .row-arrow:hover { transform: scale(1.08); }
+.ndb-root .row-arrow.left  { left: 0; }
+.ndb-root .row-arrow.right { right: 0; }
+.ndb-root .row-arrow:hover { transform: translateY(-50%) scale(1.08); }
 
 /* ── Workflow card ────────────────────────────────────────────────────────── */
 
@@ -1433,7 +1446,7 @@
   .ndb-root .filter-panel { top: 62px; }
   .ndb-root .filter-head { display: block; }
   .ndb-root .content { padding: 0 12px 34px; }
-  .ndb-root .cards-row { grid-auto-columns: minmax(260px, 82vw); gap: 14px; }
+  .ndb-root .cards-row { grid-auto-columns: minmax(260px, 82vw); gap: 14px; padding-inline: 16px; scroll-padding-inline: 16px; -webkit-mask-image: none; mask-image: none; }
   .ndb-root .row-arrow { display: none; }
   .ndb-root .workflow-card { min-height: 342px; }
   .ndb-root .card-poster:not(.has-thumbnail) { height: 200px; }

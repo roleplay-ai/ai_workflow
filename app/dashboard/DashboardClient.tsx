@@ -301,7 +301,16 @@ function HorizontalRail({
 }) {
   const rowRef = useRef<HTMLDivElement>(null);
   const [focusedIdx, setFocusedIdx] = useState(0);
-  const rowPadding = 16;
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  const focusedIdxRef = useRef(0);
+  const programmaticRef = useRef(false);
+  const isPausedRef = useRef(false);
+  const rowPadding = 54;
+
+  function setFocused(i: number) {
+    focusedIdxRef.current = i;
+    setFocusedIdx(i);
+  }
 
   function findLeadingCard(row: HTMLDivElement): number {
     const slots = Array.from(row.querySelectorAll<HTMLElement>(".rail-card-slot"));
@@ -319,25 +328,31 @@ function HorizontalRail({
   function scrollToIndex(index: number) {
     const row = rowRef.current;
     if (!row) return;
+    // Prevent onScroll from overwriting focusedIdx during the smooth animation
+    programmaticRef.current = true;
+    setTimeout(() => { programmaticRef.current = false; }, 600);
     if (index === 0) {
       row.scrollTo({ left: 0, behavior: "smooth" });
-      setFocusedIdx(0);
-      return;
+    } else {
+      const slots = Array.from(row.querySelectorAll<HTMLElement>(".rail-card-slot"));
+      const slot = slots[index];
+      if (!slot) return;
+      row.scrollTo({ left: Math.max(0, slot.offsetLeft - rowPadding), behavior: "smooth" });
     }
-    const slots = Array.from(row.querySelectorAll<HTMLElement>(".rail-card-slot"));
-    const slot = slots[index];
-    if (!slot) return;
-    row.scrollTo({ left: Math.max(0, slot.offsetLeft - rowPadding), behavior: "smooth" });
-    setFocusedIdx(index);
+    setFocused(index);
   }
 
   useEffect(() => {
     const row = rowRef.current;
     if (!row) return;
     row.scrollLeft = 0;
-    setFocusedIdx(0);
+    setFocused(0);
     let t: ReturnType<typeof setTimeout>;
-    const onScroll = () => { clearTimeout(t); t = setTimeout(() => setFocusedIdx(findLeadingCard(row)), 80); };
+    const onScroll = () => {
+      if (programmaticRef.current) return;
+      clearTimeout(t);
+      t = setTimeout(() => setFocused(findLeadingCard(row)), 80);
+    };
     row.addEventListener("scroll", onScroll, { passive: true });
     return () => { row.removeEventListener("scroll", onScroll); clearTimeout(t); };
   }, [activities]);
@@ -345,28 +360,15 @@ function HorizontalRail({
   useEffect(() => {
     if (activities.length <= 1) return;
     const id = setInterval(() => {
-      setFocusedIdx(prev => {
-        const next = (prev + 1) % activities.length;
-        const row = rowRef.current;
-        if (row) {
-          if (next === 0) {
-            row.scrollTo({ left: 0, behavior: "smooth" });
-          } else {
-            const slots = Array.from(row.querySelectorAll<HTMLElement>(".rail-card-slot"));
-            const slot = slots[next];
-            if (slot) {
-              row.scrollTo({ left: Math.max(0, slot.offsetLeft - rowPadding), behavior: "smooth" });
-            }
-          }
-        }
-        return next;
-      });
+      if (isPausedRef.current) return;
+      const next = (focusedIdxRef.current + 1) % activities.length;
+      scrollToIndex(next);
     }, 3000);
     return () => clearInterval(id);
   }, [activities.length]);
 
   function scrollTo(dir: number) {
-    const next = Math.min(activities.length - 1, Math.max(0, focusedIdx + dir));
+    const next = Math.min(activities.length - 1, Math.max(0, focusedIdxRef.current + dir));
     scrollToIndex(next);
   }
 
@@ -383,15 +385,22 @@ function HorizontalRail({
       </div>
       <div className="rail-window">
         <button className="row-arrow left" onClick={() => scrollTo(-1)}>‹</button>
-        <div className="cards-row" ref={rowRef}>
+        <div
+          className="cards-row"
+          ref={rowRef}
+          onMouseLeave={() => { setHoveredIdx(null); isPausedRef.current = false; }}
+        >
           {activities.map((a, i) => {
-            const active  = i === focusedIdx;
+            const active = i === (hoveredIdx !== null ? hoveredIdx : focusedIdx);
             const style: React.CSSProperties = {
-              opacity:     active ? 1 : 0.64,
               borderColor: active ? "#D0C7BA" : "#E5E0D8",
             };
             return (
-              <div key={a.id} className={`rail-card-slot${active ? " is-active" : ""}`}>
+              <div
+                key={a.id}
+                className={`rail-card-slot${active ? " is-active" : ""}`}
+                onMouseEnter={() => { setHoveredIdx(i); isPausedRef.current = true; }}
+              >
                 <WorkflowCard activity={a} focusStyle={style} isLoggedIn={isLoggedIn} onSignUpRequired={onSignUpRequired} />
               </div>
             );
