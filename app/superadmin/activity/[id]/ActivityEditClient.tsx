@@ -56,6 +56,11 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
   const [savingInfo,   setSavingInfo]   = useState(false);
   const [infoMsg,      setInfoMsg]      = useState("");
 
+  // Thumbnail
+  const [thumbnailUrl,       setThumbnailUrl]       = useState<string | null>(activity.thumbnail_url ?? null);
+  const [thumbnailFile,      setThumbnailFile]      = useState<File | null>(null);
+  const [thumbnailUploading, setThumbnailUploading] = useState(false);
+
   // Info — multi-select state (arrays)
   const [infoToolsArr,  setInfoToolsArr]  = useState<string[]>(normalizeToolList(activity.tools ?? []));
   const [infoTagsArr,       setInfoTagsArr]       = useState<string[]>(activity.tags ?? []);
@@ -168,8 +173,32 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
     setFunctionOpts(prev => prev.map(o => o.name === name ? { ...o, imageUrl: iconUrl } : o));
   }
 
+  async function uploadThumbnail(file: File): Promise<string | null> {
+    const safe = file.name.replace(/[^\w.\-]/g, "_");
+    const storagePath = `${activity.id}/${Date.now()}_${safe}`;
+    setThumbnailUploading(true);
+    const { error } = await supabase.storage
+      .from("activity-thumbnails")
+      .upload(storagePath, file, { upsert: true, contentType: file.type });
+    setThumbnailUploading(false);
+    if (error) {
+      setInfoMsg(`Thumbnail upload failed: ${error.message}`);
+      setTimeout(() => setInfoMsg(""), 6000);
+      return null;
+    }
+    return supabase.storage.from("activity-thumbnails").getPublicUrl(storagePath).data.publicUrl;
+  }
+
   async function saveInfo() {
     setSavingInfo(true); setInfoMsg("");
+
+    // Upload thumbnail first (if a new file was picked)
+    let finalThumbnailUrl = thumbnailUrl;
+    if (thumbnailFile) {
+      const url = await uploadThumbnail(thumbnailFile);
+      if (url) { finalThumbnailUrl = url; setThumbnailUrl(url); setThumbnailFile(null); }
+    }
+
     const { error } = await supabase.from("activities").update({
       title:                  infoTitle.trim(),
       description:            infoDesc.trim() || null,
@@ -183,6 +212,14 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
       published:              infoPublished,
       position:               infoPosition,
     }).eq("id", activity.id);
+
+    // Thumbnail is saved separately — best-effort, silent if column doesn't exist yet
+    if (finalThumbnailUrl !== thumbnailUrl || thumbnailFile) {
+      await supabase.from("activities")
+        .update({ thumbnail_url: finalThumbnailUrl } as any)
+        .eq("id", activity.id);
+    }
+
     setSavingInfo(false);
     setInfoMsg(error ? `Error: ${error.message}` : "✓ Saved");
     if (!error) setTimeout(() => setInfoMsg(""), 3000);
@@ -582,6 +619,38 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
                 <textarea value={infoDesc} onChange={e => setInfoDesc(e.target.value)} rows={3}
                   placeholder="Short description shown to learners…"
                   style={{ ...inp, marginTop: 6, resize: "vertical" }} />
+              </div>
+
+              {/* Thumbnail */}
+              <div>
+                <label style={lbl}>Card Thumbnail</label>
+                <p style={{ margin: "3px 0 10px", fontSize: 12, color: "#9E9897", lineHeight: 1.4 }}>
+                  Shown in place of the illustration on the browse page. Recommended: 16:9, JPG/PNG/WEBP.
+                </p>
+                {(thumbnailUrl || thumbnailFile) && (
+                  <div style={{ position: "relative", display: "inline-block", marginBottom: 10 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={thumbnailFile ? URL.createObjectURL(thumbnailFile) : thumbnailUrl!}
+                      alt="Thumbnail preview"
+                      style={{ width: 220, height: 124, objectFit: "cover", borderRadius: 10, border: "1px solid #E8E6DC", display: "block" }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { setThumbnailFile(null); setThumbnailUrl(null); }}
+                      style={{ position: "absolute", top: 6, right: 6, background: "rgba(0,0,0,0.62)", border: 0, color: "white", borderRadius: "50%", width: 22, height: 22, cursor: "pointer", fontSize: 14, lineHeight: 1, display: "grid", placeItems: "center" }}
+                    >×</button>
+                  </div>
+                )}
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    onChange={e => { setThumbnailFile(e.target.files?.[0] ?? null); }}
+                    style={{ fontSize: 13 }}
+                  />
+                  {thumbnailUploading && <span style={{ fontSize: 12, color: "#9E9897" }}>Uploading…</span>}
+                </div>
               </div>
 
               {/* Level + Time + Points */}

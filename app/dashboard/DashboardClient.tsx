@@ -1,21 +1,14 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import type { Activity, UserProgress, Profile, ToolDeepDive } from "@/lib/supabase/types";
-import Topbar from "@/components/Topbar";
-import ToolIcon from "@/components/ToolIcon";
-import RotatingTools from "@/components/RotatingTools";
 import type { ToolLogoMap } from "@/lib/toolLogos";
 import { activityHasTool, formatToolLabel, normalizeActivityTools } from "@/lib/tools";
-import { deepDiveHref, deepDiveLabel, isHtmlDeepDive } from "@/lib/deepDives";
-
-function byPosition(a: Activity, b: Activity) {
-  return a.position - b.position;
-}
+import "./netflix-dashboard.css";
 
 type Props = {
-  profile: Profile & { companies: { name: string } | null };
+  profile: (Profile & { companies: { name: string } | null }) | null;
   activities: (Activity & { activity_content: { id: string } | null })[];
   progress: UserProgress[];
   toolLogos: ToolLogoMap;
@@ -23,271 +16,530 @@ type Props = {
   functionLogos: Record<string, string>;
   toolFilters: string[];
   deepDives: ToolDeepDive[];
+  isLoggedIn: boolean;
 };
 
-const C = {
-  yellow: "#FFCE00",
-  lightYellow: "#FFF6CF",
-  orange: "#F68A29",
-  purple: "#623CEA",
-  blue: "#3699FC",
-  green: "#23CE6B",
-  dark: "#221D23",
-  muted: "#6f6a73",
-  line: "#e8e3d8",
-  bg: "#faf9f5",
-  soft: "#f4f1ea",
+// ── Scene theme system ────────────────────────────────────────────────────
+
+type LeftEl  = "spreadsheet" | "person-purple" | "person-green" | "person-red" | "doc-stack" | "ticket-cloud";
+type RightEl = "deck" | "scorecard" | "result-card" | "tool-ui" | "theme-map";
+type SparkV  = "s1" | "s2";
+
+type SceneTheme = {
+  posterColor: "green" | "blue" | "purple" | "orange" | "warm";
+  left: LeftEl;
+  right: RightEl;
+  spark?: SparkV;
 };
 
-function isNew(activity: Activity) {
-  return activity.is_featured;
+const THEMES: SceneTheme[] = [
+  { posterColor: "green",  left: "spreadsheet",   right: "deck",        spark: "s1" },
+  { posterColor: "blue",   left: "person-purple",  right: "scorecard",   spark: "s1" },
+  { posterColor: "purple", left: "doc-stack",      right: "result-card", spark: "s2" },
+  { posterColor: "orange", left: "person-green",   right: "tool-ui",     spark: "s1" },
+  { posterColor: "blue",   left: "ticket-cloud",   right: "theme-map"               },
+  { posterColor: "green",  left: "doc-stack",      right: "tool-ui",     spark: "s1" },
+  { posterColor: "purple", left: "spreadsheet",    right: "result-card", spark: "s2" },
+];
+
+function getTheme(id: string): SceneTheme {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) { h = ((h << 5) - h) + id.charCodeAt(i); h |= 0; }
+  return THEMES[Math.abs(h) % THEMES.length];
 }
 
-function toolDot(tool: string) {
-  if (tool === "claude") return C.orange;
-  if (tool === "chatgpt") return C.green;
-  if (tool === "gemini") return C.blue;
-  if (tool === "copilot") return C.purple;
-  if (tool === "agentic-workflows") return C.purple;
-  return C.yellow;
+function toolColor(tool: string): string {
+  if (tool === "claude")             return "#623CEA";
+  if (tool === "chatgpt")            return "#23CE68";
+  if (tool === "gemini")             return "#3696FC";
+  if (tool === "copilot")            return "#F68A29";
+  if (tool === "agentic-workflows")  return "#623CEA";
+  return "#FFCE00";
 }
 
-function visualStyle(category: string) {
-  if (category === "automate") return { bg: "linear-gradient(180deg,#fff8d9,#fff2ad)", dot: C.yellow };
-  if (category === "build") return { bg: "linear-gradient(180deg,#f3eeff,#e9deff)", dot: C.purple };
-  return { bg: "linear-gradient(180deg,#ecf6ff,#dff0ff)", dot: C.blue };
+function fnColor(fn: string): string {
+  const f = fn.toLowerCase();
+  if (f.includes("finance") || f.includes("account"))           return "#23CE68";
+  if (f.includes("hr") || f.includes("human") || f.includes("people")) return "#ED4551";
+  if (f.includes("legal") || f.includes("compliance"))          return "#623CEA";
+  if (f.includes("market") || f.includes("sales") || f.includes("brand")) return "#F68A29";
+  if (f.includes("support") || f.includes("customer"))          return "#3696FC";
+  return "#746F78";
 }
 
-function typeLabel(category: string) {
-  if (category === "automate") return "Automation";
-  if (category === "build") return "Build";
-  return "Chat";
+function fnSubtitle(fn: string): string {
+  const f = fn.toLowerCase();
+  if (f.includes("finance") || f.includes("account")) return "Workflows for financial analysis, reporting, and data.";
+  if (f.includes("hr") || f.includes("human resources") || f.includes("people")) return "Workflows for hiring, performance, and people management.";
+  if (f.includes("legal") || f.includes("compliance")) return "Workflows for contracts, policy, and risk review.";
+  if (f.includes("market") || f.includes("brand") || f.includes("content")) return "Workflows for campaigns, copy, and content strategy.";
+  if (f.includes("sales")) return "Workflows for pipeline, outreach, and deal management.";
+  if (f.includes("support") || f.includes("customer")) return "Workflows for tickets, responses, and service quality.";
+  return `AI-guided workflows for ${fn} teams.`;
 }
 
-type CardFlowKind = "tag" | "function" | "tool";
-
-function cardFlowItems(activity: Activity): { items: string[]; kind: CardFlowKind } {
-  if (activity.tags.length > 0) return { items: activity.tags, kind: "tag" };
-  const fns = activity.functions ?? [];
-  if (fns.length > 0) return { items: fns, kind: "function" };
-  return { items: activity.tools, kind: "tool" };
+function timeLabel(a: Activity): string {
+  if (a.time_estimate_minutes) return `${a.time_estimate_minutes} min`;
+  if (a.points)                 return `${a.points} pts`;
+  return "";
 }
 
-function ActivityCard({
-  activity,
-  status,
-  toolLogos,
-  tagLogos,
-  functionLogos,
-}: {
-  activity: Activity;
-  status: string;
-  toolLogos: ToolLogoMap;
-  tagLogos: Record<string, string>;
-  functionLogos: Record<string, string>;
-}) {
-  const [loading, setLoading] = useState(false);
-  const newBadge = isNew(activity) && status !== "completed";
-  const showBadge = newBadge || status === "in_progress" || status === "completed";
-  const badgeLabel = status === "completed" ? "Completed" : status === "in_progress" ? "In Progress" : "New";
-  const vis = visualStyle(activity.category);
-  const { items: flowItems, kind: flowKind } = cardFlowItems(activity);
+// ── Illustration components ───────────────────────────────────────────────
+
+function Person({ shirt }: { shirt: "red" | "purple" | "green" }) {
+  return (
+    <div className={`person ${shirt}-shirt`}>
+      <span className="hair" /><span className="head" /><span className="body" />
+      <span className="arm left" /><span className="arm right" />
+      <span className="leg left" /><span className="leg right" />
+    </div>
+  );
+}
+
+function Scene({ theme }: { theme: SceneTheme }) {
+  const left =
+    theme.left === "spreadsheet"   ? <div className="spreadsheet" /> :
+    theme.left === "doc-stack"     ? <div className="document-stack"><span className="doc" /><span className="doc" /><span className="doc" /></div> :
+    theme.left === "ticket-cloud"  ? <div className="ticket-cloud"><span className="ticket" /><span className="ticket" /><span className="ticket" /></div> :
+    theme.left === "person-purple" ? <Person shirt="purple" /> :
+    theme.left === "person-green"  ? <Person shirt="green" /> :
+                                     <Person shirt="red" />;
+
+  const right =
+    theme.right === "deck"        ? <div className="deck" /> :
+    theme.right === "scorecard"   ? <div className="scorecard" /> :
+    theme.right === "result-card" ? <div className="result-card" /> :
+    theme.right === "tool-ui"     ? <div className="tool-ui" /> :
+                                    <div className="theme-map"><span /><span /><span /></div>;
 
   return (
-    <Link href={`/activity/${activity.id}`} style={{ textDecoration: "none", color: "inherit", display: "block" }} onClick={() => setLoading(true)}>
-      <article
+    <div className="scene">
+      {left}
+      <div className="arrow-flow" />
+      {right}
+      {theme.spark && <div className={`spark ${theme.spark}`} />}
+    </div>
+  );
+}
+
+// ── Pill ──────────────────────────────────────────────────────────────────
+
+function Pill({ label, color }: { label: string; color: string }) {
+  return (
+    <span className="pill" style={{ color, borderColor: `${color}40` }}>
+      {label}
+    </span>
+  );
+}
+
+// ── SignUpCard modal ──────────────────────────────────────────────────────
+
+function SignUpCard({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 2000,
+        background: "rgba(34,29,35,0.72)", backdropFilter: "blur(6px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}
+      onClick={onClose}
+    >
+      <div
         style={{
-          position: "relative",
-          background: "white",
-          border: `1px solid ${C.line}`,
-          borderRadius: 24,
-          padding: 14,
-          minHeight: 230,
-          boxShadow: "0 10px 30px rgba(34,29,35,.08)",
-          display: "flex",
-          flexDirection: "column",
-          gap: 14,
-          transition: ".16s ease",
-          cursor: "pointer",
+          background: "#221D23", color: "#F8F8F6", borderRadius: 24,
+          padding: "48px 44px", maxWidth: 440, width: "90%", textAlign: "center",
+          boxShadow: "0 40px 100px rgba(34,29,35,0.56)", position: "relative",
         }}
-        onMouseEnter={e => {
-          if (loading) return;
-          (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)";
-          (e.currentTarget as HTMLElement).style.boxShadow = "0 16px 36px rgba(34,29,35,.13)";
-        }}
-        onMouseLeave={e => {
-          (e.currentTarget as HTMLElement).style.transform = "";
-          (e.currentTarget as HTMLElement).style.boxShadow = "0 10px 30px rgba(34,29,35,.08)";
-        }}
+        onClick={e => e.stopPropagation()}
       >
-        {loading && (
-          <div style={{
-            position: "absolute", inset: 0, zIndex: 10,
-            background: "rgba(255,255,255,0.82)",
-            borderRadius: 24,
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <div className="card-spinner" />
-          </div>
-        )}
-        {/* Visual */}
-        <div style={{
-          position: "relative",
-          minHeight: 100,
-          borderRadius: 18,
-          padding: 16,
-          border: `1px solid ${C.line}`,
-          overflow: "hidden",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: vis.bg,
-        }}>
-          {showBadge && (
-            <span style={{
-              position: "absolute", top: 12, right: 12, zIndex: 3,
-              display: "inline-flex", alignItems: "center",
-              padding: "5px 10px", borderRadius: 999,
-              fontSize: 11, fontWeight: 900,
-              ...(badgeLabel === "Completed"
-                ? { background: "white", border: "1px solid rgba(35,206,107,.4)", color: "#15803d" }
-                : badgeLabel === "In Progress"
-                ? { background: "#facc15", border: "1px solid #d97706", color: "#000" }
-                : { background: "#000", border: "1px solid #000", color: "#facc15" }
-              ),
-            }}>
-              {badgeLabel}
-            </span>
-          )}
-          {/* Flow — tag logos */}
-          <div style={{ position: "relative", width: "100%", display: "flex", justifyContent: "center", alignItems: "center", gap: 12, padding: "0 6px" }}>
-            <div style={{ position: "absolute", left: "14%", right: "14%", top: "50%", transform: "translateY(-50%)", borderTop: "2px dashed rgba(34,29,35,.2)", zIndex: 1 }} />
-            {flowItems.slice(0, 4).map((item, i) => {
-              const key = item.toLowerCase();
-              const url = flowKind === "tag" ? tagLogos[key]
-                : flowKind === "function" ? functionLogos[key]
-                : toolLogos[key];
-              return (
-                <div key={i} style={{
-                  width: 42, height: 42, borderRadius: 14,
-                  background: "rgba(255,255,255,.96)",
-                  border: `1px solid ${C.line}`,
-                  display: "grid", placeItems: "center",
-                  boxShadow: "0 4px 12px rgba(34,29,35,.06)",
-                  position: "relative", zIndex: 2, flexShrink: 0,
-                }}>
-                  {url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={url} alt={item} width={24} height={24} style={{ objectFit: "contain", borderRadius: 4 }} />
-                  ) : flowKind === "tool" ? (
-                    <ToolIcon tool={item} size={22} logos={toolLogos} />
-                  ) : (
-                    <span style={{ fontSize: 10, fontWeight: 800, color: C.muted }}>{item.slice(0, 3).toUpperCase()}</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <button
+          onClick={onClose}
+          style={{
+            position: "absolute", top: 16, right: 20, background: "none",
+            border: "none", color: "#746F78", cursor: "pointer", fontSize: 22, lineHeight: 1,
+          }}
+          aria-label="Close"
+        >×</button>
+        <div style={{ fontSize: 36, marginBottom: 16, color: "#FFCE00" }}>✦</div>
+        <h2 style={{ fontWeight: 900, fontSize: 22, marginBottom: 12, lineHeight: 1.3 }}>
+          Sign up free. Unlock every workflow.
+        </h2>
+        <p style={{ color: "#A09AA6", marginBottom: 32, lineHeight: 1.65, fontSize: 15 }}>
+          Get access to every guided workflow, tool comparison, and AI mastery tip in the studio.
+        </p>
+        <Link
+          href="/login"
+          style={{
+            display: "block", background: "#FFCE00", color: "#221D23",
+            fontWeight: 800, padding: "15px 32px", borderRadius: 12,
+            textDecoration: "none", marginBottom: 14, fontSize: 16,
+            transition: "opacity 0.15s",
+          }}
+        >
+          Get started — it&apos;s free
+        </Link>
+        <button
+          onClick={onClose}
+          style={{
+            background: "transparent", border: "none", color: "#746F78",
+            cursor: "pointer", fontSize: 14, padding: "8px",
+          }}
+        >
+          Continue browsing
+        </button>
+      </div>
+    </div>
+  );
+}
 
-        {/* Title block */}
-        <div>
-          <h3 style={{ margin: "0 0 6px", fontSize: 17, fontWeight: 800, lineHeight: 1.2, letterSpacing: "-.04em", minHeight: "2.4em", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{activity.title}</h3>
-          <p style={{ margin: 0, color: C.muted, fontSize: 13.5, lineHeight: 1.45, minHeight: "calc(13.5px * 1.45 * 3)", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{activity.description}</p>
-        </div>
+// ── WorkflowCard ──────────────────────────────────────────────────────────
 
-        {/* Meta row */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: "auto" }}>
-          <RotatingTools
-            tools={normalizeActivityTools(activity.tools)}
-            toolLogos={toolLogos}
-            borderColor={C.line}
-            labelColor={C.dark}
+function WorkflowCard({
+  activity,
+  focusStyle,
+  isLoggedIn,
+  onSignUpRequired,
+}: {
+  activity: Activity;
+  focusStyle: React.CSSProperties;
+  isLoggedIn: boolean;
+  onSignUpRequired: () => void;
+}) {
+  const theme  = getTheme(activity.id);
+  const tools  = normalizeActivityTools(activity.tools);
+  const fns    = activity.functions ?? [];
+  const chip   = timeLabel(activity);
+
+  const inner = (
+    <>
+      {activity.is_featured && <span className="new-badge">New</span>}
+      <div className={`card-poster ${theme.posterColor}`}>
+        {activity.thumbnail_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={activity.thumbnail_url}
+            alt={activity.title}
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 2 }}
           />
-          {/* Type chip */}
-          <div style={{
-            display: "inline-flex", alignItems: "center", gap: 7,
-            padding: "7px 10px", borderRadius: 999,
-            fontSize: 11, fontWeight: 900,
-            border: `1px solid ${C.line}`, color: C.muted, background: "#faf8f3",
-          }}>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", display: "inline-block", background: vis.dot }} />
-            {typeLabel(activity.category)}
-          </div>
+        ) : (
+          <Scene theme={theme} />
+        )}
+      </div>
+      <div className="card-body">
+        <div className="meta-line">
+          {tools[0] && <Pill label={formatToolLabel(tools[0])} color={toolColor(tools[0])} />}
+          {fns[0]   && <Pill label={fns[0]}                    color={fnColor(fns[0])} />}
+          {chip     && <span className="time-chip">{chip}</span>}
         </div>
-      </article>
+        <h3 className="card-title">{activity.title}</h3>
+        <p className="card-desc">{activity.description}</p>
+      </div>
+    </>
+  );
+
+  if (!isLoggedIn) {
+    return (
+      <div
+        className="workflow-card"
+        style={{ ...focusStyle, cursor: "pointer" }}
+        onClick={onSignUpRequired}
+        role="button"
+        tabIndex={0}
+        onKeyDown={e => { if (e.key === "Enter" || e.key === " ") onSignUpRequired(); }}
+      >
+        {inner}
+      </div>
+    );
+  }
+
+  return (
+    <Link href={`/activity/${activity.id}`} className="workflow-card" style={focusStyle}>
+      {inner}
     </Link>
   );
 }
 
-const INTENT_BTNS = [
-  { id: "all", icon: "✦", label: "All workflows", desc: "Browse everything available for your AI tools." },
-  { id: "chat", icon: "💬", label: "Chat", desc: "Write, summarize, analyze, compare, and decide faster." },
-  { id: "automate", icon: "⚡", label: "Automate", desc: "Save time on repetitive document, email, and follow-up tasks." },
-  { id: "build", icon: "🛠", label: "Build", desc: "Create apps, dashboards, tools, and reusable workflows." },
-];
+// ── HorizontalRail ────────────────────────────────────────────────────────
 
-export default function DashboardClient({ profile, activities, progress, toolLogos, tagLogos, functionLogos, toolFilters, deepDives }: Props) {
-  const [searchQ, setSearchQ] = useState("");
-  const [activeTool, setActiveTool] = useState("all");
-  const [activeIntent, setActiveIntent] = useState("all");
+function HorizontalRail({
+  title, subtitle, activities, isLoggedIn, onSignUpRequired,
+}: {
+  title: string;
+  subtitle: string;
+  activities: Activity[];
+  isLoggedIn: boolean;
+  onSignUpRequired: () => void;
+}) {
+  const rowRef = useRef<HTMLDivElement>(null);
+  const [focusedIdx, setFocusedIdx] = useState(0);
 
-  const progressMap = useMemo(() => {
-    const m: Record<string, UserProgress> = {};
-    progress.forEach(p => { m[p.activity_id] = p; });
-    return m;
-  }, [progress]);
+  function findCenter(row: HTMLDivElement): number {
+    const cards = Array.from(row.querySelectorAll<HTMLElement>(".workflow-card"));
+    const mid   = row.getBoundingClientRect().left + row.clientWidth / 2;
+    let best = 0, bestD = Infinity;
+    cards.forEach((c, i) => {
+      const d = Math.abs(c.getBoundingClientRect().left + c.clientWidth / 2 - mid);
+      if (d < bestD) { bestD = d; best = i; }
+    });
+    return best;
+  }
 
-  const completed = progress.filter(p => p.status === "completed").length;
-  const inProgress = progress.filter(p => p.status === "in_progress").length;
-  const totalPts = progress
-    .filter(p => p.status === "completed")
-    .reduce((s, p) => s + (activities.find(a => a.id === p.activity_id)?.points ?? 0), 0);
-  const levelPct = totalPts < 100 ? (totalPts / 100) * 100
-    : totalPts < 500 ? ((totalPts - 100) / 400) * 100
-      : totalPts < 1000 ? ((totalPts - 500) / 500) * 100 : 100;
-  const levelName = totalPts < 100 ? "Starter" : totalPts < 500 ? "Explorer" : totalPts < 1000 ? "Builder" : "Expert";
-  const newCount = activities.filter(isNew).length;
+  useEffect(() => {
+    const row = rowRef.current;
+    if (!row) return;
+    setFocusedIdx(findCenter(row));
+    let t: ReturnType<typeof setTimeout>;
+    const onScroll = () => { clearTimeout(t); t = setTimeout(() => setFocusedIdx(findCenter(row)), 80); };
+    row.addEventListener("scroll", onScroll, { passive: true });
+    return () => { row.removeEventListener("scroll", onScroll); clearTimeout(t); };
+  }, [activities]);
 
-  const toolRelevant = useMemo(() =>
-    activities.filter(a => activityHasTool(a.tools, activeTool)),
-    [activities, activeTool] // eslint-disable-line react-hooks/exhaustive-deps
+  function scrollTo(dir: number) {
+    const row = rowRef.current;
+    if (!row) return;
+    const cards = Array.from(row.querySelectorAll<HTMLElement>(".workflow-card"));
+    const next  = Math.min(cards.length - 1, Math.max(0, focusedIdx + dir));
+    const card  = cards[next];
+    if (card) {
+      row.scrollTo({ left: card.offsetLeft - (row.clientWidth - card.clientWidth) / 2, behavior: "smooth" });
+      setFocusedIdx(next);
+    }
+  }
+
+  if (activities.length === 0) return null;
+
+  return (
+    <section className="rail">
+      <div className="rail-header">
+        <div className="rail-title">
+          <h2>{title}</h2>
+          <p>{subtitle}</p>
+        </div>
+        <span className="see-all">View all →</span>
+      </div>
+      <div className="rail-window">
+        <button className="row-arrow left" onClick={() => scrollTo(-1)}>‹</button>
+        <div className="cards-row" ref={rowRef}>
+          {activities.map((a, i) => {
+            const active  = i === focusedIdx;
+            const style: React.CSSProperties = {
+              opacity:    active ? 1 : 0.64,
+              transform:  active ? "scale(1.08)" : "scale(0.94)",
+              zIndex:     active ? 8 : 1,
+              boxShadow:  active ? "0 26px 55px rgba(34, 29, 35, 0.16)" : "none",
+              borderColor: active ? "#D0C7BA" : "#E5E0D8",
+            };
+            return <WorkflowCard key={a.id} activity={a} focusStyle={style} isLoggedIn={isLoggedIn} onSignUpRequired={onSignUpRequired} />;
+          })}
+        </div>
+        <button className="row-arrow right" onClick={() => scrollTo(1)}>›</button>
+      </div>
+    </section>
   );
+}
 
-  const intentRelevant = useMemo(() =>
-    toolRelevant.filter(a => activeIntent === "all" || a.category === activeIntent),
-    [toolRelevant, activeIntent]
+// ── HeroSection ───────────────────────────────────────────────────────────
+
+function HeroSection({
+  heroActivities,
+  allFunctions,
+  heroToolOptions,
+  onShowWorkflows,
+}: {
+  heroActivities: Activity[];
+  allFunctions: string[];
+  heroToolOptions: string[];
+  onShowWorkflows: (tool: string, fn: string) => void;
+}) {
+  const [activeIdx,    setActiveIdx]    = useState(0);
+  const [heroTool,     setHeroTool]     = useState("");
+  const [heroFunction, setHeroFunction] = useState("");
+  const showcaseRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (heroActivities.length === 0) return;
+    const id = setInterval(() => setActiveIdx(i => (i + 1) % heroActivities.length), 3000);
+    return () => clearInterval(id);
+  }, [heroActivities.length]);
+
+  useEffect(() => {
+    const sc = showcaseRef.current;
+    if (!sc) return;
+    const posters = sc.querySelectorAll<HTMLElement>(".hero-poster");
+    const active  = posters[activeIdx];
+    if (active) sc.scrollTo({ left: Math.max(0, active.offsetLeft - sc.offsetWidth * 0.08), behavior: "smooth" });
+  }, [activeIdx]);
+
+  return (
+    <header className="hero-shell">
+      <section className="hero">
+        {/* Left column */}
+        <div>
+          <div className="eyebrow"><span className="eyebrow-dot" /> Updated every week</div>
+          <h1>Discover AI workflows worth trying at work</h1>
+          <p>Choose your AI tool, pick your function, and explore guided workflows built around real workplace moments.</p>
+
+          <div className="selector-row">
+            <label className="select-wrap">
+              <select value={heroTool} onChange={e => setHeroTool(e.target.value)}>
+                <option value="">I use...</option>
+                {heroToolOptions.map(t => (
+                  <option key={t} value={t}>I use {formatToolLabel(t)}</option>
+                ))}
+              </select>
+            </label>
+            <label className="select-wrap">
+              <select value={heroFunction} onChange={e => setHeroFunction(e.target.value)}>
+                <option value="">I work in...</option>
+                {allFunctions.map(fn => (
+                  <option key={fn} value={fn}>I work in {fn}</option>
+                ))}
+              </select>
+            </label>
+            <button className="btn btn-dark" onClick={() => onShowWorkflows(heroTool, heroFunction)}>
+              Show me workflows
+            </button>
+          </div>
+
+          <div className="trust-line">Browse selected workflows. Use filters below to explore more.</div>
+
+          <div className="hero-progress" aria-hidden="true">
+            {heroActivities.map((_, i) => (
+              <span key={i} className={i === activeIdx ? "active" : ""} onClick={() => setActiveIdx(i)} />
+            ))}
+          </div>
+        </div>
+
+        {/* Right column — carousel */}
+        <div className="hero-showcase" ref={showcaseRef} aria-label="Featured workflows">
+          {heroActivities.map((a, i) => {
+            const theme = getTheme(a.id);
+            const tools = normalizeActivityTools(a.tools);
+            const fns   = a.functions ?? [];
+            const chip  = timeLabel(a);
+            const isActive = i === activeIdx;
+
+            return (
+              <article
+                key={a.id}
+                className="hero-poster"
+                onClick={() => setActiveIdx(i)}
+                style={{
+                  flexBasis: isActive ? "56%" : "38%",
+                  opacity:   isActive ? 1 : 0.48,
+                  transform: isActive ? "scale(1)" : "scale(0.84)",
+                  boxShadow: isActive ? "0 28px 55px rgba(34, 29, 35, 0.24)" : "0 16px 30px rgba(34, 29, 35, 0.08)",
+                }}
+              >
+                <div className={`poster-visual ${theme.posterColor}`}>
+                  {a.thumbnail_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={a.thumbnail_url}
+                      alt={a.title}
+                      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 2 }}
+                    />
+                  ) : (
+                    <Scene theme={theme} />
+                  )}
+                </div>
+                <div className="poster-content">
+                  <div className="poster-meta">
+                    {tools[0] && <Pill label={formatToolLabel(tools[0])} color={toolColor(tools[0])} />}
+                    {fns[0]   && <Pill label={fns[0]}                    color={fnColor(fns[0])} />}
+                    {chip     && <span className="time-chip">{chip}</span>}
+                  </div>
+                  <h2>{a.title}</h2>
+                  <p>{a.description}</p>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+    </header>
   );
+}
 
-  const newList = useMemo(() =>
-    intentRelevant
-      .filter(a => isNew(a) && progressMap[a.id]?.status !== "completed")
-      .sort(byPosition)
-      .slice(0, 3),
-    [intentRelevant, progressMap]
+// ── ToolsBand (static) ───────────────────────────────────────────────────
+
+function ToolsBand({ activities }: { activities: Activity[] }) {
+  const counts: Record<string, number> = {};
+  activities.forEach(a => normalizeActivityTools(a.tools).forEach(t => { counts[t] = (counts[t] ?? 0) + 1; }));
+
+  const tools = [
+    { slug: "claude",  label: "Claude",  desc: "Strong for long documents, artifacts, writing, and structured reasoning.", init: "C",   color: "#623CEA" },
+    { slug: "chatgpt", label: "ChatGPT", desc: "Useful for everyday work, custom GPTs, research, images, and multimodal tasks.", init: "GPT", color: "#23CE68" },
+    { slug: "gemini",  label: "Gemini",  desc: "Useful for Google Workspace, research, and connected productivity tasks.", init: "Ge",  color: "#3696FC" },
+    { slug: "copilot", label: "Copilot", desc: "Useful inside Microsoft 365 for documents, meetings, and enterprise workflows.", init: "Co",  color: "#F68A29" },
+  ];
+
+  return (
+    <section className="tools-band" id="tools">
+      <div className="rail-header">
+        <div className="rail-title">
+          <h2>Know your tool</h2>
+          <p>Make tool choice feel visual, simple, and practical.</p>
+        </div>
+      </div>
+      <div className="tool-grid">
+        {tools.map(t => (
+          <article key={t.slug} className="tool-card">
+            <div>
+              <div className="tool-logo" style={{ color: t.color }}>{t.init}</div>
+              <h3>{t.label}</h3>
+              <p>{t.desc}</p>
+            </div>
+            <div className="tool-link">
+              <span>{counts[t.slug] ?? 0} workflows</span>
+              <span>→</span>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
   );
+}
 
-  const continueList = useMemo(() =>
-    intentRelevant
-      .filter(a => progressMap[a.id]?.status === "in_progress")
-      .sort(byPosition)
-      .slice(0, 3),
-    [intentRelevant, progressMap]
+// ── POVSection (static) ──────────────────────────────────────────────────
+
+function POVSection() {
+  return (
+    <section className="pov" id="pov">
+      <a className="pov-card" href="#" aria-label="Explore AI at Work: The Real Questions">
+        <div className="pov-card-copy">
+          <div className="pov-kicker">Thinking guide</div>
+          <h2>AI at Work: The Real Questions</h2>
+          <p>A clear guide to the messy questions behind AI adoption, automation, capability building, and work redesign.</p>
+          <div className="pov-chip-row">
+            <span>Adoption</span><span>Automation</span><span>Capability building</span>
+            <span>Work redesign</span><span>Human judgment</span><span>Enterprise rollouts</span>
+          </div>
+          <div className="pov-cta">Explore the guide →</div>
+        </div>
+        <div className="pov-visual" aria-hidden="true">
+          <div className="question-orbit">
+            <span className="orbit-chip c1">Jobs</span>
+            <span className="orbit-chip c2">Risk</span>
+            <span className="orbit-chip c3">Agents</span>
+            <span className="orbit-chip c4">Skills</span>
+            <div className="center-note">
+              <strong>AI</strong>
+              <small>at work</small>
+            </div>
+          </div>
+        </div>
+      </a>
+    </section>
   );
+}
 
-  const filtered = useMemo(() => {
-    const q = searchQ.toLowerCase();
-    return activities
-      .filter(a => {
-        const status = progressMap[a.id]?.status ?? "not_started";
-        const text = `${a.title} ${a.description} ${normalizeActivityTools(a.tools).join(" ")} ${a.level} ${a.category} ${status}`.toLowerCase();
-        const toolOk = activityHasTool(a.tools, activeTool);
-        const intentOk = activeIntent === "all" || a.category === activeIntent;
-        const searchOk = !q || text.includes(q);
-        return toolOk && intentOk && searchOk;
-      })
-      .sort(byPosition);
-  }, [activities, progressMap, searchQ, activeTool, activeIntent]); // eslint-disable-line react-hooks/exhaustive-deps
+// ── DashboardClient ──────────────────────────────────────────────────────
+
+export default function DashboardClient({ profile, activities, toolFilters, isLoggedIn }: Props) {
+  const [activeTool, setActiveTool]         = useState("all");
+  const [activeFunction, setActiveFunction] = useState("all");
+  const [showSignUp, setShowSignUp]         = useState(false);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -295,340 +547,184 @@ export default function DashboardClient({ profile, activities, progress, toolLog
     window.location.href = "/login";
   }
 
-  function scrollToLibrary() {
-    document.getElementById("library")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  // Unique functions sorted by frequency
+  const allFunctions = useMemo(() => {
+    const map = new Map<string, number>();
+    activities.forEach(a => (a.functions ?? []).forEach(fn => {
+      const k = fn.trim();
+      if (k) map.set(k, (map.get(k) ?? 0) + 1);
+    }));
+    return [...map.entries()].sort((a, b) => b[1] - a[1]).map(([n]) => n);
+  }, [activities]);
+
+  // Hero carousel: is_featured first, then newest
+  const heroActivities = useMemo(() => {
+    const featured = activities.filter(a => a.is_featured);
+    if (featured.length >= 3) return featured.slice(0, 3);
+    const rest = activities
+      .filter(a => !a.is_featured)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    return [...featured, ...rest].slice(0, 3);
+  }, [activities]);
+
+  // Filtered by active tool + function
+  const filtered = useMemo(() => activities.filter(a => {
+    const tOk = activeTool === "all"     || activityHasTool(a.tools, activeTool);
+    const fOk = activeFunction === "all" || (a.functions ?? []).some(f => f.toLowerCase() === activeFunction.toLowerCase());
+    return tOk && fOk;
+  }), [activities, activeTool, activeFunction]);
+
+  // "New this week" = featured activities in filtered set
+  const newThisWeek = useMemo(() => filtered.filter(a => a.is_featured), [filtered]);
+
+  // Per-function rails
+  const fnRails = useMemo(() => {
+    const fns = activeFunction === "all" ? allFunctions : [activeFunction];
+    return fns
+      .map(fn => ({ fn, items: filtered.filter(a => (a.functions ?? []).some(f => f.toLowerCase() === fn.toLowerCase())) }))
+      .filter(r => r.items.length > 0);
+  }, [allFunctions, filtered, activeFunction]);
+
+  function handleShowWorkflows(tool: string, fn: string) {
+    if (tool) setActiveTool(tool);
+    if (fn)   setActiveFunction(fn);
+    document.getElementById("workflows")?.scrollIntoView({ behavior: "smooth" });
   }
 
+  const heroToolOptions = toolFilters.filter(t => t !== "all");
+  const isAdmin = profile?.role === "admin" || profile?.role === "superadmin";
+
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif", color: C.dark }}>
-      <Topbar profile={profile} role={profile?.role} onSignOut={handleSignOut} />
+    <div className="ndb-root" style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif", color: "#221D23" }}>
 
-      <main style={{ maxWidth: 1280, margin: "0 auto", padding: "44px 32px 80px" }}>
+      {showSignUp && <SignUpCard onClose={() => setShowSignUp(false)} />}
 
-        {/* ── Hero ── */}
-        <section style={{ textAlign: "center", maxWidth: 900, margin: "0 auto 28px" }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "white", border: `1px solid ${C.line}`, color: "#a45b00", borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 850, boxShadow: "0 10px 30px rgba(34,29,35,.08)" }}>
-            ★ New applications added every week
+      {/* ── Nav ── */}
+      <nav className="nav">
+        <Link className="brand" href="/dashboard">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="brand-icon" src="/icon.png" alt="" width={32} height={32} />
+          <span>Nudgeable AI Work Studio</span>
+        </Link>
+        <div className="nav-links">
+          <a href="#workflows">Workflows</a>
+          <a href="#tools">AI Tools</a>
+          <a href="#pov">Our POV</a>
+        </div>
+        <div className="nav-actions">
+          {isLoggedIn ? (
+            <>
+              {profile?.full_name && (
+                <span style={{ fontSize: 14, fontWeight: 700, color: "#746F78" }}>
+                  {profile.full_name.split(" ")[0]}
+                </span>
+              )}
+              {isAdmin && (
+                <Link href="/admin" className="btn btn-ghost">Admin</Link>
+              )}
+              <button className="btn btn-ghost" onClick={handleSignOut}>Sign out</button>
+            </>
+          ) : (
+            <>
+              <Link href="/login" className="btn btn-ghost">Sign in</Link>
+              <Link href="/login" className="btn btn-amber">Get started</Link>
+            </>
+          )}
+          <button className="mobile-menu" aria-label="Open menu">☰</button>
+        </div>
+      </nav>
+
+      {/* ── Hero ── */}
+      <HeroSection
+        heroActivities={heroActivities}
+        allFunctions={allFunctions}
+        heroToolOptions={heroToolOptions}
+        onShowWorkflows={handleShowWorkflows}
+      />
+
+      {/* ── Content ── */}
+      <main className="content">
+
+        {/* Filter panel */}
+        <section className="filter-panel">
+          <div className="filter-head">
+            <h2>Browse by AI tool</h2>
+            <span>{filtered.length} visual workflow guide{filtered.length !== 1 ? "s" : ""}</span>
           </div>
-          <h1 style={{ margin: "20px 0 10px", fontSize: "clamp(34px,5vw,48px)", fontWeight: 900, lineHeight: .96, letterSpacing: "-.065em" }}>
-            Keep pace with practical AI workflows
-          </h1>
-          <p style={{ margin: 0, color: C.muted, fontSize: 17 }}>
-            Pick the AI tool you have. Choose a work problem. Practice with guided screenshots and videos.
-          </p>
-
-          {/* Search bar */}
-          <div style={{ maxWidth: 820, margin: "28px auto 0", display: "flex", gap: 10, background: "white", padding: 10, borderRadius: 999, border: `1px solid ${C.line}`, boxShadow: "0 10px 30px rgba(34,29,35,.08)" }}>
-            <input
-              value={searchQ}
-              onChange={e => setSearchQ(e.target.value)}
-              type="search"
-              placeholder="Search activities, tools, topics, or work problems..."
-              suppressHydrationWarning
-              style={{ flex: 1, border: 0, outline: 0, padding: "0 16px", fontSize: 15, background: "transparent", color: C.dark, fontFamily: "inherit" }}
-            />
-            <button
-              onClick={scrollToLibrary}
-              style={{ border: 0, background: C.yellow, color: C.dark, fontWeight: 900, padding: "13px 28px", borderRadius: 999, boxShadow: `2px 2px 0 ${C.dark}`, cursor: "pointer", fontFamily: "inherit", fontSize: 14 }}
-            >
-              Search
-            </button>
-          </div>
-        </section>
-
-        {/* ── Selector panel ── */}
-        <section style={{ background: "white", border: `1px solid ${C.line}`, borderRadius: 28, boxShadow: "0 10px 30px rgba(34,29,35,.08)", padding: 18, margin: "0 0 26px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, marginBottom: 14 }}>
-            <div>
-              <h2 style={{ margin: 0, fontSize: 18, letterSpacing: "-.03em" }}>Start with your AI tool</h2>
-              {/* <div style={{ color: C.muted, fontSize: 13, fontWeight: 650, marginTop: 3 }}>
-                Select your tool to see the most relevant workflows first.
-              </div> */}
-            </div>
-            <div style={{ color: C.muted, fontSize: 13, fontWeight: 650 }}>
-              {filtered.length} workflow{filtered.length !== 1 ? "s" : ""}
-            </div>
-          </div>
-
-          {/* Tool chips */}
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
+          <div className="filter-pills">
             {toolFilters.map(t => {
-              const active = activeTool === t;
+              const slug = t === "claude" ? " claude" : t === "chatgpt" ? " chatgpt" : t === "gemini" ? " gemini" : t === "copilot" ? " copilot" : "";
               return (
                 <button
                   key={t}
-                  onClick={() => setActiveTool(t)}
-                  style={{
-                    border: `1px solid ${active ? C.dark : C.line}`,
-                    background: active ? C.dark : "white",
-                    borderRadius: 999, padding: "10px 15px",
-                    fontSize: 14, fontWeight: 850,
-                    color: active ? "white" : C.dark,
-                    display: "flex", alignItems: "center", gap: 8,
-                    cursor: "pointer",
-                    boxShadow: active ? `2px 2px 0 ${C.yellow}` : "none",
-                    fontFamily: "inherit",
-                  }}
+                  className={`filter-btn${activeTool === t ? " active" : ""}`}
+                  onClick={() => { setActiveTool(t); if (t !== "all") setActiveFunction("all"); }}
                 >
-                  <span style={{ width: 10, height: 10, borderRadius: "50%", border: "1.5px solid currentColor", display: "inline-block", background: toolDot(t) }} />
-                  {t === "all" ? "All tools" : formatToolLabel(t)}
+                  <span className={`tool-dot${slug}`} />
+                  {t === "all" ? "All" : formatToolLabel(t)}
                 </button>
               );
             })}
-          </div>
-
-          {/* Intent grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
-            {INTENT_BTNS.map(btn => {
-              const active = activeIntent === btn.id;
-              return (
-                <button
-                  key={btn.id}
-                  onClick={() => setActiveIntent(btn.id)}
-                  style={{
-                    textAlign: "left",
-                    border: `1px solid ${active ? "#f0bd00" : C.line}`,
-                    background: active ? C.lightYellow : C.soft,
-                    padding: 16, borderRadius: 20, minHeight: 104,
-                    cursor: "pointer", fontFamily: "inherit",
-                    boxShadow: active ? `3px 3px 0 ${C.dark}` : "none",
-                    transition: ".12s ease",
-                  }}
-                >
-                  <div style={{ width: 32, height: 32, borderRadius: 12, background: "white", border: `1px solid ${C.line}`, display: "grid", placeItems: "center", marginBottom: 10, fontSize: 16 }}>
-                    {btn.icon}
-                  </div>
-                  <h3 style={{ margin: "0 0 4px", fontSize: 15, letterSpacing: "-.03em" }}>{btn.label}</h3>
-                  <p style={{ margin: 0, fontSize: 12.5, color: C.muted, lineHeight: 1.35 }}>{btn.desc}</p>
-                </button>
-              );
-            })}
+            {activeFunction !== "all" && (
+              <button
+                className="filter-btn active"
+                onClick={() => setActiveFunction("all")}
+                style={{ background: fnColor(activeFunction) + "22", borderColor: fnColor(activeFunction), color: fnColor(activeFunction) }}
+              >
+                {activeFunction} ✕
+              </button>
+            )}
           </div>
         </section>
 
-        {/* ── Main layout ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 330px", gap: 24, alignItems: "start" }}>
+        {/* Rails */}
+        <div id="workflows">
+          {newThisWeek.length > 0 && (
+            <HorizontalRail
+              title="New this week"
+              subtitle="Fresh workflows with visual workplace scenes."
+              activities={newThisWeek}
+              isLoggedIn={isLoggedIn}
+              onSignUpRequired={() => setShowSignUp(true)}
+            />
+          )}
 
-          {/* Left column */}
-          <div>
-
-            {/* New this week — only featured activities */}
-            {newList.length > 0 && (
-              <section style={{ marginBottom: 34 }}>
-                <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, marginBottom: 14 }}>
-                  <div>
-                    <h2 style={{ margin: 0, fontSize: 23, letterSpacing: "-.045em" }}>New this week</h2>
-                    <p style={{ margin: "3px 0 0", color: C.muted, fontSize: 14 }}>Fresh workflows you can practice right away.</p>
-                  </div>
-                  <button
-                    onClick={scrollToLibrary}
-                    style={{ border: 0, background: "transparent", color: C.purple, fontWeight: 900, fontSize: 14, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}
-                  >
-                    View all new
-                  </button>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 16 }}>
-                  {newList.map(a => (
-                    <ActivityCard key={a.id} activity={a} status={progressMap[a.id]?.status ?? "not_started"} toolLogos={toolLogos} tagLogos={tagLogos} functionLogos={functionLogos} />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Continue */}
-            {continueList.length > 0 && (
-              <section style={{ marginBottom: 34 }}>
-                <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, marginBottom: 14 }}>
-                  <div>
-                    <h2 style={{ margin: 0, fontSize: 23, letterSpacing: "-.045em" }}>Continue where you left off</h2>
-                    <p style={{ margin: "3px 0 0", color: C.muted, fontSize: 14 }}>Jump back into unfinished workflows.</p>
-                  </div>
-                  <button
-                    onClick={scrollToLibrary}
-                    style={{ border: 0, background: "transparent", color: C.purple, fontWeight: 900, fontSize: 14, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}
-                  >
-                    View in progress
-                  </button>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 16 }}>
-                  {continueList.map(a => (
-                    <ActivityCard key={a.id} activity={a} status="in_progress" toolLogos={toolLogos} tagLogos={tagLogos} functionLogos={functionLogos} />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Full library */}
-            <section id="library" style={{ marginBottom: 34 }}>
-              <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, marginBottom: 14 }}>
-                <div>
-                  <h2 style={{ margin: 0, fontSize: 23, letterSpacing: "-.045em" }}>Full workflow library</h2>
-                  <p style={{ margin: "3px 0 0", color: C.muted, fontSize: 14 }}>Use filters when you want to browse everything.</p>
-                </div>
-              </div>
-
-              <div style={{ background: "white", border: `1px solid ${C.line}`, borderRadius: 28, padding: 16, boxShadow: "0 10px 30px rgba(34,29,35,.08)" }}>
-                {filtered.length === 0 ? (
-                  <div style={{ border: "1px dashed #d7d0c2", borderRadius: 22, padding: 26, textAlign: "center", color: C.muted, fontWeight: 750 }}>
-                    No matching workflows. Try changing the tool, intent, or search term.
-                  </div>
-                ) : (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 16 }}>
-                    {filtered.map(a => (
-                      <ActivityCard key={a.id} activity={a} status={progressMap[a.id]?.status ?? "not_started"} toolLogos={toolLogos} tagLogos={tagLogos} functionLogos={functionLogos} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </section>
-          </div>
-
-          {/* ── Sidebar ── */}
-          <aside style={{ position: "sticky", top: 80, display: "flex", flexDirection: "column", gap: 16 }}>
-
-            {/* Progress card */}
-            <section style={{ background: "white", border: `1px solid ${C.line}`, borderRadius: 26, padding: 20, boxShadow: "0 10px 30px rgba(34,29,35,.08)" }}>
-              <h3 style={{ margin: "0 0 14px", letterSpacing: "-.03em", fontSize: 18 }}>Your AI Work Pace</h3>
-
-              {/* Level box */}
-              <div style={{ color: "white", background: `radial-gradient(circle at 80% 20%,rgba(255,206,0,.35),transparent 26%),${C.dark}`, borderRadius: 18, padding: 18, marginBottom: 14 }}>
-                <div style={{ fontSize: 11, color: "#d6d0ca", textTransform: "uppercase", letterSpacing: ".18em", fontWeight: 900 }}>Current level</div>
-                <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginTop: 8 }}>
-                  <strong style={{ fontSize: 24, letterSpacing: "-.05em" }}>{levelName}</strong>
-                  <span style={{ color: C.yellow, fontWeight: 900, fontSize: 13 }}>{totalPts} pts</span>
-                </div>
-                <div style={{ height: 8, background: "#4a414d", borderRadius: 999, overflow: "hidden", marginTop: 14 }}>
-                  <div style={{ width: `${Math.min(levelPct, 100)}%`, height: "100%", background: C.yellow }} />
-                </div>
-              </div>
-
-              {/* Stat grid */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
-                {[
-                  { label: "Completed", value: completed, bg: "#fbf7e6" },
-                  { label: "In progress", value: inProgress, bg: "#eef6ff" },
-                  { label: "New this week", value: newCount, bg: "#f0fff5" },
-                  { label: "Available", value: activities.length, bg: "#fff2e8" },
-                ].map((tile, i) => (
-                  <div key={i} style={{ border: `1px solid ${C.line}`, borderRadius: 16, background: tile.bg, padding: 13 }}>
-                    <div style={{ color: C.muted, fontSize: 11, fontWeight: 850, marginBottom: 6 }}>{tile.label}</div>
-                    <div style={{ fontSize: 24, fontWeight: 950, letterSpacing: "-.05em" }}>{tile.value}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Pace callout */}
-              {(() => {
-                const nextLevel = levelName === "Starter" ? "Explorer"
-                  : levelName === "Explorer" ? "Builder"
-                  : levelName === "Builder" ? "Expert"
-                  : null;
-                const ptsNeeded = levelName === "Starter" ? 100 - totalPts
-                  : levelName === "Explorer" ? 500 - totalPts
-                  : levelName === "Builder" ? 1000 - totalPts
-                  : 0;
-                const avgPts = completed > 0 ? Math.round(totalPts / completed) : 50;
-                const estWorkflows = Math.ceil(ptsNeeded / Math.max(avgPts, 25));
-                const isClose = levelPct >= 75;
-
-                let icon = "🚀";
-                let line1 = "";
-                let line2 = "";
-
-                if (!nextLevel) {
-                  icon = "🏆";
-                  line1 = "Expert level reached!";
-                  line2 = "Keep completing workflows to stay ahead.";
-                } else if (completed === 0 && inProgress === 0) {
-                  icon = "👋";
-                  line1 = "Start your first workflow.";
-                  line2 = `Complete any activity to earn points toward ${nextLevel}.`;
-                } else if (completed === 0 && inProgress > 0) {
-                  icon = "⚡";
-                  line1 = `${inProgress} workflow${inProgress !== 1 ? "s" : ""} in progress.`;
-                  line2 = "Finish one to earn your first points and level up.";
-                } else if (isClose) {
-                  icon = "🎯";
-                  line1 = `Almost ${nextLevel}!`;
-                  line2 = "You're so close — just keep going.";
-                } else {
-                  icon = "📈";
-                  line1 = `Next: ${nextLevel}`;
-                  line2 = `Keep completing workflows to get there.`;
-                }
-
-                return (
-                  <div style={{ padding: 13, borderRadius: 16, background: C.lightYellow, border: "1px solid #f3d25a" }}>
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                      <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0, marginTop: 1 }}>{icon}</span>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 800, lineHeight: 1.3, color: C.dark }}>{line1}</div>
-                        <div style={{ fontSize: 12, fontWeight: 600, lineHeight: 1.4, color: C.muted, marginTop: 2 }}>{line2}</div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-            </section>
-
-            {/* Go deeper — HTML pages or external links from superadmin */}
-            {deepDives.filter(d => isHtmlDeepDive(d) || d.url).length > 0 && (
-              <section style={{ background: "white", border: `1px solid ${C.line}`, borderRadius: 26, padding: 20, boxShadow: "0 10px 30px rgba(34,29,35,.08)" }}>
-                <h3 style={{ margin: "0 0 4px", letterSpacing: "-.03em", fontSize: 18 }}>Go deeper with your tools</h3>
-                <p style={{ margin: "0 0 14px", color: C.muted, fontSize: 12.5, lineHeight: 1.4 }}>
-                  Guides and resources to learn each tool beyond the workflows.
-                </p>
-                <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
-                  {deepDives.filter(d => isHtmlDeepDive(d) || d.url).map(item => {
-                    const href = deepDiveHref(item);
-                    const external = !isHtmlDeepDive(item);
-                    const cardInner = (
-                      <div
-                        style={{ display: "grid", gridTemplateColumns: "34px 1fr auto", gap: 10, alignItems: "start", padding: 11, border: `1px solid ${C.line}`, borderRadius: 16, background: "#fbfaf7", cursor: "pointer", transition: ".12s" }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#f4f1ea"; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "#fbfaf7"; }}
-                      >
-                        <div style={{ width: 34, height: 34, borderRadius: 12, display: "grid", placeItems: "center", background: "white", border: `1px solid ${C.line}`, overflow: "hidden" }}>
-                          {item.tool ? (
-                            <ToolIcon tool={item.tool} size={24} logos={toolLogos} insetScale={0.88} />
-                          ) : (
-                            <span style={{ fontSize: 16 }}>{external ? "↗" : "📄"}</span>
-                          )}
-                        </div>
-                        <div style={{ minWidth: 0 }}>
-                          <strong style={{ display: "block", fontSize: 13, lineHeight: 1.25, marginBottom: 2 }}>{item.title}</strong>
-                          <span style={{ color: C.muted, fontSize: 12, fontWeight: 650, lineHeight: 1.35 }}>
-                            {deepDiveLabel(item, formatToolLabel)}
-                          </span>
-                        </div>
-                        {external ? (
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2, flexShrink: 0 }}>
-                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                            <polyline points="15 3 21 3 21 9" />
-                            <line x1="10" y1="14" x2="21" y2="3" />
-                          </svg>
-                        ) : (
-                          <span style={{ marginTop: 2, fontSize: 14, color: C.muted, flexShrink: 0 }}>→</span>
-                        )}
-                      </div>
-                    );
-
-                    return external ? (
-                      <a key={item.id} href={href} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: "inherit" }}>
-                        {cardInner}
-                      </a>
-                    ) : (
-                      <Link key={item.id} href={href} style={{ textDecoration: "none", color: "inherit" }}>
-                        {cardInner}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
-          </aside>
+          {fnRails.map(({ fn, items }) => (
+            <HorizontalRail
+              key={fn}
+              title={fn}
+              subtitle={fnSubtitle(fn)}
+              activities={items}
+              isLoggedIn={isLoggedIn}
+              onSignUpRequired={() => setShowSignUp(true)}
+            />
+          ))}
         </div>
+
+        <ToolsBand activities={activities} />
+        <POVSection />
       </main>
+
+      {/* ── Footer ── */}
+      <footer className="footer">
+        {isLoggedIn ? (
+          <>
+            <h2>You&apos;re all set. Keep exploring.</h2>
+            <p>New guided workflows are added every week. Check back for what&apos;s fresh.</p>
+          </>
+        ) : (
+          <>
+            <h2>Sign up free. Unlock every workflow.</h2>
+            <p>Get access to every workflow, tool guide, and AI mastery tip in the studio.</p>
+            <Link href="/login" className="btn btn-amber">Get started</Link>
+          </>
+        )}
+        <div className="footer-links">
+          <a href="#">About</a>
+          <a href="#">Contact</a>
+          <a href="#">Privacy</a>
+        </div>
+      </footer>
     </div>
   );
 }
