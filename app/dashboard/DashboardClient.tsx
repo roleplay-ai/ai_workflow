@@ -161,29 +161,39 @@ function SignUpCard({ onClose }: { onClose: () => void }) {
           }}
           aria-label="Close"
         >×</button>
-        <div style={{ fontSize: 36, marginBottom: 16, color: "#FFCE00" }}>✦</div>
+        <div style={{ fontSize: 36, marginBottom: 16 }}>🔒</div>
         <h2 style={{ fontWeight: 900, fontSize: 22, marginBottom: 12, lineHeight: 1.3 }}>
-          Sign up free. Unlock every workflow.
+          This workflow is locked
         </h2>
-        <p style={{ color: "#A09AA6", marginBottom: 32, lineHeight: 1.65, fontSize: 15 }}>
-          Get access to every guided workflow, tool comparison, and AI mastery tip in the studio.
+        <p style={{ color: "#A09AA6", marginBottom: 28, lineHeight: 1.65, fontSize: 15 }}>
+          Sign in or create a free account to access this and every other guided workflow in the studio.
         </p>
         <Link
           href="/login"
           style={{
             display: "block", background: "#FFCE00", color: "#221D23",
-            fontWeight: 800, padding: "15px 32px", borderRadius: 12,
-            textDecoration: "none", marginBottom: 14, fontSize: 16,
-            transition: "opacity 0.15s",
+            fontWeight: 800, padding: "14px 32px", borderRadius: 12,
+            textDecoration: "none", marginBottom: 10, fontSize: 15,
           }}
         >
-          Get started — it&apos;s free
+          Sign in
+        </Link>
+        <Link
+          href="/login"
+          style={{
+            display: "block", background: "rgba(255,255,255,0.08)", color: "#F8F8F6",
+            fontWeight: 700, padding: "14px 32px", borderRadius: 12,
+            textDecoration: "none", marginBottom: 18, fontSize: 15,
+            border: "1.5px solid rgba(255,255,255,0.12)",
+          }}
+        >
+          Create a free account
         </Link>
         <button
           onClick={onClose}
           style={{
             background: "transparent", border: "none", color: "#746F78",
-            cursor: "pointer", fontSize: 14, padding: "8px",
+            cursor: "pointer", fontSize: 13, padding: "4px",
           }}
         >
           Continue browsing
@@ -206,10 +216,11 @@ function WorkflowCard({
   isLoggedIn: boolean;
   onSignUpRequired: () => void;
 }) {
-  const theme  = getTheme(activity.id);
-  const tools  = normalizeActivityTools(activity.tools);
-  const fns    = activity.functions ?? [];
-  const chip   = timeLabel(activity);
+  const theme      = getTheme(activity.id);
+  const tools      = normalizeActivityTools(activity.tools);
+  const fns        = activity.functions ?? [];
+  const chip       = timeLabel(activity);
+  const isLocked   = !isLoggedIn && !!activity.is_locked;
 
   const inner = (
     <>
@@ -225,6 +236,23 @@ function WorkflowCard({
         ) : (
           <Scene theme={theme} />
         )}
+        {isLocked && (
+          <div style={{
+            position: "absolute", inset: 0, zIndex: 4,
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            background: "rgba(34,29,35,0.52)", backdropFilter: "blur(3px)",
+            borderRadius: "inherit", gap: 6,
+          }}>
+            <div style={{
+              width: 38, height: 38, borderRadius: "50%",
+              background: "rgba(255,255,255,0.15)", border: "1.5px solid rgba(255,255,255,0.25)",
+              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17,
+            }}>🔒</div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.85)", letterSpacing: ".02em" }}>
+              Sign in to unlock
+            </span>
+          </div>
+        )}
       </div>
       <div className="card-body">
         <div className="meta-line">
@@ -238,7 +266,7 @@ function WorkflowCard({
     </>
   );
 
-  if (!isLoggedIn && activity.is_locked) {
+  if (isLocked) {
     return (
       <div
         className="workflow-card"
