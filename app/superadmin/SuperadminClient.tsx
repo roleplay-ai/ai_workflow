@@ -110,6 +110,19 @@ export default function SuperadminClient({ profile, companies, activities: initA
     setActivities(prev => prev.map(a => a.id === act.id ? { ...a, is_mastery: !a.is_mastery } : a));
   }
 
+  async function setHeroSlot(act: ActivityRow, slot: number | null) {
+    // If assigning a slot, clear it from whichever activity currently holds it
+    if (slot !== null) {
+      const current = activities.find(a => a.hero_position === slot && a.id !== act.id);
+      if (current) {
+        await supabase.from("activities").update({ hero_position: null }).eq("id", current.id);
+        setActivities(prev => prev.map(a => a.id === current.id ? { ...a, hero_position: null } : a));
+      }
+    }
+    await supabase.from("activities").update({ hero_position: slot }).eq("id", act.id);
+    setActivities(prev => prev.map(a => a.id === act.id ? { ...a, hero_position: slot } : a));
+  }
+
   async function deleteActivity(id: string) {
     if (!confirm("Delete this activity?")) return;
     await supabase.from("activities").delete().eq("id", id);
@@ -280,6 +293,25 @@ export default function SuperadminClient({ profile, companies, activities: initA
                         color: act.is_mastery ? "#623CEA" : "#6B6B6B",
                         fontSize: 11.5, fontWeight: 700, cursor: "pointer",
                       }}>⚡ {act.is_mastery ? "Mastery" : "+"}</button>
+
+                      <select
+                        value={act.hero_position ?? ""}
+                        onChange={e => void setHeroSlot(act, e.target.value ? Number(e.target.value) : null)}
+                        title="Pin to hero banner slot (top 3 cards)"
+                        style={{
+                          padding: "5px 10px", borderRadius: 999, border: "1px solid",
+                          borderColor: act.hero_position ? "rgba(54,150,252,.4)" : "#E8E6DC",
+                          background: act.hero_position ? "rgba(54,150,252,.08)" : "#F0EEE8",
+                          color: act.hero_position ? "#1A6FC4" : "#6B6B6B",
+                          fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                          appearance: "none", WebkitAppearance: "none",
+                        }}
+                      >
+                        <option value="">🎯 Hero</option>
+                        <option value="1">Slot 1</option>
+                        <option value="2">Slot 2</option>
+                        <option value="3">Slot 3</option>
+                      </select>
 
                       <button onClick={() => togglePublish(act)} style={{
                         padding: "5px 10px", borderRadius: 999, border: "1px solid",

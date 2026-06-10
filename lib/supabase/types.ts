@@ -33,6 +33,7 @@ export type Activity = {
   is_featured: boolean;
   is_locked: boolean;
   is_mastery: boolean;
+  hero_position: number | null;
   category: string;
   created_at: string;
   thumbnail_url: string | null;

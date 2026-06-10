@@ -286,38 +286,57 @@ function WorkflowCard({
 const PAGE_SIZE = 10;
 
 function AllWorkflowsSection({
-  activities, selectedFunction, isLoggedIn, onSignUpRequired, toolLogos,
+  activities, selectedFunction, selectedTool, isLoggedIn, onSignUpRequired, toolLogos,
 }: {
   activities: Activity[];
   selectedFunction: string | null;
+  selectedTool: string | null;
   isLoggedIn: boolean;
   onSignUpRequired: () => void;
   toolLogos: ToolLogoMap;
 }) {
   const [page, setPage] = useState(0);
 
-  // Reset to first page when function changes
-  useEffect(() => { setPage(0); }, [selectedFunction]);
+  // Reset to first page when either filter changes
+  useEffect(() => { setPage(0); }, [selectedFunction, selectedTool]);
 
-  const filtered = useMemo(() => (
-    selectedFunction
-      ? activities.filter(a => (a.functions ?? []).some(f => f.toLowerCase() === selectedFunction.toLowerCase()))
-      : activities
-  ), [activities, selectedFunction]);
+  const filtered = useMemo(() => {
+    let result = activities;
+    if (selectedFunction) {
+      result = result.filter(a =>
+        (a.functions ?? []).some(f => f.toLowerCase() === selectedFunction.toLowerCase())
+      );
+    }
+    if (selectedTool) {
+      result = result.filter(a =>
+        normalizeActivityTools(a.tools).some(t => t.toLowerCase() === selectedTool.toLowerCase())
+      );
+    }
+    return result;
+  }, [activities, selectedFunction, selectedTool]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const pageItems  = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-  const title      = selectedFunction ? `All ${selectedFunction} Workflows` : "All Workflows";
-  const subtitle   = selectedFunction
-    ? `${filtered.length} workflow${filtered.length !== 1 ? "s" : ""} in ${selectedFunction}`
-    : `${filtered.length} workflow${filtered.length !== 1 ? "s" : ""}`;
+
+  // Build title: "All [Function] [Tool] Workflows"
+  const titleParts: string[] = ["All"];
+  if (selectedFunction) titleParts.push(selectedFunction);
+  if (selectedTool)     titleParts.push(formatToolLabel(selectedTool));
+  titleParts.push("Workflows");
+  const title = titleParts.join(" ");
+
+  const activeFilters = [
+    selectedFunction ?? null,
+    selectedTool ? formatToolLabel(selectedTool) : null,
+  ].filter(Boolean) as string[];
+  const subtitle = `${filtered.length} workflow${filtered.length !== 1 ? "s" : ""}${activeFilters.length ? ` · ${activeFilters.join(" · ")}` : ""}`;
 
   if (filtered.length === 0) return (
     <section className="rail" id="all-workflows">
       <div className="rail-header">
         <div className="rail-title">
           <h2>{title}</h2>
-          <p>No workflows found{selectedFunction ? ` for "${selectedFunction}"` : ""}.</p>
+          <p>No workflows found{activeFilters.length ? ` for "${activeFilters.join('" + "')}"` : ""}.</p>
         </div>
       </div>
     </section>
@@ -326,7 +345,7 @@ function AllWorkflowsSection({
   return (
     <div id="all-workflows">
       <HorizontalRail
-        key={`${selectedFunction ?? "all"}-${page}`}
+        key={`${selectedFunction ?? "all"}-${selectedTool ?? "all"}-${page}`}
         title={title}
         subtitle={subtitle}
         activities={pageItems}
@@ -832,6 +851,7 @@ function POVSection() {
 
 export default function DashboardClient({ profile, activities, toolFilters, deepDives, toolLogos, functionLogos, functionThumbnails, isLoggedIn }: Props) {
   const [selectedFunction, setSelectedFunction] = useState<string | null>(null);
+  const [selectedTool,     setSelectedTool]     = useState<string | null>(null);
   const [showSignUp, setShowSignUp]             = useState(false);
 
   async function handleSignOut() {
@@ -850,8 +870,15 @@ export default function DashboardClient({ profile, activities, toolFilters, deep
     return [...map.entries()].sort((a, b) => b[1] - a[1]).map(([n]) => n);
   }, [activities]);
 
-  // Hero carousel: is_featured first, then newest
+  // Hero carousel: superadmin-pinned slots first, fallback to is_featured then newest
   const heroActivities = useMemo(() => {
+    // Prefer activities with explicit hero_position slots (1, 2, 3)
+    const slotted = activities
+      .filter(a => a.hero_position != null)
+      .sort((a, b) => (a.hero_position ?? 99) - (b.hero_position ?? 99))
+      .slice(0, 3);
+    if (slotted.length > 0) return slotted;
+    // Fallback: is_featured first, then newest
     const featured = activities.filter(a => a.is_featured);
     if (featured.length >= 3) return featured.slice(0, 3);
     const rest = activities
@@ -866,8 +893,9 @@ export default function DashboardClient({ profile, activities, toolFilters, deep
   // Section 2: AI Tools Mastery
   const masteryActivities = useMemo(() => activities.filter(a => a.is_mastery), [activities]);
 
-  function handleShowWorkflows(_tool: string, fn: string) {
-    if (fn) setSelectedFunction(fn);
+  function handleShowWorkflows(tool: string, fn: string) {
+    if (tool) setSelectedTool(tool);
+    if (fn)   setSelectedFunction(fn);
     document.getElementById("all-workflows")?.scrollIntoView({ behavior: "smooth" });
   }
 
@@ -950,10 +978,11 @@ export default function DashboardClient({ profile, activities, toolFilters, deep
           />
         )}
 
-        {/* Section 3: All Workflows (paginated, filtered by selected function) */}
+        {/* Section 3: All Workflows (paginated, filtered by function + tool) */}
         <AllWorkflowsSection
           activities={activities}
           selectedFunction={selectedFunction}
+          selectedTool={selectedTool}
           isLoggedIn={isLoggedIn}
           onSignUpRequired={() => setShowSignUp(true)}
           toolLogos={toolLogos}
