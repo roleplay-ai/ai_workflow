@@ -31,6 +31,7 @@ export type Activity = {
   position: number;
   published: boolean;
   is_featured: boolean;
+  is_locked: boolean;
   category: string;
   created_at: string;
   thumbnail_url: string | null;
@@ -174,8 +175,8 @@ export type Database = {
       };
       activities: {
         Row: Activity;
-        Insert: { title: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; tags?: string[]; functions?: string[]; position?: number; published?: boolean; is_featured?: boolean; category?: string };
-        Update: { title?: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; tags?: string[]; functions?: string[]; position?: number; published?: boolean; is_featured?: boolean; category?: string };
+        Insert: { title: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; tags?: string[]; functions?: string[]; position?: number; published?: boolean; is_featured?: boolean; is_locked?: boolean; category?: string };
+        Update: { title?: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; tags?: string[]; functions?: string[]; position?: number; published?: boolean; is_featured?: boolean; is_locked?: boolean; category?: string };
       };
       activity_companies: {
         Row: ActivityCompany;

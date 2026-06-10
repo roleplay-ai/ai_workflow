@@ -214,13 +214,13 @@ function WorkflowCard({
   const inner = (
     <>
       {activity.is_featured && <span className="new-badge">New</span>}
-      <div className={`card-poster ${theme.posterColor}`}>
+      <div className={`card-poster ${theme.posterColor}${activity.thumbnail_url ? " has-thumbnail" : ""}`}>
         {activity.thumbnail_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
+            className="card-thumbnail"
             src={activity.thumbnail_url}
             alt={activity.title}
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 2 }}
           />
         ) : (
           <Scene theme={theme} />
@@ -238,7 +238,7 @@ function WorkflowCard({
     </>
   );
 
-  if (!isLoggedIn) {
+  if (!isLoggedIn && activity.is_locked) {
     return (
       <div
         className="workflow-card"
@@ -273,38 +273,73 @@ function HorizontalRail({
 }) {
   const rowRef = useRef<HTMLDivElement>(null);
   const [focusedIdx, setFocusedIdx] = useState(0);
+  const rowPadding = 16;
 
-  function findCenter(row: HTMLDivElement): number {
-    const cards = Array.from(row.querySelectorAll<HTMLElement>(".workflow-card"));
-    const mid   = row.getBoundingClientRect().left + row.clientWidth / 2;
-    let best = 0, bestD = Infinity;
-    cards.forEach((c, i) => {
-      const d = Math.abs(c.getBoundingClientRect().left + c.clientWidth / 2 - mid);
-      if (d < bestD) { bestD = d; best = i; }
+  function findLeadingCard(row: HTMLDivElement): number {
+    const slots = Array.from(row.querySelectorAll<HTMLElement>(".rail-card-slot"));
+    if (slots.length === 0) return 0;
+    const anchor = row.scrollLeft + rowPadding;
+    let best = 0;
+    let bestDist = Infinity;
+    slots.forEach((slot, i) => {
+      const d = Math.abs(slot.offsetLeft - anchor);
+      if (d < bestDist) { bestDist = d; best = i; }
     });
     return best;
+  }
+
+  function scrollToIndex(index: number) {
+    const row = rowRef.current;
+    if (!row) return;
+    if (index === 0) {
+      row.scrollTo({ left: 0, behavior: "smooth" });
+      setFocusedIdx(0);
+      return;
+    }
+    const slots = Array.from(row.querySelectorAll<HTMLElement>(".rail-card-slot"));
+    const slot = slots[index];
+    if (!slot) return;
+    row.scrollTo({ left: Math.max(0, slot.offsetLeft - rowPadding), behavior: "smooth" });
+    setFocusedIdx(index);
   }
 
   useEffect(() => {
     const row = rowRef.current;
     if (!row) return;
-    setFocusedIdx(findCenter(row));
+    row.scrollLeft = 0;
+    setFocusedIdx(0);
     let t: ReturnType<typeof setTimeout>;
-    const onScroll = () => { clearTimeout(t); t = setTimeout(() => setFocusedIdx(findCenter(row)), 80); };
+    const onScroll = () => { clearTimeout(t); t = setTimeout(() => setFocusedIdx(findLeadingCard(row)), 80); };
     row.addEventListener("scroll", onScroll, { passive: true });
     return () => { row.removeEventListener("scroll", onScroll); clearTimeout(t); };
   }, [activities]);
 
+  useEffect(() => {
+    if (activities.length <= 1) return;
+    const id = setInterval(() => {
+      setFocusedIdx(prev => {
+        const next = (prev + 1) % activities.length;
+        const row = rowRef.current;
+        if (row) {
+          if (next === 0) {
+            row.scrollTo({ left: 0, behavior: "smooth" });
+          } else {
+            const slots = Array.from(row.querySelectorAll<HTMLElement>(".rail-card-slot"));
+            const slot = slots[next];
+            if (slot) {
+              row.scrollTo({ left: Math.max(0, slot.offsetLeft - rowPadding), behavior: "smooth" });
+            }
+          }
+        }
+        return next;
+      });
+    }, 3000);
+    return () => clearInterval(id);
+  }, [activities.length]);
+
   function scrollTo(dir: number) {
-    const row = rowRef.current;
-    if (!row) return;
-    const cards = Array.from(row.querySelectorAll<HTMLElement>(".workflow-card"));
-    const next  = Math.min(cards.length - 1, Math.max(0, focusedIdx + dir));
-    const card  = cards[next];
-    if (card) {
-      row.scrollTo({ left: card.offsetLeft - (row.clientWidth - card.clientWidth) / 2, behavior: "smooth" });
-      setFocusedIdx(next);
-    }
+    const next = Math.min(activities.length - 1, Math.max(0, focusedIdx + dir));
+    scrollToIndex(next);
   }
 
   if (activities.length === 0) return null;
@@ -324,13 +359,14 @@ function HorizontalRail({
           {activities.map((a, i) => {
             const active  = i === focusedIdx;
             const style: React.CSSProperties = {
-              opacity:    active ? 1 : 0.64,
-              transform:  active ? "scale(1.08)" : "scale(0.94)",
-              zIndex:     active ? 8 : 1,
-              boxShadow:  active ? "0 26px 55px rgba(34, 29, 35, 0.16)" : "none",
+              opacity:     active ? 1 : 0.64,
               borderColor: active ? "#D0C7BA" : "#E5E0D8",
             };
-            return <WorkflowCard key={a.id} activity={a} focusStyle={style} isLoggedIn={isLoggedIn} onSignUpRequired={onSignUpRequired} />;
+            return (
+              <div key={a.id} className={`rail-card-slot${active ? " is-active" : ""}`}>
+                <WorkflowCard activity={a} focusStyle={style} isLoggedIn={isLoggedIn} onSignUpRequired={onSignUpRequired} />
+              </div>
+            );
           })}
         </div>
         <button className="row-arrow right" onClick={() => scrollTo(1)}>›</button>
@@ -432,13 +468,13 @@ function HeroSection({
                   boxShadow: isActive ? "0 28px 55px rgba(34, 29, 35, 0.24)" : "0 16px 30px rgba(34, 29, 35, 0.08)",
                 }}
               >
-                <div className={`poster-visual ${theme.posterColor}`}>
+                <div className={`poster-visual ${theme.posterColor}${a.thumbnail_url ? " has-thumbnail" : ""}`}>
                   {a.thumbnail_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
+                      className="card-thumbnail"
                       src={a.thumbnail_url}
                       alt={a.title}
-                      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 2 }}
                     />
                   ) : (
                     <Scene theme={theme} />

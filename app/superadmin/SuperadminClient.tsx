@@ -100,6 +100,11 @@ export default function SuperadminClient({ profile, companies, activities: initA
     setActivities(prev => prev.map(a => a.id === act.id ? { ...a, is_featured: !a.is_featured } : a));
   }
 
+  async function toggleLock(act: ActivityRow) {
+    await supabase.from("activities").update({ is_locked: !act.is_locked }).eq("id", act.id);
+    setActivities(prev => prev.map(a => a.id === act.id ? { ...a, is_locked: !a.is_locked } : a));
+  }
+
   async function deleteActivity(id: string) {
     if (!confirm("Delete this activity?")) return;
     await supabase.from("activities").delete().eq("id", id);
@@ -246,6 +251,14 @@ export default function SuperadminClient({ profile, companies, activities: initA
                     </div>
 
                     <div style={{ display: "flex", gap: 7, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                      <button onClick={() => toggleLock(act)} title={act.is_locked ? "Unlock (guests can open)" : "Lock (guests blocked)"} style={{
+                        padding: "5px 10px", borderRadius: 999, border: "1px solid",
+                        borderColor: act.is_locked ? "rgba(239,68,68,.3)" : "#E8E6DC",
+                        background: act.is_locked ? "rgba(239,68,68,.08)" : "#F0EEE8",
+                        color: act.is_locked ? "#DC2626" : "#6B6B6B",
+                        fontSize: 11.5, fontWeight: 700, cursor: "pointer",
+                      }}>{act.is_locked ? "🔒 Locked" : "🔓 Open"}</button>
+
                       <button onClick={() => toggleFeatured(act)} title="Show in 'New this week'" style={{
                         padding: "5px 10px", borderRadius: 999, border: "1px solid",
                         borderColor: act.is_featured ? "rgba(255,206,0,.5)" : "#E8E6DC",
