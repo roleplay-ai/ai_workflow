@@ -3,7 +3,8 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import type { Activity, UserProgress, Profile, ToolDeepDive } from "@/lib/supabase/types";
-import type { ToolLogoMap } from "@/lib/toolLogos";
+import { resolveToolLogoUrl, type ToolLogoMap } from "@/lib/toolLogos";
+import { deepDiveHref, deepDiveLabel } from "@/lib/deepDives";
 import { activityHasTool, formatToolLabel, normalizeActivityTools } from "@/lib/tools";
 import "./netflix-dashboard.css";
 
@@ -461,41 +462,85 @@ function HeroSection({
   );
 }
 
-// ── ToolsBand (static) ───────────────────────────────────────────────────
+function toolInitials(tool: string): string {
+  const words = formatToolLabel(tool).split(/\s+/).filter(Boolean);
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+  return formatToolLabel(tool).slice(0, 3);
+}
 
-function ToolsBand({ activities }: { activities: Activity[] }) {
-  const counts: Record<string, number> = {};
-  activities.forEach(a => normalizeActivityTools(a.tools).forEach(t => { counts[t] = (counts[t] ?? 0) + 1; }));
+// ── ToolsBand (from published deep dives) ────────────────────────────────
 
-  const tools = [
-    { slug: "claude",  label: "Claude",  desc: "Strong for long documents, artifacts, writing, and structured reasoning.", init: "C",   color: "#623CEA" },
-    { slug: "chatgpt", label: "ChatGPT", desc: "Useful for everyday work, custom GPTs, research, images, and multimodal tasks.", init: "GPT", color: "#23CE68" },
-    { slug: "gemini",  label: "Gemini",  desc: "Useful for Google Workspace, research, and connected productivity tasks.", init: "Ge",  color: "#3696FC" },
-    { slug: "copilot", label: "Copilot", desc: "Useful inside Microsoft 365 for documents, meetings, and enterprise workflows.", init: "Co",  color: "#F68A29" },
-  ];
+function ToolsBand({
+  deepDives,
+  toolLogos,
+}: {
+  deepDives: ToolDeepDive[];
+  toolLogos: ToolLogoMap;
+}) {
+  if (deepDives.length === 0) return null;
 
   return (
     <section className="tools-band" id="tools">
       <div className="rail-header">
         <div className="rail-title">
           <h2>Know your tool</h2>
-          <p>Make tool choice feel visual, simple, and practical.</p>
+          <p>Deep dives on the AI tools behind these workflows.</p>
         </div>
       </div>
       <div className="tool-grid">
-        {tools.map(t => (
-          <article key={t.slug} className="tool-card">
-            <div>
-              <div className="tool-logo" style={{ color: t.color }}>{t.init}</div>
-              <h3>{t.label}</h3>
-              <p>{t.desc}</p>
-            </div>
-            <div className="tool-link">
-              <span>{counts[t.slug] ?? 0} workflows</span>
-              <span>→</span>
-            </div>
-          </article>
-        ))}
+        {deepDives.map(item => {
+          const slug = item.tool ?? "";
+          const href = deepDiveHref(item);
+          const isExternal = (item.link_type ?? "external") === "external";
+          const color = slug ? toolColor(slug) : "#FFCE00";
+          const logoUrl = slug ? resolveToolLogoUrl(slug, toolLogos) : null;
+          const desc = item.description ?? deepDiveLabel(item, formatToolLabel);
+
+          const inner = (
+            <>
+              <div>
+                <div className="tool-logo" style={{ color }}>
+                  {logoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={logoUrl} alt="" style={{ width: 32, height: 32, objectFit: "contain" }} />
+                  ) : slug ? (
+                    toolInitials(slug)
+                  ) : (
+                    "AI"
+                  )}
+                </div>
+                <h3>{item.title}</h3>
+                <p>{desc}</p>
+              </div>
+              <div className="tool-link">
+                <span>Explore →</span>
+              </div>
+            </>
+          );
+
+          const cardStyle: React.CSSProperties = { textDecoration: "none", color: "inherit" };
+
+          if (isExternal) {
+            return (
+              <a
+                key={item.id}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="tool-card"
+                style={cardStyle}
+              >
+                {inner}
+              </a>
+            );
+          }
+
+          return (
+            <Link key={item.id} href={href} className="tool-card" style={cardStyle}>
+              {inner}
+            </Link>
+          );
+        })}
       </div>
     </section>
   );
@@ -536,7 +581,7 @@ function POVSection() {
 
 // ── DashboardClient ──────────────────────────────────────────────────────
 
-export default function DashboardClient({ profile, activities, toolFilters, isLoggedIn }: Props) {
+export default function DashboardClient({ profile, activities, toolFilters, deepDives, toolLogos, isLoggedIn }: Props) {
   const [activeTool, setActiveTool]         = useState("all");
   const [activeFunction, setActiveFunction] = useState("all");
   const [showSignUp, setShowSignUp]         = useState(false);
@@ -701,7 +746,7 @@ export default function DashboardClient({ profile, activities, toolFilters, isLo
           ))}
         </div>
 
-        <ToolsBand activities={activities} />
+        <ToolsBand deepDives={deepDives} toolLogos={toolLogos} />
         <POVSection />
       </main>
 
