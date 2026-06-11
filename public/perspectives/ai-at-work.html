@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GenAI Questions Answered | Nudgeable.ai</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --n-amber: #FFCE00;
+    --n-shadow: #221D23;
+    --n-white: #FFFFFF;
+    --n-blue: #623CEA;
+    --n-orange: #F68A29;
+    --n-chiffon: #FFF6CF;
+    --n-emerald: #23CE68;
+    --n-fuchsia: #ED4551;
+    --n-dodger: #3696FC;
+    --n-bg: #FFFDF5;
+    --n-card-bg: #FFFFFF;
+    --n-border: #E8E6DC;
+    --n-text: #221D23;
+    --n-text-muted: #6B6B6B;
+    --n-radius-md: 12px;
+    --n-radius-lg: 16px;
+    --n-radius-pill: 999px;
+    --n-shadow-card: 0 2px 12px rgba(34, 29, 35, 0.08);
+    --n-shadow-hover: 0 6px 24px rgba(34, 29, 35, 0.13);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--n-bg);
+    color: var(--n-text);
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  .page-header {
+    background: var(--n-shadow);
+    padding: 56px 24px 48px;
+    text-align: center;
+  }
+
+  .brand-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--n-amber);
+    margin-bottom: 16px;
+  }
+
+  .page-header h1 {
+    font-size: 32px;
+    font-weight: 900;
+    color: var(--n-white);
+    line-height: 1.2;
+    max-width: 560px;
+    margin: 0 auto 14px;
+  }
+
+  .page-header p {
+    font-size: 15px;
+    color: rgba(255,255,255,0.55);
+    max-width: 480px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  /* GRID */
+  .grid-wrapper {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 48px 24px 64px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+
+  /* CARD */
+  .card {
+    background: var(--n-card-bg);
+    border-radius: var(--n-radius-lg);
+    box-shadow: var(--n-shadow-card);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    transition: box-shadow 0.2s ease;
+  }
+
+  .card:hover { box-shadow: var(--n-shadow-hover); }
+
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .card-icon {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--n-radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+
+  .card-title {
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.35;
+    color: var(--n-text);
+    padding-top: 4px;
+  }
+
+  .card-teaser {
+    font-size: 14px;
+    color: var(--n-text-muted);
+    line-height: 1.6;
+  }
+
+  /* READ MORE BUTTON */
+  .read-more-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--n-shadow);
+    background: var(--n-chiffon);
+    border: none;
+    border-radius: var(--n-radius-pill);
+    padding: 8px 18px;
+    cursor: pointer;
+    width: fit-content;
+    transition: background 0.18s ease;
+  }
+
+  .read-more-btn:hover { background: var(--n-amber); }
+
+  .read-more-btn .chevron {
+    display: inline-block;
+    transition: transform 0.25s ease;
+    font-style: normal;
+  }
+
+  /* EXPANDED CONTENT */
+  .card-divider {
+    height: 1px;
+    background: var(--n-border);
+    display: none;
+  }
+
+  .card-body {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.4s ease, opacity 0.3s ease;
+    opacity: 0;
+  }
+
+  .card-body.open { max-height: 600px; opacity: 1; }
+
+  .points-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 4px;
+  }
+
+  .point-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .point-num {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--n-chiffon);
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--n-orange);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+  }
+
+  .point-text {
+    font-size: 14px;
+    color: var(--n-text);
+    line-height: 1.65;
+  }
+
+  /* CTA SECTION */
+  .cta-section {
+    background: var(--n-shadow);
+    padding: 56px 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 48px;
+  }
+
+  .cta-text h2 {
+    font-size: 38px;
+    font-weight: 900;
+    color: var(--n-white);
+    line-height: 1.15;
+    max-width: 520px;
+    margin-bottom: 16px;
+  }
+
+  .cta-text p {
+    font-size: 15px;
+    color: rgba(255,255,255,0.5);
+    max-width: 500px;
+    line-height: 1.65;
+  }
+
+  .cta-btn {
+    flex-shrink: 0;
+    background: var(--n-amber);
+    color: var(--n-shadow);
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    padding: 14px 28px;
+    border-radius: var(--n-radius-pill);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: opacity 0.18s ease;
+  }
+
+  .cta-btn:hover { opacity: 0.85; }
+
+  /* FOOTER */
+  .page-footer {
+    text-align: center;
+    padding: 24px;
+    font-size: 13px;
+    color: var(--n-text-muted);
+    border-top: 1px solid var(--n-border);
+  }
+
+  .page-footer span {
+    color: var(--n-orange);
+    font-weight: 600;
+  }
+
+  @media (max-width: 640px) {
+    .grid-wrapper { grid-template-columns: 1fr; padding: 32px 16px 48px; }
+    .page-header h1 { font-size: 24px; }
+    .cta-section { flex-direction: column; padding: 40px 24px; align-items: flex-start; }
+    .cta-text h2 { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <div class="brand-label">Nudgeable.ai</div>
+  <h1>Your GenAI Questions, Answered</h1>
+  <p>Common myths, confusions, and real questions about Generative AI — with honest, practical answers.</p>
+</header>
+
+<div class="grid-wrapper" id="cardGrid"></div>
+
+<section class="cta-section">
+  <div class="cta-text">
+    <h2>Want your team to understand and apply GenAI at work?</h2>
+    <p>Nudgeable helps teams move from AI awareness to practical workplace application through classroom training, AI Fluency App, AI Workflow Studio, and AI Mastery Course.</p>
+  </div>
+  <a href="https://nudgeable.ai" target="_blank" class="cta-btn">Explore AI programs</a>
+</section>
+
+<footer class="page-footer">
+  Perspectives by <span>Nudgeable.ai</span> &mdash; GenAI Capability Building
+</footer>
+
+<script>
+const questions = [
+  {
+    bg: "#DDEEFF",
+    emoji: "🫧",
+    text: "Is this an AI bubble?",
+    teaser: "It might be a financial bubble, but that doesn't mean AI capability is hype.",
+    points: [
+      "There are real signals of a financial bubble: companies without products getting billion-dollar valuations, circular funding between hyperscalers, AI labs and chipmakers, and data center investments that may take decades to recover.",
+      "The capability story is different. Since early 2026, Claude's revenue moved from $8B to $30B in two months, and users consistently report significant value from daily use.",
+      "For most people, whether it's a financial bubble is irrelevant unless you've invested in AI companies as a VC. Focus on what the technology can do for your work."
+    ]
+  },
+  {
+    bg: "#FFE5E7",
+    emoji: "🤖",
+    text: "Will AI take over the world?",
+    teaser: "We're competing with a technology we don't fully understand — but the 10-year risk is low.",
+    points: [
+      "For the first time, we are building something that could become more intelligent than us and we don't fully understand how it works. AI already outperforms the average human on many tasks.",
+      "Senior AI scientists are divided on how far scaling will continue to improve intelligence. History shows humans tend to come together against existential threats, as we did with nuclear weapons and COVID.",
+      "Due to infrastructure limitations — data center capacity, device constraints, and training data availability — the risk of AI taking over is very low in the next 10 years. Beyond that, it's genuinely uncertain."
+    ]
+  },
+  {
+    bg: "#FFF0E0",
+    emoji: "💼",
+    text: "Will everyone lose their jobs?",
+    teaser: "Jobs are collections of tasks. The question is which part of your job is hardest.",
+    points: [
+      "If a job is essentially one repeatable task (like basic customer query resolution) and there's enough training data available, that job can be fully automated.",
+      "Most jobs are complex bundles of tasks. You don't pay McKinsey for 70 slides — you pay for customer interviews, insight generation, and perspectives you hadn't considered. If the hardest part of your job can't be done by AI, you're relatively safe.",
+      "If you work in coding or design, adopt AI and aim to be in the top 1% of your field — you're competing with machines. For other roles, track how much of your work AI can do today, and if you see a trend, adapt early."
+    ]
+  },
+  {
+    bg: "#EEE6FF",
+    emoji: "🎯",
+    text: "Where can I apply GenAI?",
+    teaser: "The key question: do you need 100% accuracy, or can you live with uncertainty?",
+    points: [
+      "GenAI is predictive, not deterministic. Use it comfortably for content generation — text, voice, image, video, and code — where some variability is acceptable.",
+      "For data analytics, GenAI can write the code that analyses your data, which works well. But feeding large raw datasets directly into context windows has limits. Know the boundaries.",
+      "Avoid GenAI where a standard software rule applies: if input X always needs output Y, use regular code. Do not use it in aviation, banking, or healthcare systems where accuracy is non-negotiable."
+    ]
+  },
+  {
+    bg: "#E0FAF0",
+    emoji: "🔮",
+    text: "How will the workplace change with AI?",
+    teaser: "Agents are coming, but humans stay in the loop for anything critical.",
+    points: [
+      "AI agents are increasingly capable but not fully predictable. For any critical business process, expect human-in-the-loop to remain the norm for the foreseeable future.",
+      "Most transactional work will shift to machines. Humans will spend more time on relationship-building, selling, and judgment-heavy decisions.",
+      "Middle management will face the most pressure. AI can delegate tasks, track progress, and coach more consistently than most managers. The number of middle management roles will likely shrink."
+    ]
+  },
+  {
+    bg: "#FFFBE0",
+    emoji: "🏭",
+    text: "How can AI be applied in manufacturing?",
+    teaser: "Think of AI as three new superpowers: Eyes, Voice, and Brain.",
+    points: [
+      "Give your team an extra pair of Eyes, a Voice, and a Brain. With those three, what becomes possible on your shop floor?",
+      "Use computer vision for first-pass quality checks — AI flags issues, human approves. Faster throughput, fewer misses.",
+      "AI can help supervisors with shift planning, work allocation, and on-the-job capability building. Workers can ask AI directly when something breaks down rather than waiting for an expert."
+    ]
+  },
+  {
+    bg: "#E0F4FF",
+    emoji: "📈",
+    text: "How do we measure the impact of GenAI?",
+    teaser: "Two numbers: costs down or revenues up. Pick one and track it.",
+    points: [
+      "Every GenAI initiative must tie to either lower costs or higher revenues. There is no other credible measure of impact.",
+      "If your people can do more work with AI, decide upfront: will you hire fewer people (cost reduction) or give them more ambitious targets (revenue growth)? You can't claim both by default.",
+      "Always check whether your spend on tokens is proportionate to the returns from the project. Start every AI initiative with a clear, measurable goal."
+    ]
+  },
+  {
+    bg: "#F0E8FF",
+    emoji: "🏆",
+    text: "Which is the best AI chatbot?",
+    teaser: "There is no single best. The right question is: best for which task?",
+    points: [
+      "Rankings change every few months as labs release new models. The better question is: which tool is best for the task you need, and which can you afford to use consistently?",
+      "Claude is currently the strongest for knowledge work. Gemini and ChatGPT lead for image generation. Claude Code is exceptional for coding but can hit token limits quickly on large projects.",
+      "Pick any one paid subscription from the top three — Claude, Gemini, or ChatGPT — and use it daily. You'll learn more from practice than from benchmarks. Paid tiers unlock meaningfully better features."
+    ]
+  }
+];
+
+const grid = document.getElementById("cardGrid");
+
+questions.forEach((q, i) => {
+  const card = document.createElement("div");
+  card.className = "card";
+
+  card.innerHTML = `
+    <div class="card-top">
+      <div class="card-icon" style="background:${q.bg};">${q.emoji}</div>
+      <div class="card-title">${q.text}</div>
+    </div>
+    <div class="card-teaser">${q.teaser}</div>
+    <button class="read-more-btn" data-index="${i}">
+      Read more <i class="chevron">&#8964;</i>
+    </button>
+    <div class="card-divider" id="div-${i}"></div>
+    <div class="card-body" id="body-${i}">
+      <div class="points-list">
+        ${q.points.map((p, pi) => `
+          <div class="point-item">
+            <div class="point-num">${pi+1}</div>
+            <div class="point-text">${p}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  grid.appendChild(card);
+});
+
+document.querySelectorAll(".read-more-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const idx = btn.dataset.index;
+    const body = document.getElementById(`body-${idx}`);
+    const divider = document.getElementById(`div-${idx}`);
+    const isOpen = body.classList.contains("open");
+
+    if (isOpen) {
+      body.classList.remove("open");
+      btn.innerHTML = `Read more <i class="chevron">&#8964;</i>`;
+      divider.style.display = "none";
+    } else {
+      body.classList.add("open");
+      btn.innerHTML = `Read less <i class="chevron" style="transform:rotate(180deg)">&#8964;</i>`;
+      divider.style.display = "block";
+    }
+  });
+});
+</script>
+</body>
+</html>

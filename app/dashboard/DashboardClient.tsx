@@ -671,7 +671,7 @@ function ToolsBand({
 function POVSection() {
   return (
     <section className="pov" id="pov">
-      <a className="pov-card" href="#" aria-label="Explore AI at Work: The Real Questions">
+      <a className="pov-card" href="/explore/perspective/ai-at-work" aria-label="Explore AI at Work: The Real Questions">
         <div className="pov-card-copy">
           <div className="pov-kicker">Thinking guide</div>
           <h2>AI at Work: The Real Questions</h2>
