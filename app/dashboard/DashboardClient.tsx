@@ -17,6 +17,7 @@ type Props = {
   tagLogos: Record<string, string>;
   functionLogos: Record<string, string>;
   functionThumbnails: Record<string, string>;
+  functionDescriptions: Record<string, string>;
   toolFilters: string[];
   deepDives: ToolDeepDive[];
   isLoggedIn: boolean;
@@ -193,17 +194,23 @@ function WorkflowCard({
   isLoggedIn,
   onSignUpRequired,
   toolLogos,
+  variant = "default",
 }: {
   activity: Activity;
   focusStyle: React.CSSProperties;
   isLoggedIn: boolean;
   onSignUpRequired: () => void;
   toolLogos: ToolLogoMap;
+  variant?: "default" | "dark" | "yellow";
 }) {
   const theme      = getTheme(activity.id);
   const tools      = normalizeActivityTools(activity.tools);
   const chip       = timeLabel(activity);
   const isLocked   = !isLoggedIn && !!activity.is_locked;
+
+  const cardClass = `workflow-card${variant === "dark" ? " dark-card" : variant === "yellow" ? " yellow-card" : ""}`;
+  const chipBorderColor = variant === "dark" ? "rgba(255,255,255,0.2)" : "#E5E0D8";
+  const chipLabelColor  = variant === "dark" ? "#FFFFFF" : "#221D23";
 
   const inner = (
     <>
@@ -245,8 +252,8 @@ function WorkflowCard({
               toolLogos={toolLogos}
               iconSize={14}
               insetScale={0.9}
-              borderColor="#E5E0D8"
-              labelColor="#221D23"
+              borderColor={chipBorderColor}
+              labelColor={chipLabelColor}
               labelSize={10}
               chipStyle={{ padding: "6px 9px 6px 6px", fontWeight: 900 }}
             />
@@ -262,7 +269,7 @@ function WorkflowCard({
   if (isLocked) {
     return (
       <div
-        className="workflow-card"
+        className={cardClass}
         style={{ ...focusStyle, cursor: "pointer" }}
         onClick={onSignUpRequired}
         role="button"
@@ -275,7 +282,7 @@ function WorkflowCard({
   }
 
   return (
-    <Link href={`/activity/${activity.id}`} className="workflow-card" style={focusStyle}>
+    <Link href={`/activity/${activity.id}`} className={cardClass} style={focusStyle}>
       {inner}
     </Link>
   );
@@ -373,10 +380,11 @@ function AllWorkflowsSection({
 // ── FunctionCard ──────────────────────────────────────────────────────────
 
 function FunctionCard({
-  name, count, thumbnail, icon, selected, color, onClick,
+  name, count, description, thumbnail, icon, selected, color, onClick,
 }: {
   name: string;
   count: number;
+  description: string | null;
   thumbnail: string | null;
   icon: string | null;
   selected: boolean;
@@ -405,6 +413,10 @@ function FunctionCard({
         {selected && (
           <div className="fn-card-check">✓</div>
         )}
+        {/* Workflow count tag — top-right corner */}
+        <div className="fn-count-tag" style={{ background: color }}>
+          {count} workflow{count !== 1 ? "s" : ""}
+        </div>
       </div>
       <div className="fn-card-body">
         <div className="fn-card-name">{name}</div>
@@ -412,6 +424,9 @@ function FunctionCard({
           <span className="fn-card-dot" style={{ background: color }} />
           {count} workflow{count !== 1 ? "s" : ""}
         </div>
+        {description && (
+          <p className="fn-card-desc">{description}</p>
+        )}
       </div>
     </button>
   );
@@ -420,13 +435,14 @@ function FunctionCard({
 // ── FunctionsCarousel ─────────────────────────────────────────────────────
 
 function FunctionsCarousel({
-  activities, selectedFunction, onSelect, functionLogos, functionThumbnails,
+  activities, selectedFunction, onSelect, functionLogos, functionThumbnails, functionDescriptions,
 }: {
   activities: Activity[];
   selectedFunction: string | null;
   onSelect: (fn: string | null) => void;
   functionLogos: Record<string, string>;
   functionThumbnails: Record<string, string>;
+  functionDescriptions: Record<string, string>;
 }) {
   const functions = useMemo(() => {
     const map = new Map<string, number>();
@@ -458,6 +474,7 @@ function FunctionsCarousel({
               key={fn}
               name={fn}
               count={count}
+              description={functionDescriptions?.[key] ?? null}
               thumbnail={functionThumbnails?.[key] ?? null}
               icon={functionLogos?.[key] ?? null}
               selected={selectedFunction === fn}
@@ -474,7 +491,7 @@ function FunctionsCarousel({
 // ── HorizontalRail ────────────────────────────────────────────────────────
 
 function HorizontalRail({
-  title, subtitle, activities, isLoggedIn, onSignUpRequired, toolLogos,
+  title, subtitle, activities, isLoggedIn, onSignUpRequired, toolLogos, variant = "default",
 }: {
   title: string;
   subtitle: string;
@@ -482,6 +499,7 @@ function HorizontalRail({
   isLoggedIn: boolean;
   onSignUpRequired: () => void;
   toolLogos: ToolLogoMap;
+  variant?: "default" | "dark" | "yellow";
 }) {
   const rowRef = useRef<HTMLDivElement>(null);
   const [focusedIdx, setFocusedIdx] = useState(0);
@@ -576,8 +594,10 @@ function HorizontalRail({
         >
           {activities.map((a, i) => {
             const active = i === (hoveredIdx !== null ? hoveredIdx : focusedIdx);
+            const borderActive   = variant === "dark" ? "rgba(255,255,255,0.28)" : variant === "yellow" ? "#D0A600" : "#D0C7BA";
+            const borderInactive = variant === "dark" ? "rgba(255,255,255,0.07)" : variant === "yellow" ? "#E8B800" : "#E5E0D8";
             const style: React.CSSProperties = {
-              borderColor: active ? "#D0C7BA" : "#E5E0D8",
+              borderColor: active ? borderActive : borderInactive,
             };
             return (
               <div
@@ -585,7 +605,7 @@ function HorizontalRail({
                 className={`rail-card-slot${active ? " is-active" : ""}`}
                 onMouseEnter={() => { setHoveredIdx(i); isPausedRef.current = true; }}
               >
-                <WorkflowCard activity={a} focusStyle={style} isLoggedIn={isLoggedIn} onSignUpRequired={onSignUpRequired} toolLogos={toolLogos} />
+                <WorkflowCard activity={a} focusStyle={style} isLoggedIn={isLoggedIn} onSignUpRequired={onSignUpRequired} toolLogos={toolLogos} variant={variant} />
               </div>
             );
           })}
@@ -849,7 +869,7 @@ function POVSection() {
 
 // ── DashboardClient ──────────────────────────────────────────────────────
 
-export default function DashboardClient({ profile, activities, toolFilters, deepDives, toolLogos, functionLogos, functionThumbnails, isLoggedIn }: Props) {
+export default function DashboardClient({ profile, activities, progress, toolFilters, deepDives, toolLogos, functionLogos, functionThumbnails, functionDescriptions, isLoggedIn }: Props) {
   const [selectedFunction, setSelectedFunction] = useState<string | null>(null);
   const [selectedTool,     setSelectedTool]     = useState<string | null>(null);
   const [showSignUp, setShowSignUp]             = useState(false);
@@ -890,8 +910,22 @@ export default function DashboardClient({ profile, activities, toolFilters, deep
   // Section 1: New
   const newActivities = useMemo(() => activities.filter(a => a.is_featured), [activities]);
 
+  // Section 1b: Continue where you left off (in_progress for logged-in user)
+  const pendingActivities = useMemo(() => {
+    if (!isLoggedIn || progress.length === 0) return [];
+    const ids = new Set(progress.filter(p => p.status === "in_progress").map(p => p.activity_id));
+    return activities.filter(a => ids.has(a.id));
+  }, [activities, progress, isLoggedIn]);
+
   // Section 2: AI Tools Mastery
   const masteryActivities = useMemo(() => activities.filter(a => a.is_mastery), [activities]);
+
+  // Section last: Completed workflows (logged-in user)
+  const completedActivities = useMemo(() => {
+    if (!isLoggedIn || progress.length === 0) return [];
+    const ids = new Set(progress.filter(p => p.status === "completed").map(p => p.activity_id));
+    return activities.filter(a => ids.has(a.id));
+  }, [activities, progress, isLoggedIn]);
 
   function handleShowWorkflows(tool: string, fn: string) {
     if (tool) setSelectedTool(tool);
@@ -954,24 +988,38 @@ export default function DashboardClient({ profile, activities, toolFilters, deep
       {/* ── Content ── */}
       <main className="content">
 
-        {/* Section 1: New */}
+        {/* Section 1: New — dark cards */}
         {newActivities.length > 0 && (
           <HorizontalRail
-            title="New"
-            subtitle="Latest workflows added by our team."
+            title="Newly added workflows this week"
+            subtitle="Fresh workflows added for this week's practice."
             activities={newActivities}
+            variant="dark"
             isLoggedIn={isLoggedIn}
             onSignUpRequired={() => setShowSignUp(true)}
             toolLogos={toolLogos}
           />
         )}
 
-        {/* Section 2: AI Tools Mastery */}
+        {/* Section 1b: Continue where you left off (in_progress, logged-in only) */}
+        {isLoggedIn && pendingActivities.length > 0 && (
+          <HorizontalRail
+            title="Continue where you left off"
+            subtitle={`You have ${pendingActivities.length} workflow${pendingActivities.length !== 1 ? "s" : ""} in progress.`}
+            activities={pendingActivities}
+            isLoggedIn={isLoggedIn}
+            onSignUpRequired={() => setShowSignUp(true)}
+            toolLogos={toolLogos}
+          />
+        )}
+
+        {/* Section 2: AI Mastery — yellow cards */}
         {masteryActivities.length > 0 && (
           <HorizontalRail
-            title="AI Tools Mastery"
-            subtitle="Handpicked workflows to help you go deeper with AI tools."
+            title="AI Mastery"
+            subtitle="Core workflows for improving AI fluency and everyday practice."
             activities={masteryActivities}
+            variant="yellow"
             isLoggedIn={isLoggedIn}
             onSignUpRequired={() => setShowSignUp(true)}
             toolLogos={toolLogos}
@@ -995,7 +1043,20 @@ export default function DashboardClient({ profile, activities, toolFilters, deep
           onSelect={fn => setSelectedFunction(fn)}
           functionLogos={functionLogos}
           functionThumbnails={functionThumbnails}
+          functionDescriptions={functionDescriptions}
         />
+
+        {/* Section last: Completed Workflows (logged-in only) */}
+        {isLoggedIn && completedActivities.length > 0 && (
+          <HorizontalRail
+            title="Completed Workflows"
+            subtitle={`${completedActivities.length} workflow${completedActivities.length !== 1 ? "s" : ""} you've finished — revisit anytime.`}
+            activities={completedActivities}
+            isLoggedIn={isLoggedIn}
+            onSignUpRequired={() => setShowSignUp(true)}
+            toolLogos={toolLogos}
+          />
+        )}
 
         <ToolsBand deepDives={deepDives} toolLogos={toolLogos} />
         <POVSection />

@@ -49,6 +49,7 @@ export type ActivityTag = {
 export type ActivityFunction = {
   id: string;
   name: string;
+  description: string | null;
   icon_url: string | null;
   thumbnail_url: string | null;
   created_at: string;

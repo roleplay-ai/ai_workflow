@@ -58,7 +58,7 @@ export default async function DashboardPage() {
       .order("position"),
     supabase.from("tool_logos").select("tool, logo_url"),
     supabase.from("activity_tags").select("name, icon_url"),
-    supabase.from("activity_functions").select("name, icon_url, thumbnail_url"),
+    supabase.from("activity_functions").select("name, icon_url, thumbnail_url, description"),
     supabase.from("tool_deep_dives").select("*").eq("published", true).order("position"),
   ]);
 
@@ -69,10 +69,12 @@ export default async function DashboardPage() {
 
   const functionLogos: Record<string, string> = {};
   const functionThumbnails: Record<string, string> = {};
+  const functionDescriptions: Record<string, string> = {};
   for (const row of functionRows ?? []) {
     const key = (row.name as string).toLowerCase();
     if (row.icon_url) functionLogos[key] = row.icon_url as string;
     if ((row as any).thumbnail_url) functionThumbnails[key] = (row as any).thumbnail_url as string;
+    if ((row as any).description) functionDescriptions[key] = (row as any).description as string;
   }
 
   const fullProfile = profile ? { ...profile, companies: company } : null;
@@ -90,6 +92,7 @@ export default async function DashboardPage() {
       tagLogos={tagLogos}
       functionLogos={functionLogos}
       functionThumbnails={functionThumbnails}
+      functionDescriptions={functionDescriptions}
       toolFilters={toolFilters}
       deepDives={deepDives ?? []}
       isLoggedIn={!!user}
