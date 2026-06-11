@@ -24,7 +24,7 @@ export default async function FunctionsPage() {
 
   const { data: functions } = await supabase
     .from("activity_functions")
-    .select("id, name, icon_url, thumbnail_url, created_at")
+    .select("id, name, description, icon_url, thumbnail_url, created_at")
     .order("name");
 
   return (

@@ -1018,6 +1018,7 @@
   object-position: center top;
   display: block;
   border-radius: 20px 20px 0 0;
+  z-index: 1;
 }
 .ndb-root .fn-card-thumb {
   position: absolute;
@@ -1027,6 +1028,7 @@
   object-fit: cover;
   object-position: center;
   display: block;
+  z-index: 1;
 }
 .ndb-root .fn-card-icon-large {
   width: 60px;
@@ -1062,6 +1064,21 @@
   z-index: 2;
 }
 
+.ndb-root .fn-count-tag {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: .01em;
+  box-shadow: 0 2px 8px rgba(34,29,35,.22);
+  white-space: nowrap;
+  z-index: 3;
+}
+
 .ndb-root .fn-card-body {
   padding: 13px 15px 14px;
 }
@@ -1069,7 +1086,7 @@
   font-size: 14px;
   font-weight: 800;
   color: #221D23;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
   letter-spacing: -.01em;
   white-space: nowrap;
   overflow: hidden;
@@ -1082,12 +1099,23 @@
   font-size: 12px;
   font-weight: 600;
   color: #746F78;
+  margin-bottom: 0;
 }
 .ndb-root .fn-card-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
+}
+.ndb-root .fn-card-desc {
+  margin: 7px 0 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #746F78;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* ── Pagination row ──────────────────────────────────────────────────────── */
@@ -1264,6 +1292,76 @@
   padding: 6px 9px;
   font-size: 10px;
   font-weight: 900;
+}
+
+/* ── Dark card variant (New section) ────────────────────────────────────────── */
+
+.ndb-root .dark-card {
+  background: #221D23;
+  border-color: rgba(255, 255, 255, 0.07);
+}
+
+.ndb-root .dark-card:hover,
+.ndb-root .rail-card-slot.is-active .dark-card,
+.ndb-root .rail-card-slot:hover .dark-card {
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 20px 52px rgba(0, 0, 0, 0.52);
+}
+
+.ndb-root .dark-card .card-body {
+  background: #221D23;
+}
+
+.ndb-root .dark-card .card-title {
+  color: #FFFFFF;
+}
+
+.ndb-root .dark-card .card-desc {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.ndb-root .dark-card:hover .card-desc {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.ndb-root .dark-card .time-chip {
+  background: #FFCE00;
+  color: #221D23;
+}
+
+/* ── Yellow card variant (AI Mastery) ───────────────────────────────────────── */
+
+.ndb-root .yellow-card {
+  background: #FFCE00;
+  border-color: #E8B800;
+}
+
+.ndb-root .yellow-card:hover,
+.ndb-root .rail-card-slot.is-active .yellow-card,
+.ndb-root .rail-card-slot:hover .yellow-card {
+  border-color: #C9A000;
+  box-shadow: 0 20px 52px rgba(255, 206, 0, 0.32);
+}
+
+.ndb-root .yellow-card .card-body {
+  background: #FFCE00;
+}
+
+.ndb-root .yellow-card .card-title {
+  color: #221D23;
+}
+
+.ndb-root .yellow-card .card-desc {
+  color: rgba(34, 29, 35, 0.7);
+}
+
+.ndb-root .yellow-card:hover .card-desc {
+  color: rgba(34, 29, 35, 0.7);
+}
+
+.ndb-root .yellow-card .time-chip {
+  background: #221D23;
+  color: #FFCE00;
 }
 
 /* ── Tools Band ──────────────────────────────────────────────────────────── */

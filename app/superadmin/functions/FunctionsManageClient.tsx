@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import Topbar from "@/components/Topbar";
 import type { Profile, ActivityFunction } from "@/lib/supabase/types";
 
-type FnRow = Pick<ActivityFunction, "id" | "name" | "icon_url" | "thumbnail_url" | "created_at">;
+type FnRow = Pick<ActivityFunction, "id" | "name" | "description" | "icon_url" | "thumbnail_url" | "created_at">;
 
 type Props = {
   profile: Profile & { companies: { name: string } | null };
@@ -27,12 +27,17 @@ const btnDanger: React.CSSProperties = {
 
 export default function FunctionsManageClient({ profile, functions: initFunctions }: Props) {
   const supabase = createClient();
-  const [functions, setFunctions] = useState<FnRow[]>(initFunctions);
-  const [uploading, setUploading] = useState<string | null>(null);
-  const [message, setMessage]     = useState<{ text: string; ok: boolean } | null>(null);
-  const [newName, setNewName]     = useState("");
-  const [creating, setCreating]   = useState(false);
+  const [functions, setFunctions]   = useState<FnRow[]>(initFunctions);
+  const [uploading, setUploading]   = useState<string | null>(null);
+  const [message, setMessage]       = useState<{ text: string; ok: boolean } | null>(null);
+  const [newName, setNewName]       = useState("");
+  const [creating, setCreating]     = useState(false);
   const [showCreate, setShowCreate] = useState(false);
+  // description drafts: fnId → draft text
+  const [descDrafts, setDescDrafts] = useState<Record<string, string>>(() =>
+    Object.fromEntries(initFunctions.map(f => [f.id, f.description ?? ""]))
+  );
+  const [savingDesc, setSavingDesc] = useState<string | null>(null);
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -44,6 +49,21 @@ export default function FunctionsManageClient({ profile, functions: initFunction
     setTimeout(() => setMessage(null), 3500);
   }
 
+  async function saveDescription(fnId: string, fnName: string) {
+    const description = (descDrafts[fnId] ?? "").trim() || null;
+    setSavingDesc(fnId);
+    const { error } = await supabase
+      .from("activity_functions")
+      .update({ description })
+      .eq("id", fnId);
+    if (error) { toast(`Failed to save: ${error.message}`, false); }
+    else {
+      setFunctions(prev => prev.map(f => f.id === fnId ? { ...f, description } : f));
+      toast(`Description saved for "${fnName}".`);
+    }
+    setSavingDesc(null);
+  }
+
   async function createFunction(e: React.FormEvent) {
     e.preventDefault();
     const name = newName.trim();
@@ -52,11 +72,12 @@ export default function FunctionsManageClient({ profile, functions: initFunction
     const { data, error } = await supabase
       .from("activity_functions")
       .insert({ name })
-      .select("id, name, icon_url, thumbnail_url, created_at")
+      .select("id, name, description, icon_url, thumbnail_url, created_at")
       .single();
     if (error) { toast(`Error: ${error.message}`, false); }
     else if (data) {
       setFunctions(prev => [...prev, data as FnRow].sort((a, b) => a.name.localeCompare(b.name)));
+      setDescDrafts(prev => ({ ...prev, [(data as FnRow).id]: "" }));
       setNewName("");
       setShowCreate(false);
       toast(`Created function "${name}".`);
@@ -253,6 +274,33 @@ export default function FunctionsManageClient({ profile, functions: initFunction
                         Added {new Date(fn.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                       </div>
                     </div>
+                  </div>
+
+                  {/* Description */}
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#746F78", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>
+                      Description
+                    </div>
+                    <textarea
+                      rows={3}
+                      value={descDrafts[fn.id] ?? ""}
+                      onChange={e => setDescDrafts(prev => ({ ...prev, [fn.id]: e.target.value }))}
+                      placeholder="Short description shown on the dashboard function card…"
+                      style={{
+                        width: "100%", boxSizing: "border-box",
+                        padding: "8px 10px", borderRadius: 8,
+                        border: "1.5px solid #E8E6DC", fontSize: 12.5,
+                        fontFamily: "inherit", outline: "none", resize: "vertical",
+                        lineHeight: 1.5, color: "#221D23",
+                      }}
+                    />
+                    <button
+                      onClick={() => void saveDescription(fn.id, fn.name)}
+                      disabled={savingDesc === fn.id}
+                      style={{ ...btnPrimary, marginTop: 6, padding: "6px 14px", fontSize: 12 }}
+                    >
+                      {savingDesc === fn.id ? "Saving…" : "Save description"}
+                    </button>
                   </div>
 
                   {/* Upload sections */}
