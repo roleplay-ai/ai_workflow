@@ -81,6 +81,12 @@ export type ToolLogo = {
   updated_at: string;
 };
 
+export type AIMasteryProgress = {
+  user_id: string;
+  module_id: string;
+  completed_at: string;
+};
+
 
 
 export type SlideImage = { url: string; caption?: string };
