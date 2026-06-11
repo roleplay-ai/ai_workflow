@@ -711,11 +711,13 @@ function AIMasteryCourseSection({ completedCount, isLoggedIn }: { completedCount
   const href = isLoggedIn ? "/ai-mastery" : "/login";
 
   return (
-    <section style={{ margin: "0 0 32px" }} id="ai-mastery-course">
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-        <span style={{ fontSize: 11, fontWeight: 900, color: "#746F78", textTransform: "uppercase", letterSpacing: ".08em" }}>
-          Course
-        </span>
+    <section style={{ margin: "48px 0 32px" }} id="ai-mastery-course">
+      <div className="rail-header" style={{ marginBottom: 16 }}>
+        <div className="rail-title">
+          <span className="section-label">Featured course</span>
+          <h2>AI Mastery Course</h2>
+          <p>Go from AI basics to advanced workflows — 10 parts, 30 modules.</p>
+        </div>
       </div>
       <Link
         href={href}
