@@ -7,6 +7,7 @@ import { resolveToolLogoUrl, type ToolLogoMap } from "@/lib/toolLogos";
 import { deepDiveHref, deepDiveLabel } from "@/lib/deepDives";
 import { formatToolLabel, normalizeActivityTools } from "@/lib/tools";
 import RotatingTools from "@/components/RotatingTools";
+import ActivityCard, { Scene, getTheme, timeLabel, type CardVariant } from "./ActivityCard";
 import "./netflix-dashboard.css";
 
 type Props = {
@@ -23,34 +24,7 @@ type Props = {
   isLoggedIn: boolean;
 };
 
-// ── Scene theme system ────────────────────────────────────────────────────
-
-type LeftEl  = "spreadsheet" | "person-purple" | "person-green" | "person-red" | "doc-stack" | "ticket-cloud";
-type RightEl = "deck" | "scorecard" | "result-card" | "tool-ui" | "theme-map";
-type SparkV  = "s1" | "s2";
-
-type SceneTheme = {
-  posterColor: "green" | "blue" | "purple" | "orange" | "warm";
-  left: LeftEl;
-  right: RightEl;
-  spark?: SparkV;
-};
-
-const THEMES: SceneTheme[] = [
-  { posterColor: "green",  left: "spreadsheet",   right: "deck",        spark: "s1" },
-  { posterColor: "blue",   left: "person-purple",  right: "scorecard",   spark: "s1" },
-  { posterColor: "purple", left: "doc-stack",      right: "result-card", spark: "s2" },
-  { posterColor: "orange", left: "person-green",   right: "tool-ui",     spark: "s1" },
-  { posterColor: "blue",   left: "ticket-cloud",   right: "theme-map"               },
-  { posterColor: "green",  left: "doc-stack",      right: "tool-ui",     spark: "s1" },
-  { posterColor: "purple", left: "spreadsheet",    right: "result-card", spark: "s2" },
-];
-
-function getTheme(id: string): SceneTheme {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) { h = ((h << 5) - h) + id.charCodeAt(i); h |= 0; }
-  return THEMES[Math.abs(h) % THEMES.length];
-}
+// ── Colour helpers ────────────────────────────────────────────────────────
 
 function toolColor(tool: string): string {
   if (tool === "claude")             return "#623CEA";
@@ -71,50 +45,6 @@ function fnColor(fn: string): string {
   return "#746F78";
 }
 
-
-function timeLabel(a: Activity): string {
-  if (a.time_estimate_minutes) return `${a.time_estimate_minutes} min`;
-  if (a.points)                 return `${a.points} pts`;
-  return "";
-}
-
-// ── Illustration components ───────────────────────────────────────────────
-
-function Person({ shirt }: { shirt: "red" | "purple" | "green" }) {
-  return (
-    <div className={`person ${shirt}-shirt`}>
-      <span className="hair" /><span className="head" /><span className="body" />
-      <span className="arm left" /><span className="arm right" />
-      <span className="leg left" /><span className="leg right" />
-    </div>
-  );
-}
-
-function Scene({ theme }: { theme: SceneTheme }) {
-  const left =
-    theme.left === "spreadsheet"   ? <div className="spreadsheet" /> :
-    theme.left === "doc-stack"     ? <div className="document-stack"><span className="doc" /><span className="doc" /><span className="doc" /></div> :
-    theme.left === "ticket-cloud"  ? <div className="ticket-cloud"><span className="ticket" /><span className="ticket" /><span className="ticket" /></div> :
-    theme.left === "person-purple" ? <Person shirt="purple" /> :
-    theme.left === "person-green"  ? <Person shirt="green" /> :
-                                     <Person shirt="red" />;
-
-  const right =
-    theme.right === "deck"        ? <div className="deck" /> :
-    theme.right === "scorecard"   ? <div className="scorecard" /> :
-    theme.right === "result-card" ? <div className="result-card" /> :
-    theme.right === "tool-ui"     ? <div className="tool-ui" /> :
-                                    <div className="theme-map"><span /><span /><span /></div>;
-
-  return (
-    <div className="scene">
-      {left}
-      <div className="arrow-flow" />
-      {right}
-      {theme.spark && <div className={`spark ${theme.spark}`} />}
-    </div>
-  );
-}
 
 // ── SignUpCard modal ──────────────────────────────────────────────────────
 
@@ -186,108 +116,6 @@ function SignUpCard({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ── WorkflowCard ──────────────────────────────────────────────────────────
-
-function WorkflowCard({
-  activity,
-  focusStyle,
-  isLoggedIn,
-  onSignUpRequired,
-  toolLogos,
-  variant = "default",
-}: {
-  activity: Activity;
-  focusStyle: React.CSSProperties;
-  isLoggedIn: boolean;
-  onSignUpRequired: () => void;
-  toolLogos: ToolLogoMap;
-  variant?: "default" | "dark" | "yellow";
-}) {
-  const theme      = getTheme(activity.id);
-  const tools      = normalizeActivityTools(activity.tools);
-  const chip       = timeLabel(activity);
-  const isLocked   = !isLoggedIn && !!activity.is_locked;
-
-  const cardClass = `workflow-card${variant === "dark" ? " dark-card" : variant === "yellow" ? " yellow-card" : ""}`;
-  const chipBorderColor = variant === "dark" ? "rgba(255,255,255,0.2)" : "#E5E0D8";
-  const chipLabelColor  = variant === "dark" ? "#FFFFFF" : "#221D23";
-
-  const inner = (
-    <>
-      {activity.is_featured && <span className="new-badge">New</span>}
-      <div className={`card-poster ${theme.posterColor}${activity.thumbnail_url ? " has-thumbnail" : ""}`}>
-        {activity.thumbnail_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            className="card-thumbnail"
-            src={activity.thumbnail_url}
-            alt={activity.title}
-          />
-        ) : (
-          <Scene theme={theme} />
-        )}
-        {isLocked && (
-          <div style={{
-            position: "absolute", inset: 0, zIndex: 4,
-            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-            background: "rgba(34,29,35,0.52)", backdropFilter: "blur(3px)",
-            borderRadius: "inherit", gap: 6,
-          }}>
-            <div style={{
-              width: 38, height: 38, borderRadius: "50%",
-              background: "rgba(255,255,255,0.15)", border: "1.5px solid rgba(255,255,255,0.25)",
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17,
-            }}>🔒</div>
-            <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.85)", letterSpacing: ".02em" }}>
-              Sign in to unlock
-            </span>
-          </div>
-        )}
-      </div>
-      <div className="card-body">
-        <div className="meta-line">
-          {tools.length > 0 && (
-            <RotatingTools
-              tools={tools}
-              toolLogos={toolLogos}
-              iconSize={14}
-              insetScale={0.9}
-              borderColor={chipBorderColor}
-              labelColor={chipLabelColor}
-              labelSize={10}
-              chipStyle={{ padding: "6px 9px 6px 6px", fontWeight: 900 }}
-            />
-          )}
-          {chip && <span className="time-chip">{chip}</span>}
-        </div>
-        <h3 className="card-title">{activity.title}</h3>
-        <p className="card-desc">{activity.description}</p>
-      </div>
-    </>
-  );
-
-  if (isLocked) {
-    return (
-      <div
-        className={cardClass}
-        style={{ ...focusStyle, cursor: "pointer" }}
-        onClick={onSignUpRequired}
-        role="button"
-        tabIndex={0}
-        onKeyDown={e => { if (e.key === "Enter" || e.key === " ") onSignUpRequired(); }}
-      >
-        {inner}
-      </div>
-    );
-  }
-
-  return (
-    <Link href={`/activity/${activity.id}`} className={cardClass} style={focusStyle}>
-      {inner}
-    </Link>
-  );
-}
-
 // ── AllWorkflowsSection ───────────────────────────────────────────────────
 
 const PAGE_SIZE = 10;
@@ -353,6 +181,7 @@ function AllWorkflowsSection({
     <div id="all-workflows">
       <HorizontalRail
         key={`${selectedFunction ?? "all"}-${selectedTool ?? "all"}-${page}`}
+        label="Full library"
         title={title}
         subtitle={subtitle}
         activities={pageItems}
@@ -459,6 +288,7 @@ function FunctionsCarousel({
     <section className="rail functions-rail">
       <div className="rail-header">
         <div className="rail-title">
+          <span className="section-label">Filter by role</span>
           <h2>Browse by function</h2>
           <p>Select a function to filter All Workflows above.</p>
         </div>
@@ -491,15 +321,16 @@ function FunctionsCarousel({
 // ── HorizontalRail ────────────────────────────────────────────────────────
 
 function HorizontalRail({
-  title, subtitle, activities, isLoggedIn, onSignUpRequired, toolLogos, variant = "default",
+  title, subtitle, label, activities, isLoggedIn, onSignUpRequired, toolLogos, variant = "default",
 }: {
   title: string;
   subtitle: string;
+  label?: string;
   activities: Activity[];
   isLoggedIn: boolean;
   onSignUpRequired: () => void;
   toolLogos: ToolLogoMap;
-  variant?: "default" | "dark" | "yellow";
+  variant?: CardVariant;
 }) {
   const rowRef = useRef<HTMLDivElement>(null);
   const [focusedIdx, setFocusedIdx] = useState(0);
@@ -580,6 +411,7 @@ function HorizontalRail({
     <section className="rail">
       <div className="rail-header">
         <div className="rail-title">
+          {label && <span className={`section-label${variant === "yellow" ? " section-label--yellow" : ""}`}>{label}</span>}
           <h2>{title}</h2>
           <p>{subtitle}</p>
         </div>
@@ -605,7 +437,7 @@ function HorizontalRail({
                 className={`rail-card-slot${active ? " is-active" : ""}`}
                 onMouseEnter={() => { setHoveredIdx(i); isPausedRef.current = true; }}
               >
-                <WorkflowCard activity={a} focusStyle={style} isLoggedIn={isLoggedIn} onSignUpRequired={onSignUpRequired} toolLogos={toolLogos} variant={variant} />
+                <ActivityCard activity={a} focusStyle={style} isLoggedIn={isLoggedIn} onSignUpRequired={onSignUpRequired} toolLogos={toolLogos} variant={variant} />
               </div>
             );
           })}
@@ -656,8 +488,8 @@ function HeroSection({
         {/* Left column */}
         <div>
           <div className="eyebrow"><span className="eyebrow-dot" /> Updated every week</div>
-          <h1>Discover AI workflows worth trying at work</h1>
-          <p>Choose your AI tool, pick your function, and explore guided workflows built around real workplace moments.</p>
+          <h1>Practical AI workflows for your daily work</h1>
+          <p>Discover and run guided AI automations tailored to your tool stack and job function.</p>
 
           <div className="selector-row">
             <label className="select-wrap">
@@ -991,6 +823,7 @@ export default function DashboardClient({ profile, activities, progress, toolFil
         {/* Section 1: New — dark cards */}
         {newActivities.length > 0 && (
           <HorizontalRail
+            label="New this week"
             title="Newly added workflows this week"
             subtitle="Fresh workflows added for this week's practice."
             activities={newActivities}
@@ -1004,6 +837,7 @@ export default function DashboardClient({ profile, activities, progress, toolFil
         {/* Section 1b: Continue where you left off (in_progress, logged-in only) */}
         {isLoggedIn && pendingActivities.length > 0 && (
           <HorizontalRail
+            label="In progress"
             title="Continue where you left off"
             subtitle={`You have ${pendingActivities.length} workflow${pendingActivities.length !== 1 ? "s" : ""} in progress.`}
             activities={pendingActivities}
@@ -1016,6 +850,7 @@ export default function DashboardClient({ profile, activities, progress, toolFil
         {/* Section 2: AI Mastery — yellow cards */}
         {masteryActivities.length > 0 && (
           <HorizontalRail
+            label="Core practice"
             title="AI Mastery"
             subtitle="Core workflows for improving AI fluency and everyday practice."
             activities={masteryActivities}
@@ -1049,6 +884,7 @@ export default function DashboardClient({ profile, activities, progress, toolFil
         {/* Section last: Completed Workflows (logged-in only) */}
         {isLoggedIn && completedActivities.length > 0 && (
           <HorizontalRail
+            label="Done"
             title="Completed Workflows"
             subtitle={`${completedActivities.length} workflow${completedActivities.length !== 1 ? "s" : ""} you've finished — revisit anytime.`}
             activities={completedActivities}
