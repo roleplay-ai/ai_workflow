@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import ExplorePageClient from "./ExplorePageClient";
 
 export const dynamic = "force-dynamic";
@@ -8,13 +8,10 @@ export default async function ExplorePage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
+  const { data: profile } = user
+    ? await supabase.from("profiles").select("role").eq("id", user.id).single()
+    : { data: null };
 
   let query = supabase.from("tool_deep_dives").select("*").eq("id", id);
   if (profile?.role !== "superadmin") {
