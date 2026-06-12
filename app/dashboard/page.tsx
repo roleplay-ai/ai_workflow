@@ -56,7 +56,6 @@ export default async function DashboardPage() {
     { data: toolLogoRows },
     { data: tagRows },
     { data: functionRows },
-    { data: deepDives },
   ] = await Promise.all([
     supabase
       .from("activities")
@@ -66,7 +65,6 @@ export default async function DashboardPage() {
     supabase.from("tool_logos").select("tool, logo_url"),
     supabase.from("activity_tags").select("name, icon_url"),
     supabase.from("activity_functions").select("name, icon_url, thumbnail_url, description"),
-    supabase.from("tool_deep_dives").select("*").eq("published", true).order("position"),
   ]);
 
   const tagLogos: Record<string, string> = {};
@@ -101,7 +99,6 @@ export default async function DashboardPage() {
       functionThumbnails={functionThumbnails}
       functionDescriptions={functionDescriptions}
       toolFilters={toolFilters}
-      deepDives={deepDives ?? []}
       isLoggedIn={!!user}
       masteryProgressCount={masteryProgressCount}
     />

@@ -2,9 +2,8 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import type { Activity, UserProgress, Profile, ToolDeepDive } from "@/lib/supabase/types";
+import type { Activity, UserProgress, Profile } from "@/lib/supabase/types";
 import { resolveToolLogoUrl, type ToolLogoMap } from "@/lib/toolLogos";
-import { deepDiveHref, deepDiveLabel } from "@/lib/deepDives";
 import { formatToolLabel, normalizeActivityTools } from "@/lib/tools";
 import RotatingTools from "@/components/RotatingTools";
 import ActivityCard, { Scene, getTheme, timeLabel, type CardVariant } from "./ActivityCard";
@@ -20,7 +19,6 @@ type Props = {
   functionThumbnails: Record<string, string>;
   functionDescriptions: Record<string, string>;
   toolFilters: string[];
-  deepDives: ToolDeepDive[];
   isLoggedIn: boolean;
   masteryProgressCount: number;
 };
@@ -589,117 +587,6 @@ function toolInitials(tool: string): string {
   return formatToolLabel(tool).slice(0, 3);
 }
 
-// ── ToolsBand (from published deep dives) ────────────────────────────────
-
-function ToolsBand({
-  deepDives,
-  toolLogos,
-}: {
-  deepDives: ToolDeepDive[];
-  toolLogos: ToolLogoMap;
-}) {
-  if (deepDives.length === 0) return null;
-
-  return (
-    <section className="tools-band" id="tools">
-      <div className="rail-header">
-        <div className="rail-title">
-          <h2>Know your tool</h2>
-          <p>Deep dives on the AI tools behind these workflows.</p>
-        </div>
-      </div>
-      <div className="tool-grid">
-        {deepDives.map(item => {
-          const slug = item.tool ?? "";
-          const href = deepDiveHref(item);
-          const isExternal = (item.link_type ?? "external") === "external";
-          const color = slug ? toolColor(slug) : "#FFCE00";
-          const logoUrl = slug ? resolveToolLogoUrl(slug, toolLogos) : null;
-          const desc = item.description ?? deepDiveLabel(item, formatToolLabel);
-
-          const inner = (
-            <>
-              <div>
-                <div className="tool-logo" style={{ color }}>
-                  {logoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={logoUrl} alt="" style={{ width: 32, height: 32, objectFit: "contain" }} />
-                  ) : slug ? (
-                    toolInitials(slug)
-                  ) : (
-                    "AI"
-                  )}
-                </div>
-                <h3>{item.title}</h3>
-                <p>{desc}</p>
-              </div>
-              <div className="tool-link">
-                <span>Explore →</span>
-              </div>
-            </>
-          );
-
-          const cardStyle: React.CSSProperties = { textDecoration: "none", color: "inherit" };
-
-          if (isExternal) {
-            return (
-              <a
-                key={item.id}
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="tool-card"
-                style={cardStyle}
-              >
-                {inner}
-              </a>
-            );
-          }
-
-          return (
-            <Link key={item.id} href={href} className="tool-card" style={cardStyle}>
-              {inner}
-            </Link>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-// ── POVSection (static) ──────────────────────────────────────────────────
-
-function POVSection() {
-  return (
-    <section className="pov" id="pov">
-      <a className="pov-card" href="/explore/perspective/ai-at-work" aria-label="Explore AI at Work: The Real Questions">
-        <div className="pov-card-copy">
-          <div className="pov-kicker">Thinking guide</div>
-          <h2>AI at Work: The Real Questions</h2>
-          <p>A clear guide to the messy questions behind AI adoption, automation, capability building, and work redesign.</p>
-          <div className="pov-chip-row">
-            <span>Adoption</span><span>Automation</span><span>Capability building</span>
-            <span>Work redesign</span><span>Human judgment</span><span>Enterprise rollouts</span>
-          </div>
-          <div className="pov-cta">Explore the guide →</div>
-        </div>
-        <div className="pov-visual" aria-hidden="true">
-          <div className="question-orbit">
-            <span className="orbit-chip c1">Jobs</span>
-            <span className="orbit-chip c2">Risk</span>
-            <span className="orbit-chip c3">Agents</span>
-            <span className="orbit-chip c4">Skills</span>
-            <div className="center-note">
-              <strong>AI</strong>
-              <small>at work</small>
-            </div>
-          </div>
-        </div>
-      </a>
-    </section>
-  );
-}
-
 // ── AIMasteryCourseSection ────────────────────────────────────────────────
 
 const TOTAL_COURSE_MODULES = 30;
@@ -796,7 +683,7 @@ function AIMasteryCourseSection({ completedCount, isLoggedIn }: { completedCount
 
 // ── DashboardClient ──────────────────────────────────────────────────────
 
-export default function DashboardClient({ profile, activities, progress, toolFilters, deepDives, toolLogos, functionLogos, functionThumbnails, functionDescriptions, isLoggedIn, masteryProgressCount }: Props) {
+export default function DashboardClient({ profile, activities, progress, toolFilters, toolLogos, functionLogos, functionThumbnails, functionDescriptions, isLoggedIn, masteryProgressCount }: Props) {
   const [selectedFunction, setSelectedFunction] = useState<string | null>(null);
   const [selectedTool,     setSelectedTool]     = useState<string | null>(null);
   const [showSignUp, setShowSignUp]             = useState(false);
@@ -879,6 +766,8 @@ export default function DashboardClient({ profile, activities, progress, toolFil
           <a href="#workflows">Workflows</a>
           <a href="#tools">AI Tools</a>
           <a href="#pov">Our POV</a>
+          <Link href="/ai-mastery">AI Mastery</Link>
+          <Link href="/ai-fluency">AI Fluency</Link>
         </div>
         <div className="nav-actions">
           {isLoggedIn ? (
@@ -989,12 +878,8 @@ export default function DashboardClient({ profile, activities, progress, toolFil
           />
         )}
 
-        <ToolsBand deepDives={deepDives} toolLogos={toolLogos} />
-
         {/* AI Mastery Course — visible to all, login required to open */}
         <AIMasteryCourseSection completedCount={masteryProgressCount} isLoggedIn={isLoggedIn} />
-
-        <POVSection />
       </main>
 
       {/* ── Footer ── */}
