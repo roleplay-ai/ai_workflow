@@ -76,6 +76,14 @@ const WORLD_CARD_COLORS = [
 
 const TOOL_ACCENTS = ["#17614B", "#326EA9", "#AA577C", "#C66D38", "#623CEA", "#1E8B5C"];
 
+// Tool-guide card colour cycle (purple → yellow → blue → green)
+const TOOL_GUIDE_COLORS = [
+  { bg: "#F4EFFD", border: "#DED1FF", accent: "#623CEA" },
+  { bg: "#FFF6CF", border: "#F0D978", accent: "#FFCE00" },
+  { bg: "#EEF7FF", border: "#CFE8FF", accent: "#3699FC" },
+  { bg: "#ECFFF4", border: "#C8F3DA", accent: "#23CE6B" },
+];
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatDate(d: string) {
@@ -637,126 +645,123 @@ export default function AIFluencyClient({
         </Carousel>
 
         {/* ── AI Tool Guides ── */}
-        <section style={{ marginTop: 72 }}>
-          <div style={{ marginBottom: 24 }}>
+        <section style={{ marginTop: 72 }} id="tool-guides">
+          <div style={{
+            display: "flex", alignItems: "flex-end", justifyContent: "space-between",
+            gap: 22, marginBottom: 24,
+          }}>
             <div style={{ position: "relative", paddingLeft: 22 }}>
               <div style={{
                 position: "absolute", left: 0, top: 4, width: 7, height: 58,
                 borderRadius: 999, background: "#FFCE00", border: "1px solid rgba(34,29,35,.18)",
               }} />
-              <h2 style={{ margin: 0, fontSize: 32, lineHeight: 1.03, fontWeight: 950, letterSpacing: "-.055em" }}>AI Tool Guides</h2>
+              <h2 style={{ margin: 0, fontSize: 32, lineHeight: 1.03, fontWeight: 950, letterSpacing: "-.055em" }}>
+                AI Tool Guides
+              </h2>
               <p style={{ margin: "8px 0 0", color: "#6B6670", fontSize: 14, fontWeight: 650, lineHeight: 1.45 }}>
-                Deep dives on the AI tools behind these workflows.
+                Understand how each major AI tool fits into real work.
               </p>
             </div>
           </div>
 
-          {/* Know Your Tools — deep dive cards (dark band) */}
+          {/* Deep-dive cards — same light card style, colour-cycled */}
           {deepDives.length > 0 && (
-            <div style={{
-              background: "#1C1720", borderRadius: 30, padding: 30,
-              border: "1px solid rgba(255,206,0,.24)", marginBottom: 20,
+            <div className="aif-tool-grid" style={{
+              display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 18,
+              marginBottom: toolGuides.length > 0 ? 18 : 0,
             }}>
-              <div className="aif-tool-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16 }}>
-                {deepDives.map(item => {
-                  const slug = item.tool ?? "";
-                  const href = deepDiveHref(item);
-                  const isExternal = (item.link_type ?? "external") === "external";
-                  const color = slug ? toolColor(slug) : "#FFCE00";
-                  const logoUrl = slug ? resolveToolLogoUrl(slug, toolLogos) : null;
-                  const desc = deepDiveLabel(item, formatToolLabel);
+              {deepDives.map((item, i) => {
+                const cycle      = TOOL_GUIDE_COLORS[i % TOOL_GUIDE_COLORS.length];
+                const slug       = item.tool ?? "";
+                const href       = deepDiveHref(item);
+                const isExternal = (item.link_type ?? "external") === "external";
+                const logoUrl    = slug ? resolveToolLogoUrl(slug, toolLogos) : null;
+                const desc       = deepDiveLabel(item, formatToolLabel);
 
-                  const cardInner = (
-                    <>
-                      <div>
-                        <div style={{
-                          width: 50, height: 50, borderRadius: 17, display: "grid", placeItems: "center",
-                          background: "rgba(255,255,255,.10)", border: `1px solid ${color}44`,
-                          color, fontSize: 14, fontWeight: 900, marginBottom: 16,
-                        }}>
-                          {logoUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={logoUrl} alt="" style={{ width: 32, height: 32, objectFit: "contain" }} />
-                          ) : (
-                            toolInitials(slug)
-                          )}
-                        </div>
-                        <h3 style={{ margin: "0 0 7px", fontSize: 18, fontWeight: 950, letterSpacing: "-.05em", color: "#fff", lineHeight: 1.15 }}>
-                          {item.title}
-                        </h3>
-                        <p style={{ margin: 0, color: "#D8D2DA", fontSize: 12, lineHeight: 1.45, fontWeight: 650 }}>
-                          {desc}
-                        </p>
+                const cardContent = (
+                  <>
+                    {/* Top accent stripe */}
+                    <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 6, background: cycle.accent }} />
+                    <div>
+                      <div style={{
+                        width: 46, height: 46, borderRadius: 15, display: "grid", placeItems: "center",
+                        background: "#fff", color: "#221D23", fontSize: 20, fontWeight: 950,
+                        marginBottom: 18, border: "1px solid rgba(34,29,35,.08)",
+                      }}>
+                        {logoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={logoUrl} alt="" style={{ width: 28, height: 28, objectFit: "contain" }} />
+                        ) : toolInitials(slug)}
                       </div>
-                      <div style={{ marginTop: 14, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                        <span style={{ fontSize: 12, fontWeight: 950, color: "#FFCE00" }}>Explore →</span>
-                      </div>
-                    </>
-                  );
+                      <h3 style={{ margin: "0 0 8px", fontSize: 18, lineHeight: 1.1, fontWeight: 950, letterSpacing: "-.04em", color: "#221D23" }}>
+                        {item.title}
+                      </h3>
+                      <p style={{ margin: "0 0 18px", color: "#514B53", fontSize: 13, lineHeight: 1.35, fontWeight: 650 }}>
+                        {desc}
+                      </p>
+                    </div>
+                    <span style={{ color: "#221D23", fontSize: 12, fontWeight: 950 }}>Explore guide →</span>
+                  </>
+                );
 
-                  const cardStyle: React.CSSProperties = {
-                    minHeight: 188, background: "rgba(255,255,255,.06)",
-                    border: "1px solid rgba(255,206,0,.22)", borderRadius: 22,
-                    padding: "20px 20px 16px", display: "flex", flexDirection: "column",
-                    justifyContent: "space-between", textDecoration: "none", color: "inherit",
-                    transition: "transform 0.18s ease, background 0.18s ease", cursor: "pointer",
-                  };
+                const cardStyle: React.CSSProperties = {
+                  minHeight: 188, padding: 22, borderRadius: 20,
+                  background: cycle.bg, border: `1px solid ${cycle.border}`,
+                  display: "flex", flexDirection: "column", justifyContent: "space-between",
+                  boxShadow: "0 18px 45px rgba(34,29,35,.08)",
+                  position: "relative", overflow: "hidden",
+                  textDecoration: "none", color: "inherit",
+                };
 
-                  if (isExternal) {
-                    return (
-                      <a key={item.id} href={href} target="_blank" rel="noopener noreferrer" style={cardStyle}>
-                        {cardInner}
-                      </a>
-                    );
-                  }
-                  return (
-                    <Link key={item.id} href={href} style={cardStyle}>
-                      {cardInner}
-                    </Link>
-                  );
-                })}
-              </div>
+                if (isExternal) {
+                  return <a key={item.id} href={href} target="_blank" rel="noopener noreferrer" style={cardStyle}>{cardContent}</a>;
+                }
+                return <Link key={item.id} href={href} style={cardStyle}>{cardContent}</Link>;
+              })}
             </div>
           )}
 
-          {/* Tool overview cards */}
+          {/* Tool-guide overview cards */}
           {toolGuides.length > 0 && (
             <div className="aif-tool-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 18 }}>
-              {toolGuides.map(g => (
-                <article
-                  key={g.id}
-                  className="aif-tool-card"
-                  style={{
+              {toolGuides.map((g, i) => {
+                const cycle  = TOOL_GUIDE_COLORS[i % TOOL_GUIDE_COLORS.length];
+                const bg     = g.bg_color     || cycle.bg;
+                const border = g.border_color || cycle.border;
+                const accent = g.accent_color || cycle.accent;
+                return (
+                  <article key={g.id} style={{
                     minHeight: 188, padding: 22, borderRadius: 20,
-                    background: g.bg_color, border: `1px solid ${g.border_color}`,
+                    background: bg, border: `1px solid ${border}`,
                     display: "flex", flexDirection: "column", justifyContent: "space-between",
                     boxShadow: "0 18px 45px rgba(34,29,35,.08)",
                     position: "relative", overflow: "hidden",
-                    ["--aif-guide-accent" as string]: g.accent_color,
-                  }}
-                >
-                  <div>
-                    <div style={{
-                      width: 46, height: 46, borderRadius: 15, display: "grid", placeItems: "center",
-                      background: "#fff", color: "#221D23", fontSize: 20, fontWeight: 950,
-                      marginBottom: 18, border: "1px solid rgba(34,29,35,.08)",
-                    }}>{g.logo_letter}</div>
-                    <h3 style={{ margin: "0 0 8px", fontSize: 18, lineHeight: 1.1, fontWeight: 950, letterSpacing: "-.04em", color: "#221D23" }}>
-                      {g.name}
-                    </h3>
-                    <p style={{ margin: "0 0 18px", color: "#514B53", fontSize: 13, lineHeight: 1.35, fontWeight: 650 }}>
-                      {g.description}
-                    </p>
-                  </div>
-                  {g.guide_url ? (
-                    <Link href={g.guide_url} style={{ color: "#221D23", fontSize: 12, fontWeight: 950, textDecoration: "none" }}>
-                      Explore guide →
-                    </Link>
-                  ) : (
-                    <span style={{ color: "#6B6670", fontSize: 12, fontWeight: 950 }}>Guide coming soon</span>
-                  )}
-                </article>
-              ))}
+                  }}>
+                    {/* Top accent stripe */}
+                    <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 6, background: accent }} />
+                    <div>
+                      <div style={{
+                        width: 46, height: 46, borderRadius: 15, display: "grid", placeItems: "center",
+                        background: "#fff", color: "#221D23", fontSize: 20, fontWeight: 950,
+                        marginBottom: 18, border: "1px solid rgba(34,29,35,.08)",
+                      }}>{g.logo_letter}</div>
+                      <h3 style={{ margin: "0 0 8px", fontSize: 18, lineHeight: 1.1, fontWeight: 950, letterSpacing: "-.04em", color: "#221D23" }}>
+                        {g.name}
+                      </h3>
+                      <p style={{ margin: "0 0 18px", color: "#514B53", fontSize: 13, lineHeight: 1.35, fontWeight: 650 }}>
+                        {g.description}
+                      </p>
+                    </div>
+                    {g.guide_url ? (
+                      <Link href={g.guide_url} style={{ color: "#221D23", fontSize: 12, fontWeight: 950, textDecoration: "none" }}>
+                        Explore guide →
+                      </Link>
+                    ) : (
+                      <span style={{ color: "#6B6670", fontSize: 12, fontWeight: 950 }}>Guide coming soon</span>
+                    )}
+                  </article>
+                );
+              })}
             </div>
           )}
         </section>
