@@ -13,6 +13,7 @@ export default async function DashboardPage() {
   let profile = null;
   let company = null;
   let progress: unknown[] = [];
+  let masteryProgressCount = 0;
 
   if (user) {
     const { data: profileData, error: profileError } = await supabase
@@ -41,6 +42,12 @@ export default async function DashboardPage() {
       .select("*")
       .eq("user_id", user.id);
     progress = progressData ?? [];
+
+    const { data: masteryRows } = await supabase
+      .from("ai_mastery_progress")
+      .select("module_id")
+      .eq("user_id", user.id);
+    masteryProgressCount = (masteryRows ?? []).length;
   }
 
   // Activities and static data fetched for all visitors
@@ -96,6 +103,7 @@ export default async function DashboardPage() {
       toolFilters={toolFilters}
       deepDives={deepDives ?? []}
       isLoggedIn={!!user}
+      masteryProgressCount={masteryProgressCount}
     />
   );
 }

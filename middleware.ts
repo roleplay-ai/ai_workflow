@@ -38,10 +38,14 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // Not logged in — only block admin/superadmin routes; everything else is guest-accessible
+  // Not logged in — block admin, superadmin, and ai-mastery routes
   if (!user) {
-    if (path.startsWith("/admin") || path.startsWith("/superadmin")) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+    if (
+      path.startsWith("/admin") ||
+      path.startsWith("/superadmin") ||
+      path.startsWith("/ai-mastery")
+    ) {
+      return NextResponse.redirect(new URL("/login", request.url));
     }
     return supabaseResponse;
   }
