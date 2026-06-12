@@ -23,7 +23,7 @@ type ApplyVideo = {
   thumbnail_url: string | null; duration: string | null; order_index: number;
   is_locked: boolean; group_name: string | null; category_tag: string | null;
 };
-type FluencyTool  = { id: string; category_label: string; name: string; description: string; icon_emoji: string; company_name: string; try_url: string | null };
+type FluencyTool  = { id: string; category_label: string; name: string; description: string; icon_emoji: string | null; letter: string | null; color: string | null; company_name: string | null; try_url: string | null; best_for: string | null; pricing: string | null; is_featured: boolean };
 type ToolGuide    = { id: string; name: string; logo_letter: string; description: string; accent_color: string; bg_color: string; border_color: string; guide_url: string | null };
 type Props = {
   brief:               Brief | null;
@@ -608,7 +608,7 @@ export default function AIFluencyClient({
                 key={t.id}
                 className="aif-product-card"
                 style={{
-                  scrollSnapAlign: "start", height: 222, borderRadius: 20,
+                  scrollSnapAlign: "start", height: 258, borderRadius: 20,
                   padding: "18px 18px 16px", color: "#221D23",
                   display: "flex", flexDirection: "column", justifyContent: "space-between",
                   overflow: "hidden", position: "relative", background: "#fff",
@@ -623,36 +623,47 @@ export default function AIFluencyClient({
                   </div>
                   <div style={{ display: "flex", gap: 12, alignItems: "center", margin: "12px 0" }}>
                     <span style={{
-                      width: 42, height: 42, borderRadius: 12, background: "#FFF6CF",
-                      border: "1px solid #F0D978", display: "grid", placeItems: "center",
-                      fontSize: 19, flexShrink: 0,
-                    }}>{t.icon_emoji}</span>
+                      width: 42, height: 42, borderRadius: 12, flexShrink: 0,
+                      background: t.color ?? "#FFCE00",
+                      display: "grid", placeItems: "center",
+                      fontSize: t.letter ? 18 : 19, fontWeight: 950, color: "#fff",
+                      letterSpacing: "-.02em",
+                    }}>{t.letter ?? t.icon_emoji}</span>
                     <h3 style={{ margin: 0, fontSize: 18, lineHeight: 1, fontWeight: 950, letterSpacing: "-.035em" }}>{t.name}</h3>
                   </div>
-                  <p style={{ margin: 0, fontSize: 12, lineHeight: 1.38, fontWeight: 650, color: "#514B53" }}>{t.description}</p>
+                  <p style={{
+                    margin: 0, fontSize: 12, lineHeight: 1.38, fontWeight: 650, color: "#514B53",
+                    display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden",
+                  }}>{t.description}</p>
                 </div>
 
                 <div style={{
-                  position: "relative", zIndex: 1, display: "flex", alignItems: "center",
-                  justifyContent: "space-between", gap: 10, paddingTop: 14,
+                  position: "relative", zIndex: 1, paddingTop: 12,
                   borderTop: "1px solid #E9E4DC",
                 }}>
-                  <span style={{ fontSize: 11, color: "#6B6670", fontWeight: 850 }}>
-                    by <strong style={{ color: "#221D23" }}>{t.company_name}</strong>
-                  </span>
-                  {t.try_url ? (
-                    <a href={t.try_url} target="_blank" rel="noopener noreferrer" style={{
-                      display: "inline-flex", background: "#FFCE00", color: "#221D23",
-                      borderRadius: 999, padding: "8px 13px", fontSize: 11, fontWeight: 950,
-                      whiteSpace: "nowrap", border: "1px solid rgba(34,29,35,.10)", textDecoration: "none",
-                    }}>Try it →</a>
-                  ) : (
-                    <span style={{
-                      display: "inline-flex", background: "#F7F2E9", color: "#6B6670",
-                      borderRadius: 999, padding: "8px 13px", fontSize: 11, fontWeight: 950,
-                      whiteSpace: "nowrap", border: "1px solid #E9E4DC",
-                    }}>Coming soon</span>
+                  {t.pricing && (
+                    <div style={{ fontSize: 10, color: "#6B6670", fontWeight: 800, marginBottom: 8 }}>
+                      {t.pricing}
+                    </div>
                   )}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                    <span style={{ fontSize: 11, color: "#6B6670", fontWeight: 850 }}>
+                      {t.company_name ? <>by <strong style={{ color: "#221D23" }}>{t.company_name}</strong></> : null}
+                    </span>
+                    {t.try_url ? (
+                      <a href={t.try_url} target="_blank" rel="noopener noreferrer" style={{
+                        display: "inline-flex", background: "#FFCE00", color: "#221D23",
+                        borderRadius: 999, padding: "8px 13px", fontSize: 11, fontWeight: 950,
+                        whiteSpace: "nowrap", border: "1px solid rgba(34,29,35,.10)", textDecoration: "none",
+                      }}>Try it →</a>
+                    ) : (
+                      <span style={{
+                        display: "inline-flex", background: "#F7F2E9", color: "#6B6670",
+                        borderRadius: 999, padding: "8px 13px", fontSize: 11, fontWeight: 950,
+                        whiteSpace: "nowrap", border: "1px solid #E9E4DC",
+                      }}>Coming soon</span>
+                    )}
+                  </div>
                 </div>
               </article>
             );
