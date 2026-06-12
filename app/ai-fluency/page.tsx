@@ -6,6 +6,9 @@ export const dynamic = "force-dynamic";
 export default async function AIFluencyPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  const { data: profile } = user
+    ? await supabase.from("profiles").select("full_name, role").eq("id", user.id).single()
+    : { data: null };
 
   const [
     { data: briefs },
@@ -79,6 +82,8 @@ export default async function AIFluencyPage() {
       deepDives={(deepDives ?? []) as any}
       toolLogos={toolLogos}
       completedModuleIds={completedModuleIds}
+      userName={(profile as any)?.full_name ?? null}
+      isAdmin={(profile as any)?.role === "superadmin"}
     />
   );
 }

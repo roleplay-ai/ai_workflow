@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
+import AppNav from "@/components/AppNav";
 import { deepDiveHref, deepDiveLabel } from "@/lib/deepDives";
 import { formatToolLabel } from "@/lib/tools";
 import { resolveToolLogoUrl, type ToolLogoMap } from "@/lib/toolLogos";
@@ -34,6 +35,8 @@ type Props = {
   deepDives:           ToolDeepDive[];
   toolLogos:           ToolLogoMap;
   completedModuleIds:  string[];
+  userName?:           string | null;
+  isAdmin?:            boolean;
 };
 
 // ── Deep-dive helpers ────────────────────────────────────────────────────────
@@ -156,6 +159,7 @@ function Carousel({
 
 export default function AIFluencyClient({
   brief, worlds, videos, tools, toolGuides, deepDives, toolLogos, completedModuleIds,
+  userName, isAdmin,
 }: Props) {
   const sortedItems = brief
     ? [...brief.fluency_brief_items].sort((a, b) => a.sort_order - b.sort_order)
@@ -190,45 +194,7 @@ export default function AIFluencyClient({
       letterSpacing: "-.01em",
     }}>
 
-      {/* ── Topbar ── */}
-      <header style={{
-        position: "sticky", top: 0, zIndex: 20, height: 66,
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "0 36px", background: "rgba(254,252,250,.88)",
-        backdropFilter: "blur(18px)", borderBottom: "1px solid #E9E4DC",
-      }}>
-        <Link href="/dashboard" style={{
-          display: "flex", alignItems: "center", gap: 10, fontWeight: 900,
-          fontSize: 15, color: "#221D23", textDecoration: "none",
-        }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/icon.png" alt="" width={26} height={26} style={{ borderRadius: "50%" }} />
-          <span>Nudgeable AI Work Studio</span>
-        </Link>
-
-        <nav style={{ display: "flex", alignItems: "center", gap: 28, fontSize: 13, fontWeight: 800, color: "#3B363D" }}>
-          <Link href="/dashboard" style={{
-            padding: "9px 0", borderBottom: "3px solid transparent",
-            color: "#3B363D", textDecoration: "none",
-          }}>Workflows</Link>
-          <Link href="/ai-mastery" style={{
-            padding: "9px 0", borderBottom: "3px solid transparent",
-            color: "#3B363D", textDecoration: "none",
-          }}>AI Mastery</Link>
-          <Link href="/ai-fluency" style={{
-            padding: "9px 0", borderBottom: "3px solid #FFCE00",
-            color: "#221D23", textDecoration: "none",
-          }}>AI Fluency</Link>
-        </nav>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <a href="#videos" style={{
-            display: "inline-flex", alignItems: "center", justifyContent: "center",
-            padding: "10px 15px", borderRadius: 999, background: "#221D23",
-            color: "#fff", fontSize: 12, fontWeight: 900, textDecoration: "none",
-          }}>Watch videos</a>
-        </div>
-      </header>
+      <AppNav activePage="ai-fluency" userName={userName} isAdmin={isAdmin} />
 
       {/* ── Page ── */}
       <main style={{ width: "min(1200px,calc(100% - 56px))", margin: "34px auto 0" }}>

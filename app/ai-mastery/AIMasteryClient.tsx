@@ -3,12 +3,15 @@
 import { useRef, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { TOTAL_MODULES } from "@/lib/ai-mastery-course";
+import AppNav from "@/components/AppNav";
 
 type Props = {
   completedModules: string[];
+  userName?:        string | null;
+  isAdmin?:         boolean;
 };
 
-export default function AIMasteryClient({ completedModules: initial }: Props) {
+export default function AIMasteryClient({ completedModules: initial, userName, isAdmin }: Props) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [completed, setCompleted] = useState<string[]>(initial);
   const [saving, startSave] = useTransition();
@@ -62,45 +65,23 @@ export default function AIMasteryClient({ completedModules: initial }: Props) {
       height: "100vh", display: "flex", flexDirection: "column",
       overflow: "hidden", fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     }}>
-      {/* Top bar */}
-      <header style={{
-        height: 60, flexShrink: 0, display: "flex", alignItems: "center",
-        justifyContent: "space-between", padding: "0 20px",
-        background: "rgba(255,255,255,.96)", borderBottom: "1px solid #E8DFD2",
-        backdropFilter: "blur(18px)", zIndex: 10, gap: 16,
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-          <Link
-            href="/dashboard"
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              height: 32, padding: "0 14px", borderRadius: 999,
-              fontSize: 13, fontWeight: 700, color: "#221D23",
-              background: "#FFCE00", border: "1px solid #d4a900",
-              textDecoration: "none", flexShrink: 0,
-            }}
-          >
-            ← Dashboard
-          </Link>
-          <span style={{
-            fontSize: 15, fontWeight: 900, letterSpacing: "-.03em",
-            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-          }}>
-            AI Mastery Course
-          </span>
-        </div>
+      <AppNav activePage="ai-mastery" userName={userName} isAdmin={isAdmin} />
 
-        {/* Progress bar */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-          {saving && (
-            <span style={{ fontSize: 12, color: "#746F78" }}>Saving…</span>
-          )}
+      {/* Progress bar */}
+      <div style={{
+        flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "0 36px", height: 44, background: "#fff", borderBottom: "1px solid #E8DFD2",
+        gap: 16,
+      }}>
+        <span style={{ fontSize: 13, fontWeight: 900, letterSpacing: "-.03em" }}>
+          AI Mastery Course
+        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {saving && <span style={{ fontSize: 12, color: "#746F78" }}>Saving…</span>}
           <span style={{ fontSize: 13, fontWeight: 700, color: "#221D23", whiteSpace: "nowrap" }}>
             {completed.length} / {TOTAL_MODULES}
           </span>
-          <div style={{
-            width: 96, height: 8, background: "#E8DFD2", borderRadius: 999, overflow: "hidden",
-          }}>
+          <div style={{ width: 96, height: 8, background: "#E8DFD2", borderRadius: 999, overflow: "hidden" }}>
             <div style={{
               width: `${pct}%`, height: "100%", background: "#FFCE00",
               borderRadius: 999, transition: "width .4s ease",
@@ -110,7 +91,7 @@ export default function AIMasteryClient({ completedModules: initial }: Props) {
             {pct}%
           </span>
         </div>
-      </header>
+      </div>
 
       {/* Course iframe */}
       <iframe

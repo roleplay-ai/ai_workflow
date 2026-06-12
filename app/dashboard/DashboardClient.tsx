@@ -764,8 +764,6 @@ export default function DashboardClient({ profile, activities, progress, toolFil
         </Link>
         <div className="nav-links">
           <a href="#workflows">Workflows</a>
-          <a href="#tools">AI Tools</a>
-          <a href="#pov">Our POV</a>
           <Link href="/ai-mastery">AI Mastery</Link>
           <Link href="/ai-fluency">AI Fluency</Link>
         </div>
