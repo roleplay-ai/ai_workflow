@@ -344,7 +344,7 @@ export default function AIFluencyClient({
                   Short explainers that build practical AI fluency.
                 </p>
               </div>
-              <a href="#" style={{ fontSize: 13, fontWeight: 950, color: "#FF4B1F", whiteSpace: "nowrap", textDecoration: "none" }}>
+              <a href="/ai-fluency/foundations" style={{ fontSize: 13, fontWeight: 950, color: "#FF4B1F", whiteSpace: "nowrap", textDecoration: "none" }}>
                 See all →
               </a>
             </div>

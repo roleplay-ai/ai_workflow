@@ -1372,6 +1372,14 @@
   color: #221D23;
 }
 
+.ndb-root .dark-card .card-poster {
+  background: #221D23;
+}
+
+.ndb-root .dark-card .card-poster::before {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
 /* ── Yellow card variant (AI Mastery) ───────────────────────────────────────── */
 
 .ndb-root .yellow-card {
@@ -1401,6 +1409,201 @@
 .ndb-root .yellow-card .time-chip {
   background: #221D23;
   color: #FFCE00;
+}
+
+.ndb-root .yellow-card .card-poster {
+  background: #FFCE00;
+}
+
+.ndb-root .yellow-card .card-poster::before {
+  border-color: rgba(34, 29, 35, 0.16);
+}
+
+/* ── News brief card ───────────────────────────────────────────────────────── */
+
+.ndb-root .brief-card-section {
+  margin: 48px 0 24px;
+}
+
+.ndb-root .brief-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 320px;
+  padding: 30px 32px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #191612, #211B1F 68%, #171218);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 24px 55px rgba(34, 29, 35, 0.22);
+  text-decoration: none;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.ndb-root .brief-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 28px 60px rgba(34, 29, 35, 0.28);
+}
+
+.ndb-root .brief-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.ndb-root .brief-card-badge {
+  display: inline-flex;
+  padding: 8px 13px;
+  border-radius: 7px;
+  background: #221D23;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ndb-root .brief-card-date {
+  color: #B9A995;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ndb-root .brief-card-title {
+  margin: 0 0 20px;
+  font-size: clamp(24px, 3vw, 31px);
+  line-height: 1.05;
+  font-weight: 950;
+  letter-spacing: -0.055em;
+  color: #fff;
+}
+
+.ndb-root .brief-card-list {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ndb-root .brief-card-list li {
+  position: relative;
+  padding-left: 24px;
+  color: #C9B9A2;
+  font-size: 14px;
+  line-height: 1.55;
+  font-weight: 650;
+}
+
+.ndb-root .brief-card-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 9px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #D48742;
+}
+
+.ndb-root .brief-card-link {
+  display: inline-flex;
+  color: #FFCE00;
+  font-weight: 950;
+  font-size: 13px;
+  margin-top: 24px;
+  text-decoration: none;
+}
+
+/* ── AI Mastery course section ───────────────────────────────────────────── */
+
+.ndb-root .mastery-course-section {
+  margin: 48px 0 32px;
+}
+
+.ndb-root .mastery-course-card {
+  border: 2.5px solid #221D23;
+  border-radius: 28px;
+  background: #FFCE00;
+  box-shadow: 7px 7px 0 #221D23;
+  padding: 28px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.ndb-root .mastery-course-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 9px 9px 0 #221D23;
+}
+
+.ndb-root .mastery-course-label {
+  font-size: 12px;
+  font-weight: 900;
+  color: #221D23;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.ndb-root .mastery-course-title {
+  margin: 0 0 10px;
+  font-size: 26px;
+  font-weight: 950;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  color: #221D23;
+}
+
+.ndb-root .mastery-course-desc {
+  margin: 0 0 18px;
+  color: rgba(34, 29, 35, 0.72);
+  font-size: 14px;
+  line-height: 1.6;
+  max-width: 520px;
+}
+
+.ndb-root .mastery-course-progress-track {
+  flex: 1;
+  max-width: 200px;
+  height: 8px;
+  background: rgba(34, 29, 35, 0.18);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.ndb-root .mastery-course-progress-fill {
+  height: 100%;
+  background: #221D23;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.ndb-root .mastery-course-progress-text {
+  font-size: 13px;
+  font-weight: 700;
+  color: #221D23;
+  white-space: nowrap;
+}
+
+.ndb-root .mastery-course-cta {
+  flex-shrink: 0;
+  background: #221D23;
+  color: #fff;
+  font-weight: 900;
+  font-size: 14px;
+  padding: 12px 24px;
+  border-radius: 999px;
+  border: 2px solid #221D23;
+  white-space: nowrap;
 }
 
 /* ── Tools Band ──────────────────────────────────────────────────────────── */

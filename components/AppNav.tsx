@@ -7,9 +7,9 @@ import { createClient } from "@/lib/supabase/client";
 type Page = "workflows" | "ai-mastery" | "ai-fluency";
 
 const LINKS: { label: string; href: string; page: Page }[] = [
-  { label: "Workflows",  href: "/dashboard",   page: "workflows"  },
-  { label: "AI Mastery", href: "/ai-mastery",  page: "ai-mastery" },
-  { label: "AI Fluency", href: "/ai-fluency",  page: "ai-fluency" },
+  { label: "Application", href: "/dashboard", page: "workflows" },
+  { label: "Mastery", href: "/ai-mastery", page: "ai-mastery" },
+  { label: "Fluency", href: "/ai-fluency", page: "ai-fluency" },
 ];
 
 type Props = {
