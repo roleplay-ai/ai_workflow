@@ -3,8 +3,6 @@ import { NextResponse } from "next/server";
 import { readFile } from "fs/promises";
 import path from "path";
 
-// Injected before the existing inline script: pre-populates localStorage so the
-// course reader opens with the user's Supabase-persisted progress.
 function buildPreInitScript(completedJson: string): string {
   return `<script>
 (function(){
@@ -16,8 +14,6 @@ function buildPreInitScript(completedJson: string): string {
 `;
 }
 
-// Injected after the existing script closes: patches localStorage.setItem so
-// every progress toggle is reported to the parent frame via postMessage.
 const BRIDGE_SCRIPT = `
 <script>
 (function(){
@@ -32,21 +28,54 @@ const BRIDGE_SCRIPT = `
 </script>
 `;
 
-export async function GET() {
+// When ?moduleId= is supplied, hide chrome (sidebar, bottom-nav) and
+// auto-navigate to that single module so guests see only its content.
+function buildPreviewScript(moduleId: string): string {
+  // Strip anything that isn't safe in a data-attribute selector value
+  const safe = moduleId.replace(/[^a-zA-Z0-9_-]/g, "");
+  return `<script>
+(function(){
+  var s = document.createElement('style');
+  s.textContent = [
+    '.sidebar{display:none!important}',
+    '.app{grid-template-columns:1fr!important}',
+    '.mobile-menu{display:none!important}',
+    '.bottom-nav{display:none!important}'
+  ].join('');
+  document.head.appendChild(s);
+
+  var target = '${safe}';
+  function openTarget() {
+    var btn = document.querySelector('[data-open="' + target + '"]');
+    if (btn) { btn.click(); return; }
+    setTimeout(openTarget, 80);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', openTarget);
+  } else {
+    openTarget();
+  }
+})();
+</script>`;
+}
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const moduleId = searchParams.get("moduleId");
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) {
-    return NextResponse.redirect("/login");
+  // Guests see the course in read-only preview mode; progress not saved
+  let completedModules: string[] = [];
+  if (user) {
+    const { data: rows } = await supabase
+      .from("ai_mastery_progress")
+      .select("module_id")
+      .eq("user_id", user.id);
+    completedModules = (rows ?? []).map(r => r.module_id as string);
   }
-
-  const { data: rows } = await supabase
-    .from("ai_mastery_progress")
-    .select("module_id")
-    .eq("user_id", user.id);
-
-  const completedModules = (rows ?? []).map(r => r.module_id as string);
-  // Escape any single quotes to avoid breaking the inline JS string
   const completedJson = JSON.stringify(completedModules).replace(/'/g, "\\'");
 
   let html: string;
@@ -57,12 +86,16 @@ export async function GET() {
     return new NextResponse("Course content unavailable.", { status: 404 });
   }
 
-  // 1. Inject pre-init script just before the existing inline <script> block
+  // 1. Pre-init: load persisted progress into localStorage before the course JS runs
   const scriptStart = "<script>\nconst modules = [";
-  const preInit = buildPreInitScript(completedJson);
-  html = html.replace(scriptStart, preInit + scriptStart);
+  html = html.replace(scriptStart, buildPreInitScript(completedJson) + scriptStart);
 
-  // 2. Inject bridge script before </body>
+  // 2. Preview mode: hide nav chrome and auto-jump to the requested module
+  if (moduleId) {
+    html = html.replace("</body>", buildPreviewScript(moduleId) + "\n</body>");
+  }
+
+  // 3. Bridge: relay progress changes back to the parent frame
   html = html.replace("</body>", BRIDGE_SCRIPT + "\n</body>");
 
   return new NextResponse(html, {

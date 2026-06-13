@@ -9,9 +9,16 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      // Redirect to root — the server-side root page reads the role
-      // and redirects to /superadmin, /admin, or /dashboard accordingly.
-      return NextResponse.redirect(`${origin}/`);
+      // Honour ?next for post-OAuth redirects (e.g. coming from /ai-mastery preview)
+      const next = searchParams.get("next");
+      let destination = "/";
+      if (next) {
+        try {
+          const url = new URL(next, origin);
+          if (url.origin === origin) destination = url.pathname + url.search;
+        } catch { /* ignore malformed */ }
+      }
+      return NextResponse.redirect(`${origin}${destination}`);
     }
   }
 

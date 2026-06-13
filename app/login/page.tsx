@@ -1,7 +1,19 @@
 "use client";
 export const dynamic = "force-dynamic";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+
+function safeRedirect(raw: string | null): string {
+  if (!raw) return "/";
+  // Only allow relative paths starting with /
+  try {
+    const url = new URL(raw, window.location.origin);
+    if (url.origin !== window.location.origin) return "/";
+    return url.pathname + url.search;
+  } catch {
+    return "/";
+  }
+}
 
 function EyeOpen() {
   return (
@@ -28,14 +40,21 @@ export default function LoginPage() {
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState("");
   const [showPw, setShowPw]     = useState(true);
+  const [redirectTo, setRedirectTo] = useState("/");
 
   const supabase = createClient();
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setRedirectTo(safeRedirect(params.get("redirect")));
+  }, []);
+
   async function handleGoogleSignIn() {
     setLoading(true);
+    const next = encodeURIComponent(redirectTo);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${location.origin}/auth/callback` },
+      options: { redirectTo: `${location.origin}/auth/callback?next=${next}` },
     });
     if (error) { setError(error.message); setLoading(false); }
   }
@@ -45,7 +64,7 @@ export default function LoginPage() {
     setError(""); setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) { setError(error.message); setLoading(false); return; }
-    window.location.href = "/";
+    window.location.href = redirectTo;
     setLoading(false);
   }
 
