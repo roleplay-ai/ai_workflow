@@ -33,14 +33,17 @@ export default async function AIFluencyPage() {
       .order("sort_order"),
     supabase
       .from("apply_videos")
-      .select("id, title, description, video_url, thumbnail_url, duration, order_index, is_locked, group_name, category_tag")
+      .select("id, title, description, video_url, thumbnail_url, duration, order_index, is_locked, group_name, category_tag, is_featured")
       .eq("is_published", true)
-      .order("order_index"),
+      .eq("is_featured", true)
+      .order("order_index")
+      .limit(10),
     supabase
       .from("fluency_tools")
       .select("*")
       .eq("published", true)
-      .order("sort_order"),
+      .order("sort_order")
+      .limit(10),
     supabase
       .from("fluency_tool_guides")
       .select("*")
