@@ -1,11 +1,11 @@
 "use client";
 import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import type { Activity, UserProgress, Profile } from "@/lib/supabase/types";
 import { resolveToolLogoUrl, type ToolLogoMap } from "@/lib/toolLogos";
 import { formatToolLabel, normalizeActivityTools } from "@/lib/tools";
 import RotatingTools from "@/components/RotatingTools";
+import AppNav from "@/components/AppNav";
 import ActivityCard, { Scene, getTheme, timeLabel, type CardVariant } from "./ActivityCard";
 import "./netflix-dashboard.css";
 
@@ -21,7 +21,11 @@ type Props = {
   toolFilters: string[];
   isLoggedIn: boolean;
   masteryProgressCount: number;
+  brief: Brief | null;
 };
+
+type BriefItem = { id: string; content: string; sort_order: number };
+type Brief = { id: string; title: string; published_date: string; fluency_brief_items: BriefItem[] };
 
 // ── Colour helpers ────────────────────────────────────────────────────────
 
@@ -129,10 +133,9 @@ function AllWorkflowsSection({
   onSignUpRequired: () => void;
   toolLogos: ToolLogoMap;
 }) {
-  const [page, setPage] = useState(0);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  // Reset to first page when either filter changes
-  useEffect(() => { setPage(0); }, [selectedFunction, selectedTool]);
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [selectedFunction, selectedTool]);
 
   const filtered = useMemo(() => {
     let result = activities;
@@ -149,10 +152,9 @@ function AllWorkflowsSection({
     return result;
   }, [activities, selectedFunction, selectedTool]);
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const pageItems  = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const visibleItems = filtered.slice(0, visibleCount);
+  const hasMore = visibleCount < filtered.length;
 
-  // Build title: "All [Function] [Tool] Workflows"
   const titleParts: string[] = ["All"];
   if (selectedFunction) titleParts.push(selectedFunction);
   if (selectedTool)     titleParts.push(formatToolLabel(selectedTool));
@@ -179,28 +181,16 @@ function AllWorkflowsSection({
   return (
     <div id="all-workflows">
       <HorizontalRail
-        key={`${selectedFunction ?? "all"}-${selectedTool ?? "all"}-${page}`}
+        key={`${selectedFunction ?? "all"}-${selectedTool ?? "all"}`}
         label="Full library"
         title={title}
         subtitle={subtitle}
-        activities={pageItems}
+        activities={visibleItems}
         isLoggedIn={isLoggedIn}
         onSignUpRequired={onSignUpRequired}
         toolLogos={toolLogos}
+        onLoadMore={hasMore ? () => setVisibleCount(c => Math.min(filtered.length, c + PAGE_SIZE)) : undefined}
       />
-      {totalPages > 1 && (
-        <div className="pagination-row">
-          <span className="page-info">Page {page + 1} of {totalPages}</span>
-          <div className="page-btns">
-            {page > 0 && (
-              <button className="btn btn-ghost pagination-btn" onClick={() => setPage(p => p - 1)}>← Previous</button>
-            )}
-            {page < totalPages - 1 && (
-              <button className="btn btn-ghost pagination-btn" onClick={() => setPage(p => p + 1)}>More workflows →</button>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -320,7 +310,7 @@ function FunctionsCarousel({
 // ── HorizontalRail ────────────────────────────────────────────────────────
 
 function HorizontalRail({
-  title, subtitle, label, activities, isLoggedIn, onSignUpRequired, toolLogos, variant = "default",
+  title, subtitle, label, activities, isLoggedIn, onSignUpRequired, toolLogos, variant = "default", onLoadMore,
 }: {
   title: string;
   subtitle: string;
@@ -330,6 +320,7 @@ function HorizontalRail({
   onSignUpRequired: () => void;
   toolLogos: ToolLogoMap;
   variant?: CardVariant;
+  onLoadMore?: () => void;
 }) {
   const rowRef = useRef<HTMLDivElement>(null);
   const [focusedIdx, setFocusedIdx] = useState(0);
@@ -360,7 +351,6 @@ function HorizontalRail({
   function scrollToIndex(index: number) {
     const row = rowRef.current;
     if (!row) return;
-    // Prevent onScroll from overwriting focusedIdx during the smooth animation
     programmaticRef.current = true;
     setTimeout(() => { programmaticRef.current = false; }, 600);
     if (index === 0) {
@@ -374,6 +364,7 @@ function HorizontalRail({
     setFocused(index);
   }
 
+  // Only reset scroll on mount; load-more appends items without resetting position
   useEffect(() => {
     const row = rowRef.current;
     if (!row) return;
@@ -387,7 +378,8 @@ function HorizontalRail({
     };
     row.addEventListener("scroll", onScroll, { passive: true });
     return () => { row.removeEventListener("scroll", onScroll); clearTimeout(t); };
-  }, [activities]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (activities.length <= 1) return;
@@ -400,7 +392,13 @@ function HorizontalRail({
   }, [activities.length]);
 
   function scrollTo(dir: number) {
-    const next = Math.min(activities.length - 1, Math.max(0, focusedIdxRef.current + dir));
+    const last = activities.length - 1;
+    const cur = focusedIdxRef.current;
+    if (dir > 0 && cur >= last) {
+      onLoadMore?.();
+      return;
+    }
+    const next = Math.min(last, Math.max(0, cur + dir));
     scrollToIndex(next);
   }
 
@@ -414,7 +412,6 @@ function HorizontalRail({
           <h2>{title}</h2>
           <p>{subtitle}</p>
         </div>
-        <span className="see-all">View all →</span>
       </div>
       <div className="rail-window">
         <button className="row-arrow left" onClick={() => scrollTo(-1)}>‹</button>
@@ -587,9 +584,39 @@ function toolInitials(tool: string): string {
   return formatToolLabel(tool).slice(0, 3);
 }
 
-// ── AIMasteryCourseSection ────────────────────────────────────────────────
+// ── Featured promo cards ────────────────────────────────────────────────────
 
 const TOTAL_COURSE_MODULES = 30;
+
+function formatBriefDate(d: string) {
+  return new Date(d + "T12:00:00").toLocaleDateString("en-US", {
+    month: "short", day: "numeric", year: "numeric",
+  });
+}
+
+function NewsBriefCard({ brief }: { brief: Brief }) {
+  const items = [...brief.fluency_brief_items].sort((a, b) => a.sort_order - b.sort_order).slice(0, 3);
+
+  return (
+    <section className="brief-card-section">
+      <Link href="/ai-fluency" className="brief-card">
+        <div>
+          <div className="brief-card-header">
+            <span className="brief-card-badge">Nudgeable Brief</span>
+            <span className="brief-card-date">{formatBriefDate(brief.published_date)}</span>
+          </div>
+          <h2 className="brief-card-title">{brief.title}</h2>
+          <ul className="brief-card-list">
+            {items.map((item, i) => (
+              <li key={item.id ?? i}>{item.content}</li>
+            ))}
+          </ul>
+        </div>
+        <span className="brief-card-link">Explore AI Fluency →</span>
+      </Link>
+    </section>
+  );
+}
 
 function AIMasteryCourseSection({ completedCount, isLoggedIn }: { completedCount: number; isLoggedIn: boolean }) {
   const pct = Math.round((completedCount / TOTAL_COURSE_MODULES) * 100);
@@ -598,7 +625,7 @@ function AIMasteryCourseSection({ completedCount, isLoggedIn }: { completedCount
   const href = isLoggedIn ? "/ai-mastery" : "/login";
 
   return (
-    <section style={{ margin: "48px 0 32px" }} id="ai-mastery-course">
+    <section className="mastery-course-section" id="ai-mastery-course">
       <div className="rail-header" style={{ marginBottom: 16 }}>
         <div className="rail-title">
           <span className="section-label">Featured course</span>
@@ -606,76 +633,29 @@ function AIMasteryCourseSection({ completedCount, isLoggedIn }: { completedCount
           <p>Go from AI basics to advanced workflows — 10 parts, 30 modules.</p>
         </div>
       </div>
-      <Link
-        href={href}
-        style={{ textDecoration: "none", display: "block" }}
-      >
-        <div style={{
-          border: "2.5px solid #221D23",
-          borderRadius: 28,
-          background: "linear-gradient(135deg, #221D23 0%, #2E2531 100%)",
-          boxShadow: "7px 7px 0 #FFCE00",
-          padding: "28px 32px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 24,
-          flexWrap: "wrap",
-          cursor: "pointer",
-          transition: "transform .18s, box-shadow .18s",
-        }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)";
-            (e.currentTarget as HTMLDivElement).style.boxShadow = "9px 9px 0 #FFCE00";
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLDivElement).style.transform = "";
-            (e.currentTarget as HTMLDivElement).style.boxShadow = "7px 7px 0 #FFCE00";
-          }}
-        >
-          {/* Left: info */}
-          <div style={{ flex: 1, minWidth: 240 }}>
-            <div style={{ fontSize: 12, fontWeight: 900, color: "#FFCE00", letterSpacing: ".10em", textTransform: "uppercase", marginBottom: 8 }}>
-              AI Mastery Course
-            </div>
-            <h2 style={{ margin: "0 0 10px", fontSize: 26, fontWeight: 950, lineHeight: 1.1, letterSpacing: "-.04em", color: "#fff" }}>
-              From AI Basics to Advanced Workflows
-            </h2>
-            <p style={{ margin: "0 0 18px", color: "#C9C1CB", fontSize: 14, lineHeight: 1.6, maxWidth: 520 }}>
-              10 parts · 30 modules · Everything from LLM fundamentals to building agents, vibe-coding, and AI safety.
-            </p>
-
-            {/* Progress — shown only when logged in */}
-            {isLoggedIn ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ flex: 1, maxWidth: 200, height: 8, background: "rgba(255,255,255,.18)", borderRadius: 999, overflow: "hidden" }}>
-                  <div style={{
-                    width: `${pct}%`, height: "100%",
-                    background: "#FFCE00", borderRadius: 999,
-                    transition: "width .4s ease",
-                  }} />
-                </div>
-                <span style={{ fontSize: 13, fontWeight: 700, color: "#FFCE00", whiteSpace: "nowrap" }}>
-                  {completedCount}/{TOTAL_COURSE_MODULES} {done ? "Complete ✓" : started ? "modules done" : "modules"}
-                </span>
+      <Link href={href} className="mastery-course-card">
+        <div style={{ flex: 1, minWidth: 240 }}>
+          <div className="mastery-course-label">AI Mastery Course</div>
+          <h2 className="mastery-course-title">From AI Basics to Advanced Workflows</h2>
+          <p className="mastery-course-desc">
+            10 parts · 30 modules · Everything from LLM fundamentals to building agents, vibe-coding, and AI safety.
+          </p>
+          {isLoggedIn ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div className="mastery-course-progress-track">
+                <div className="mastery-course-progress-fill" style={{ width: `${pct}%` }} />
               </div>
-            ) : (
-              <span style={{ fontSize: 13, color: "#9F97A2" }}>Sign in to track your progress</span>
-            )}
-          </div>
-
-          {/* Right: CTA */}
-          <div style={{
-            flexShrink: 0,
-            background: "#FFCE00", color: "#221D23",
-            fontWeight: 900, fontSize: 14,
-            padding: "12px 24px", borderRadius: 999,
-            border: "2px solid #221D23",
-            whiteSpace: "nowrap",
-          }}>
-            {!isLoggedIn ? "Sign in to start →" : done ? "Review course" : started ? "Continue learning →" : "Start course →"}
-          </div>
+              <span className="mastery-course-progress-text">
+                {completedCount}/{TOTAL_COURSE_MODULES} {done ? "Complete ✓" : started ? "modules done" : "modules"}
+              </span>
+            </div>
+          ) : (
+            <span style={{ fontSize: 13, color: "rgba(34,29,35,0.62)" }}>Sign in to track your progress</span>
+          )}
         </div>
+        <span className="mastery-course-cta">
+          {!isLoggedIn ? "Sign in to start →" : done ? "Review course" : started ? "Continue learning →" : "Start course →"}
+        </span>
       </Link>
     </section>
   );
@@ -683,16 +663,10 @@ function AIMasteryCourseSection({ completedCount, isLoggedIn }: { completedCount
 
 // ── DashboardClient ──────────────────────────────────────────────────────
 
-export default function DashboardClient({ profile, activities, progress, toolFilters, toolLogos, functionLogos, functionThumbnails, functionDescriptions, isLoggedIn, masteryProgressCount }: Props) {
+export default function DashboardClient({ profile, activities, progress, toolFilters, toolLogos, functionLogos, functionThumbnails, functionDescriptions, isLoggedIn, masteryProgressCount, brief }: Props) {
   const [selectedFunction, setSelectedFunction] = useState<string | null>(null);
   const [selectedTool,     setSelectedTool]     = useState<string | null>(null);
   const [showSignUp, setShowSignUp]             = useState(false);
-
-  async function handleSignOut() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    window.location.href = "/dashboard";
-  }
 
   // Unique functions (for HeroSection dropdowns)
   const allFunctions = useMemo(() => {
@@ -755,40 +729,11 @@ export default function DashboardClient({ profile, activities, progress, toolFil
 
       {showSignUp && <SignUpCard onClose={() => setShowSignUp(false)} />}
 
-      {/* ── Nav ── */}
-      <nav className="nav">
-        <Link className="brand" href="/dashboard">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="brand-icon" src="/icon.png" alt="" width={32} height={32} />
-          <span>Nudgeable AI Work Studio</span>
-        </Link>
-        <div className="nav-links">
-          <a href="#workflows">Workflows</a>
-          <Link href="/ai-mastery">AI Mastery</Link>
-          <Link href="/ai-fluency">AI Fluency</Link>
-        </div>
-        <div className="nav-actions">
-          {isLoggedIn ? (
-            <>
-              {profile?.full_name && (
-                <span style={{ fontSize: 14, fontWeight: 700, color: "#746F78" }}>
-                  {profile.full_name.split(" ")[0]}
-                </span>
-              )}
-              {isAdmin && (
-                <Link href="/admin" className="btn btn-ghost">Admin</Link>
-              )}
-              <button className="btn btn-ghost" onClick={handleSignOut}>Sign out</button>
-            </>
-          ) : (
-            <>
-              <Link href="/login" className="btn btn-ghost">Sign in</Link>
-              <Link href="/login" className="btn btn-amber">Get started</Link>
-            </>
-          )}
-          <button className="mobile-menu" aria-label="Open menu">☰</button>
-        </div>
-      </nav>
+      <AppNav
+        activePage="workflows"
+        userName={isLoggedIn ? profile?.full_name : null}
+        isAdmin={isAdmin}
+      />
 
       {/* ── Hero ── */}
       <HeroSection
@@ -876,8 +821,10 @@ export default function DashboardClient({ profile, activities, progress, toolFil
           />
         )}
 
-        {/* AI Mastery Course — visible to all, login required to open */}
+        {brief && <NewsBriefCard brief={brief} />}
+
         <AIMasteryCourseSection completedCount={masteryProgressCount} isLoggedIn={isLoggedIn} />
+
       </main>
 
       {/* ── Footer ── */}

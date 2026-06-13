@@ -56,6 +56,7 @@ export default async function DashboardPage() {
     { data: toolLogoRows },
     { data: tagRows },
     { data: functionRows },
+    { data: briefs },
   ] = await Promise.all([
     supabase
       .from("activities")
@@ -65,6 +66,12 @@ export default async function DashboardPage() {
     supabase.from("tool_logos").select("tool, logo_url"),
     supabase.from("activity_tags").select("name, icon_url"),
     supabase.from("activity_functions").select("name, icon_url, thumbnail_url, description"),
+    supabase
+      .from("fluency_briefs")
+      .select("*, fluency_brief_items(*)")
+      .eq("is_active", true)
+      .order("published_date", { ascending: false })
+      .limit(1),
   ]);
 
   const tagLogos: Record<string, string> = {};
@@ -101,6 +108,7 @@ export default async function DashboardPage() {
       toolFilters={toolFilters}
       isLoggedIn={!!user}
       masteryProgressCount={masteryProgressCount}
+      brief={(briefs?.[0] ?? null) as any}
     />
   );
 }

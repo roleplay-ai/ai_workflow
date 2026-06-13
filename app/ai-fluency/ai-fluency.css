@@ -1,10 +1,12 @@
 /* AI Fluency page — scoped helpers that can't be done with inline styles */
 
-.aif-slider {
+.aif-slider,
+.aif-modal-scroll {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-.aif-slider::-webkit-scrollbar {
+.aif-slider::-webkit-scrollbar,
+.aif-modal-scroll::-webkit-scrollbar {
   display: none;
 }
 

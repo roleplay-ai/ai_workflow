@@ -95,9 +95,9 @@ function formatDate(d: string) {
 // ── Carousel wrapper ──────────────────────────────────────────────────────────
 
 function Carousel({
-  title, label, subtitle, seeAllLabel, children,
+  title, label, subtitle, seeAllLabel, seeAllHref, children,
 }: {
-  title: string; label?: string; subtitle: string; seeAllLabel: string; children: React.ReactNode;
+  title: string; label?: string; subtitle: string; seeAllLabel: string; seeAllHref?: string; children: React.ReactNode;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const scroll = (dir: "left" | "right") =>
@@ -122,7 +122,7 @@ function Carousel({
           <h2 style={{ margin: 0, fontSize: 32, lineHeight: 1.03, fontWeight: 950, letterSpacing: "-.055em" }}>{title}</h2>
           <p style={{ margin: "8px 0 0", color: "#6B6670", fontSize: 14, fontWeight: 650, lineHeight: 1.45 }}>{subtitle}</p>
         </div>
-        <a href="#" style={{ fontSize: 13, fontWeight: 950, color: "#FF4B1F", whiteSpace: "nowrap", textDecoration: "none" }}>{seeAllLabel}</a>
+        <a href={seeAllHref ?? "#"} style={{ fontSize: 13, fontWeight: 950, color: "#FF4B1F", whiteSpace: "nowrap", textDecoration: "none" }}>{seeAllLabel}</a>
       </div>
 
       {/* Scroll row */}
@@ -344,7 +344,7 @@ export default function AIFluencyClient({
                   Short explainers that build practical AI fluency.
                 </p>
               </div>
-              <a href="#" style={{ fontSize: 13, fontWeight: 950, color: "#FF4B1F", whiteSpace: "nowrap", textDecoration: "none" }}>
+              <a href="/ai-fluency/foundations" style={{ fontSize: 13, fontWeight: 950, color: "#FF4B1F", whiteSpace: "nowrap", textDecoration: "none" }}>
                 See all →
               </a>
             </div>
@@ -565,7 +565,7 @@ export default function AIFluencyClient({
                 Short videos on new launches across AI tools.
               </p>
             </div>
-            <a href="#" style={{ fontSize: 13, fontWeight: 950, color: "#FF4B1F", whiteSpace: "nowrap", textDecoration: "none" }}>
+            <a href="/ai-fluency/videos" style={{ fontSize: 13, fontWeight: 950, color: "#FF4B1F", whiteSpace: "nowrap", textDecoration: "none" }}>
               View all videos →
             </a>
           </div>
@@ -574,7 +574,7 @@ export default function AIFluencyClient({
         </section>
 
         {/* ── Most Useful Tools ── */}
-        <Carousel title="Most Useful Tools" label="Tools" subtitle="AI products worth trying for real work." seeAllLabel="Browse tools →">
+        <Carousel title="Most Useful Tools" label="Tools" subtitle="AI products worth trying for real work." seeAllLabel="Browse tools →" seeAllHref="/ai-fluency/tools">
           {tools.map((t, i) => {
             const accent = TOOL_ACCENTS[i % TOOL_ACCENTS.length];
             return (

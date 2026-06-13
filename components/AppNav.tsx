@@ -1,19 +1,38 @@
 "use client";
 
-import Link, { type LinkProps } from "next/link";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-type Page = "workflows" | "ai-mastery" | "ai-fluency";
+export type AppPage = "workflows" | "ai-mastery" | "ai-fluency";
 
-const LINKS: { label: string; href: string; page: Page }[] = [
-  { label: "Workflows",  href: "/dashboard",   page: "workflows"  },
-  { label: "AI Mastery", href: "/ai-mastery",  page: "ai-mastery" },
-  { label: "AI Fluency", href: "/ai-fluency",  page: "ai-fluency" },
+export const APP_NAV_LINKS: { label: string; href: string; page: AppPage }[] = [
+  { label: "Application", href: "/dashboard", page: "workflows" },
+  { label: "Mastery", href: "/ai-mastery", page: "ai-mastery" },
+  { label: "Fluency", href: "/ai-fluency", page: "ai-fluency" },
 ];
 
+export function AppNavLinks({ activePage }: { activePage?: AppPage }) {
+  return (
+    <nav style={{ display: "flex", gap: 26, fontSize: 14, fontWeight: 700 }}>
+      {APP_NAV_LINKS.map(({ label, href, page }) => {
+        const active = activePage != null && page === activePage;
+        return (
+          <Link key={page} href={href} style={{
+            color: active ? "#221D23" : "#746F78",
+            textDecoration: "none",
+            paddingBottom: 4,
+            borderBottom: active ? "2.5px solid #FFCE00" : "2.5px solid transparent",
+            transition: "color .15s",
+          }}>{label}</Link>
+        );
+      })}
+    </nav>
+  );
+}
+
 type Props = {
-  activePage: Page;
+  activePage: AppPage;
   userName?: string | null;
   isAdmin?: boolean;
 };
@@ -48,21 +67,7 @@ export default function AppNav({ activePage, userName, isAdmin }: Props) {
         <span>Nudgeable AI Work Studio</span>
       </Link>
 
-      {/* Nav links */}
-      <nav style={{ display: "flex", gap: 26, fontSize: 14, fontWeight: 700 }}>
-        {LINKS.map(({ label, href, page }) => {
-          const active = page === activePage;
-          return (
-            <Link key={page} href={href} style={{
-              color: active ? "#221D23" : "#746F78",
-              textDecoration: "none",
-              paddingBottom: 4,
-              borderBottom: active ? "2.5px solid #FFCE00" : "2.5px solid transparent",
-              transition: "color .15s",
-            }}>{label}</Link>
-          );
-        })}
-      </nav>
+      <AppNavLinks activePage={activePage} />
 
       {/* Actions */}
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
