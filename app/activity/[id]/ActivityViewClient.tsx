@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Topbar from "@/components/Topbar";
+import AppNav from "@/components/AppNav";
 import QuizModal from "@/components/QuizModal";
 import CelebrationModal from "@/components/CelebrationModal";
 import VideoModal from "@/components/VideoModal";
@@ -339,7 +340,11 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
   if (steps.length === 0) {
     return (
       <div style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
-        <Topbar profile={profile} role={profile?.role} onSignOut={handleSignOut} />
+        <AppNav
+          activePage="workflows"
+          userName={profile?.full_name}
+          isAdmin={profile?.role === "admin" || profile?.role === "superadmin"}
+        />
         <div style={{ maxWidth: 720, margin: "60px auto", padding: "0 24px", textAlign: "center", color: "#6B6B6B" }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>🚧</div>
           <h2 style={{ fontWeight: 900, fontSize: 22, color: "#221D23", marginBottom: 8 }}>{activity.title}</h2>

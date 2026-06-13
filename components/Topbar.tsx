@@ -2,14 +2,16 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import type { Profile } from "@/lib/supabase/types";
+import { AppNavLinks, type AppPage } from "@/components/AppNav";
 
 type Props = {
   profile: (Profile & { companies?: { name: string } | null }) | null;
   role?: string;
+  activePage?: AppPage;
   onSignOut?: () => void;
 };
 
-export default function Topbar({ profile, role, onSignOut }: Props) {
+export default function Topbar({ profile, role, activePage, onSignOut }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -31,17 +33,17 @@ export default function Topbar({ profile, role, onSignOut }: Props) {
 
   return (
     <header style={{
-      height: 62, display: "flex", alignItems: "center", justifyContent: "space-between",
-      padding: "0 44px", background: "rgba(255,255,255,.94)", borderBottom: "1px solid #E8E6DC",
-      position: "sticky", top: 0, zIndex: 20, backdropFilter: "blur(16px)",
-      fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+      height: 68, display: "flex", alignItems: "center", justifyContent: "space-between",
+      padding: "0 36px", background: "rgba(255,255,255,0.96)", borderBottom: "1px solid #E9E4DC",
+      position: "sticky", top: 0, zIndex: 100, backdropFilter: "blur(18px)",
+      fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif", gap: 16,
     }}>
       {/* Brand */}
       <Link
         href="/dashboard"
         style={{
-          display: "flex", alignItems: "center", gap: 10, fontSize: 16, fontWeight: 800,
-          letterSpacing: "-.03em", color: "inherit", textDecoration: "none",
+          display: "flex", alignItems: "center", gap: 10, fontSize: 15, fontWeight: 900,
+          letterSpacing: "-0.04em", color: "#221D23", textDecoration: "none", whiteSpace: "nowrap",
         }}
       >
         <img
@@ -54,16 +56,29 @@ export default function Topbar({ profile, role, onSignOut }: Props) {
         <span>Nudgeable AI Work Studio</span>
       </Link>
 
-      {/* Nav */}
-      <nav style={{ display: "flex", gap: 22, alignItems: "center", color: "#6B6B6B", fontSize: 13.5, fontWeight: 600 }}>
-        {/* <Link href="/dashboard" style={{ color: "inherit", textDecoration: "none" }}>Explore</Link> */}
+      <AppNavLinks activePage={activePage} />
+
+      {/* Actions */}
+      <nav style={{ display: "flex", gap: 10, alignItems: "center", marginLeft: "auto" }}>
         {(role === "admin" || role === "superadmin") && (
-          <Link href="/admin" style={{ color: "inherit", textDecoration: "none" }}>Admin</Link>
+          <Link href="/admin" style={{
+            borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 900,
+            background: "transparent", border: "1px solid #E9E4DC",
+            color: "#221D23", textDecoration: "none",
+          }}>Admin</Link>
         )}
         {role === "superadmin" && (
           <>
-            <Link href="/superadmin" style={{ color: "inherit", textDecoration: "none" }}>Superadmin</Link>
-            <Link href="/superadmin/tool-logos" style={{ color: "inherit", textDecoration: "none" }}>Tool logos</Link>
+            <Link href="/superadmin" style={{
+              borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 900,
+              background: "transparent", border: "1px solid #E9E4DC",
+              color: "#221D23", textDecoration: "none",
+            }}>Superadmin</Link>
+            <Link href="/superadmin/tool-logos" style={{
+              borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 900,
+              background: "transparent", border: "1px solid #E9E4DC",
+              color: "#221D23", textDecoration: "none",
+            }}>Tool logos</Link>
           </>
         )}
 

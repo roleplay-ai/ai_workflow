@@ -1,11 +1,11 @@
 "use client";
 import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import type { Activity, UserProgress, Profile } from "@/lib/supabase/types";
 import { resolveToolLogoUrl, type ToolLogoMap } from "@/lib/toolLogos";
 import { formatToolLabel, normalizeActivityTools } from "@/lib/tools";
 import RotatingTools from "@/components/RotatingTools";
+import AppNav from "@/components/AppNav";
 import ActivityCard, { Scene, getTheme, timeLabel, type CardVariant } from "./ActivityCard";
 import "./netflix-dashboard.css";
 
@@ -133,10 +133,9 @@ function AllWorkflowsSection({
   onSignUpRequired: () => void;
   toolLogos: ToolLogoMap;
 }) {
-  const [page, setPage] = useState(0);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  // Reset to first page when either filter changes
-  useEffect(() => { setPage(0); }, [selectedFunction, selectedTool]);
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [selectedFunction, selectedTool]);
 
   const filtered = useMemo(() => {
     let result = activities;
@@ -153,10 +152,9 @@ function AllWorkflowsSection({
     return result;
   }, [activities, selectedFunction, selectedTool]);
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const pageItems  = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const visibleItems = filtered.slice(0, visibleCount);
+  const hasMore = visibleCount < filtered.length;
 
-  // Build title: "All [Function] [Tool] Workflows"
   const titleParts: string[] = ["All"];
   if (selectedFunction) titleParts.push(selectedFunction);
   if (selectedTool)     titleParts.push(formatToolLabel(selectedTool));
@@ -183,28 +181,16 @@ function AllWorkflowsSection({
   return (
     <div id="all-workflows">
       <HorizontalRail
-        key={`${selectedFunction ?? "all"}-${selectedTool ?? "all"}-${page}`}
+        key={`${selectedFunction ?? "all"}-${selectedTool ?? "all"}`}
         label="Full library"
         title={title}
         subtitle={subtitle}
-        activities={pageItems}
+        activities={visibleItems}
         isLoggedIn={isLoggedIn}
         onSignUpRequired={onSignUpRequired}
         toolLogos={toolLogos}
+        onLoadMore={hasMore ? () => setVisibleCount(c => Math.min(filtered.length, c + PAGE_SIZE)) : undefined}
       />
-      {totalPages > 1 && (
-        <div className="pagination-row">
-          <span className="page-info">Page {page + 1} of {totalPages}</span>
-          <div className="page-btns">
-            {page > 0 && (
-              <button className="btn btn-ghost pagination-btn" onClick={() => setPage(p => p - 1)}>← Previous</button>
-            )}
-            {page < totalPages - 1 && (
-              <button className="btn btn-ghost pagination-btn" onClick={() => setPage(p => p + 1)}>More workflows →</button>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -324,7 +310,7 @@ function FunctionsCarousel({
 // ── HorizontalRail ────────────────────────────────────────────────────────
 
 function HorizontalRail({
-  title, subtitle, label, activities, isLoggedIn, onSignUpRequired, toolLogos, variant = "default",
+  title, subtitle, label, activities, isLoggedIn, onSignUpRequired, toolLogos, variant = "default", onLoadMore,
 }: {
   title: string;
   subtitle: string;
@@ -334,6 +320,7 @@ function HorizontalRail({
   onSignUpRequired: () => void;
   toolLogos: ToolLogoMap;
   variant?: CardVariant;
+  onLoadMore?: () => void;
 }) {
   const rowRef = useRef<HTMLDivElement>(null);
   const [focusedIdx, setFocusedIdx] = useState(0);
@@ -364,7 +351,6 @@ function HorizontalRail({
   function scrollToIndex(index: number) {
     const row = rowRef.current;
     if (!row) return;
-    // Prevent onScroll from overwriting focusedIdx during the smooth animation
     programmaticRef.current = true;
     setTimeout(() => { programmaticRef.current = false; }, 600);
     if (index === 0) {
@@ -378,6 +364,7 @@ function HorizontalRail({
     setFocused(index);
   }
 
+  // Only reset scroll on mount; load-more appends items without resetting position
   useEffect(() => {
     const row = rowRef.current;
     if (!row) return;
@@ -391,7 +378,8 @@ function HorizontalRail({
     };
     row.addEventListener("scroll", onScroll, { passive: true });
     return () => { row.removeEventListener("scroll", onScroll); clearTimeout(t); };
-  }, [activities]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (activities.length <= 1) return;
@@ -404,7 +392,13 @@ function HorizontalRail({
   }, [activities.length]);
 
   function scrollTo(dir: number) {
-    const next = Math.min(activities.length - 1, Math.max(0, focusedIdxRef.current + dir));
+    const last = activities.length - 1;
+    const cur = focusedIdxRef.current;
+    if (dir > 0 && cur >= last) {
+      onLoadMore?.();
+      return;
+    }
+    const next = Math.min(last, Math.max(0, cur + dir));
     scrollToIndex(next);
   }
 
@@ -418,7 +412,6 @@ function HorizontalRail({
           <h2>{title}</h2>
           <p>{subtitle}</p>
         </div>
-        <span className="see-all">View all →</span>
       </div>
       <div className="rail-window">
         <button className="row-arrow left" onClick={() => scrollTo(-1)}>‹</button>
@@ -675,12 +668,6 @@ export default function DashboardClient({ profile, activities, progress, toolFil
   const [selectedTool,     setSelectedTool]     = useState<string | null>(null);
   const [showSignUp, setShowSignUp]             = useState(false);
 
-  async function handleSignOut() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    window.location.href = "/dashboard";
-  }
-
   // Unique functions (for HeroSection dropdowns)
   const allFunctions = useMemo(() => {
     const map = new Map<string, number>();
@@ -742,40 +729,11 @@ export default function DashboardClient({ profile, activities, progress, toolFil
 
       {showSignUp && <SignUpCard onClose={() => setShowSignUp(false)} />}
 
-      {/* ── Nav ── */}
-      <nav className="nav">
-        <Link className="brand" href="/dashboard">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="brand-icon" src="/icon.png" alt="" width={32} height={32} />
-          <span>Nudgeable AI Work Studio</span>
-        </Link>
-        <div className="nav-links">
-          <a href="#workflows">application</a>
-          <Link href="/ai-mastery">mastery</Link>
-          <Link href="/ai-fluency">fluency</Link>
-        </div>
-        <div className="nav-actions">
-          {isLoggedIn ? (
-            <>
-              {profile?.full_name && (
-                <span style={{ fontSize: 14, fontWeight: 700, color: "#746F78" }}>
-                  {profile.full_name.split(" ")[0]}
-                </span>
-              )}
-              {isAdmin && (
-                <Link href="/admin" className="btn btn-ghost">Admin</Link>
-              )}
-              <button className="btn btn-ghost" onClick={handleSignOut}>Sign out</button>
-            </>
-          ) : (
-            <>
-              <Link href="/login" className="btn btn-ghost">Sign in</Link>
-              <Link href="/login" className="btn btn-amber">Get started</Link>
-            </>
-          )}
-          <button className="mobile-menu" aria-label="Open menu">☰</button>
-        </div>
-      </nav>
+      <AppNav
+        activePage="workflows"
+        userName={isLoggedIn ? profile?.full_name : null}
+        isAdmin={isAdmin}
+      />
 
       {/* ── Hero ── */}
       <HeroSection
