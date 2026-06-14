@@ -1002,12 +1002,42 @@
 
 .ndb-root .functions-rail { margin-top: 8px; }
 
+.ndb-root .fn-rail-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ndb-root .fn-arrow-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 56px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--dark);
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  font-family: inherit;
+  transition: transform 0.15s;
+}
+
+.ndb-root .fn-arrow-btn:hover {
+  transform: scale(1.08);
+}
+
 .ndb-root .fn-cards-row {
   display: flex;
   gap: 18px;
   overflow-x: auto;
   padding: 4px 0 16px;
   scrollbar-width: none;
+  flex: 1;
+  min-width: 0;
 }
 .ndb-root .fn-cards-row::-webkit-scrollbar { display: none; }
 
@@ -1870,41 +1900,154 @@
 
 /* ── Footer ──────────────────────────────────────────────────────────────── */
 
-.ndb-root .footer {
+.ndb-root .nudge-footer {
+  width: 100%;
+  background:
+    radial-gradient(circle at 10% 18%, rgba(255,255,255,.34), transparent 16%),
+    radial-gradient(circle at 92% 14%, rgba(246,138,41,.18), transparent 16%),
+    var(--amber);
+  border-top: 1px solid rgba(34,29,35,.12);
   margin-top: 48px;
-  background: var(--white);
-  border-top: 1px solid var(--border);
-  padding: 46px 36px;
-  text-align: center;
 }
 
-.ndb-root .footer h2 {
-  margin: 0;
-  font-size: 30px;
-  letter-spacing: -0.06em;
+.ndb-root .nf-inner {
+  width: min(1280px, calc(100% - 72px));
+  margin: 0 auto;
+  padding: 20px 0;
 }
 
-.ndb-root .footer p {
-  max-width: 540px;
-  margin: 10px auto 20px;
-  color: var(--muted);
-  font-weight: 500;
-  line-height: 1.5;
-}
-
-.ndb-root .footer-links {
-  margin-top: 26px;
+.ndb-root .nf-head {
   display: flex;
-  justify-content: center;
-  gap: 22px;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 700;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 12px;
 }
 
-.ndb-root .footer-links a {
-  color: var(--muted);
+.ndb-root .nf-copy h2 {
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.1;
+  letter-spacing: -.055em;
+  font-weight: 950;
+  color: var(--dark);
+}
+
+.ndb-root .nf-copy p {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.35;
+  font-weight: 750;
+  color: #4E4329;
+}
+
+.ndb-root .nf-contact {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.ndb-root .nf-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid rgba(34,29,35,.12);
+  color: var(--dark);
+  font-size: 12px;
+  font-weight: 900;
   text-decoration: none;
+  white-space: nowrap;
+}
+
+.ndb-root .nf-products {
+  display: grid;
+  grid-template-columns: 1.28fr .86fr .86fr;
+  gap: 10px;
+}
+
+.ndb-root .nf-card {
+  min-height: 92px;
+  border-radius: 18px;
+  border: 1px solid rgba(34,29,35,.12);
+  padding: 13px 14px;
+  background: #fff;
+}
+
+.ndb-root .nf-card.nf-dark {
+  background: var(--dark);
+  color: #fff;
+}
+
+.ndb-root .nf-card.nf-coach {
+  background: #F4EFFD;
+}
+
+.ndb-root .nf-card.nf-nudge {
+  background: #ECFFF4;
+}
+
+.ndb-root .nf-card h3 {
+  margin: 0 0 5px;
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: -.04em;
+  font-weight: 950;
+}
+
+.ndb-root .nf-card p {
+  margin: 0 0 9px;
+  font-size: 11.5px;
+  line-height: 1.3;
+  font-weight: 700;
+  color: #5D5660;
+}
+
+.ndb-root .nf-card.nf-dark p {
+  color: rgba(255,255,255,.72);
+}
+
+.ndb-root .nf-chips {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.ndb-root .nf-chip {
+  display: inline-flex;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid rgba(34,29,35,.10);
+  font-size: 10.5px;
+  font-weight: 900;
+  color: var(--dark);
+}
+
+.ndb-root .nf-card.nf-dark .nf-chip {
+  background: rgba(255,255,255,.10);
+  border-color: rgba(255,255,255,.16);
+  color: #fff;
+}
+
+@media (max-width: 900px) {
+  .ndb-root .nf-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .ndb-root .nf-contact {
+    justify-content: flex-start;
+  }
+  .ndb-root .nf-products {
+    grid-template-columns: 1fr;
+  }
+  .ndb-root .nf-card {
+    min-height: auto;
+  }
 }
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
