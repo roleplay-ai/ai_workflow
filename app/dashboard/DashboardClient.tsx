@@ -262,6 +262,8 @@ function FunctionsCarousel({
   functionThumbnails: Record<string, string>;
   functionDescriptions: Record<string, string>;
 }) {
+  const rowRef = useRef<HTMLDivElement>(null);
+
   const functions = useMemo(() => {
     const map = new Map<string, number>();
     activities.forEach(a => (a.functions ?? []).forEach(fn => {
@@ -272,6 +274,10 @@ function FunctionsCarousel({
   }, [activities]);
 
   if (functions.length === 0) return null;
+
+  function scrollFn(dir: number) {
+    rowRef.current?.scrollBy({ left: dir * 300, behavior: "smooth" });
+  }
 
   return (
     <section className="rail functions-rail">
@@ -285,23 +291,27 @@ function FunctionsCarousel({
           <button className="see-all" onClick={() => onSelect(null)}>Clear filter ✕</button>
         )}
       </div>
-      <div className="fn-cards-row">
-        {functions.map(([fn, count]) => {
-          const key = fn.toLowerCase();
-          return (
-            <FunctionCard
-              key={fn}
-              name={fn}
-              count={count}
-              description={functionDescriptions?.[key] ?? null}
-              thumbnail={functionThumbnails?.[key] ?? null}
-              icon={functionLogos?.[key] ?? null}
-              selected={selectedFunction === fn}
-              color={fnColor(fn)}
-              onClick={() => onSelect(selectedFunction === fn ? null : fn)}
-            />
-          );
-        })}
+      <div className="fn-rail-wrap">
+        <button className="fn-arrow-btn" onClick={() => scrollFn(-1)}>‹</button>
+        <div className="fn-cards-row" ref={rowRef}>
+          {functions.map(([fn, count]) => {
+            const key = fn.toLowerCase();
+            return (
+              <FunctionCard
+                key={fn}
+                name={fn}
+                count={count}
+                description={functionDescriptions?.[key] ?? null}
+                thumbnail={functionThumbnails?.[key] ?? null}
+                icon={functionLogos?.[key] ?? null}
+                selected={selectedFunction === fn}
+                color={fnColor(fn)}
+                onClick={() => onSelect(selectedFunction === fn ? null : fn)}
+              />
+            );
+          })}
+        </div>
+        <button className="fn-arrow-btn" onClick={() => scrollFn(1)}>›</button>
       </div>
     </section>
   );
@@ -828,23 +838,46 @@ export default function DashboardClient({ profile, activities, progress, toolFil
       </main>
 
       {/* ── Footer ── */}
-      <footer className="footer">
-        {isLoggedIn ? (
-          <>
-            <h2>You&apos;re all set. Keep exploring.</h2>
-            <p>New guided workflows are added every week. Check back for what&apos;s fresh.</p>
-          </>
-        ) : (
-          <>
-            <h2>Sign up free. Unlock every workflow.</h2>
-            <p>Get access to every workflow, tool guide, and AI mastery tip in the studio.</p>
-            <Link href="/login" className="btn btn-amber">Get started</Link>
-          </>
-        )}
-        <div className="footer-links">
-          <a href="#">About</a>
-          <a href="#">Contact</a>
-          <a href="#">Privacy</a>
+      <footer className="nudge-footer">
+        <div className="nf-inner">
+          <section className="nf-head">
+            <div className="nf-copy">
+              <h2>Nudgeable builds AI capability and behavior change at work.</h2>
+              <p>AI Work Studio, AI Coach, and Nudge Engine for learning, application, practice, and sustained action.</p>
+            </div>
+            <div className="nf-contact">
+              <a className="nf-pill" href="mailto:team@nudgeable.ai">team@nudgeable.ai</a>
+              <a className="nf-pill" href="https://www.nudgeable.ai">www.nudgeable.ai</a>
+            </div>
+          </section>
+          <section className="nf-products">
+            <article className="nf-card nf-dark">
+              <h3>AI Work Studio</h3>
+              <p>For AI learning, application, mastery, and fluency.</p>
+              <div className="nf-chips">
+                <span className="nf-chip">Masterclasses</span>
+                <span className="nf-chip">Application</span>
+                <span className="nf-chip">Mastery</span>
+                <span className="nf-chip">Fluency</span>
+              </div>
+            </article>
+            <article className="nf-card nf-coach">
+              <h3>AI Coach</h3>
+              <p>Safe practice before real workplace conversations.</p>
+              <div className="nf-chips">
+                <span className="nf-chip">Roleplays</span>
+                <span className="nf-chip">Feedback</span>
+              </div>
+            </article>
+            <article className="nf-card nf-nudge">
+              <h3>Nudge Engine</h3>
+              <p>Convert training into actions, habits, and measurement.</p>
+              <div className="nf-chips">
+                <span className="nf-chip">Actions</span>
+                <span className="nf-chip">Habits</span>
+              </div>
+            </article>
+          </section>
         </div>
       </footer>
     </div>
