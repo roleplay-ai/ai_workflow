@@ -34,6 +34,7 @@ type Props = {
   deepDives:           ToolDeepDive[];
   toolLogos:           ToolLogoMap;
   completedModuleIds:  string[];
+  isLoggedIn:          boolean;
   userName?:           string | null;
   isAdmin?:            boolean;
 };
@@ -154,7 +155,7 @@ function Carousel({
 
 export default function AIFluencyClient({
   brief, worlds, videos, tools, toolGuides, deepDives, toolLogos, completedModuleIds,
-  userName, isAdmin,
+  isLoggedIn, userName, isAdmin,
 }: Props) {
   const sortedItems = brief
     ? [...brief.fluency_brief_items].sort((a, b) => a.sort_order - b.sort_order)
@@ -532,7 +533,7 @@ export default function AIFluencyClient({
             </a>
           </div>
 
-          <VideoCarousel videos={videos} />
+          <VideoCarousel videos={videos} isLoggedIn={isLoggedIn} />
         </section>
 
         {/* ── Most Useful Tools ── */}
@@ -818,10 +819,40 @@ export default function AIFluencyClient({
 
 // ── Video carousel ─────────────────────────────────────────────────────────────
 
-function VideoCarousel({ videos }: { videos: ApplyVideo[] }) {
+function extractYouTubeId(url: string): string | null {
+  const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
+function AutoVideoThumbnail({ videoUrl }: { videoUrl: string }) {
+  const ytId = extractYouTubeId(videoUrl);
+  if (ytId) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />;
+  }
+  return (
+    <video
+      src={videoUrl}
+      preload="metadata"
+      muted
+      playsInline
+      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+      onLoadedMetadata={e => { (e.target as HTMLVideoElement).currentTime = 1; }}
+    />
+  );
+}
+
+function VideoCarousel({ videos, isLoggedIn }: { videos: ApplyVideo[]; isLoggedIn: boolean }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const scroll = (dir: "left" | "right") =>
     scrollRef.current?.scrollBy({ left: dir === "left" ? -290 : 290, behavior: "smooth" });
+
+  // Locked videos (for guests) always appear last
+  const displayVideos = [...videos].sort((a, b) => {
+    const aLocked = !isLoggedIn && a.is_locked ? 1 : 0;
+    const bLocked = !isLoggedIn && b.is_locked ? 1 : 0;
+    return aLocked - bLocked;
+  });
 
   return (
     <div className="aif-carousel-rail">
@@ -835,8 +866,9 @@ function VideoCarousel({ videos }: { videos: ApplyVideo[] }) {
         display: "grid", gridAutoFlow: "column", gridAutoColumns: 268,
         gap: 14, overflowX: "auto", padding: "4px 0 30px", scrollSnapType: "x mandatory",
       }}>
-        {videos.map(v => {
+        {displayVideos.map(v => {
           const accent = GROUP_ACCENT[v.group_name ?? ""] ?? "#623CEA";
+          const isLocked = !isLoggedIn && v.is_locked;
 
           return (
             <article key={v.id} style={{
@@ -844,7 +876,7 @@ function VideoCarousel({ videos }: { videos: ApplyVideo[] }) {
               background: "#fff", border: "1px solid rgba(34,29,35,.06)",
               boxShadow: "0 2px 12px rgba(0,0,0,.06)", cursor: "pointer",
               display: "flex", flexDirection: "column",
-              opacity: v.is_locked ? 0.6 : 1,
+              opacity: isLocked ? 0.6 : 1,
             }}>
               {/* Thumbnail */}
               <div style={{
@@ -868,17 +900,28 @@ function VideoCarousel({ videos }: { videos: ApplyVideo[] }) {
                   }} />
                 )}
 
+                {/* Auto-thumbnail: extract a frame from the video when no uploaded thumbnail */}
+                {!v.thumbnail_url && v.video_url && (
+                  <>
+                    <AutoVideoThumbnail videoUrl={v.video_url} />
+                    <div style={{
+                      position: "absolute", inset: 0,
+                      background: "linear-gradient(to top, rgba(0,0,0,.55) 0%, rgba(0,0,0,.15) 50%, rgba(0,0,0,.25) 100%)",
+                    }} />
+                  </>
+                )}
+
                 {/* Play button */}
                 <div style={{
                   position: "absolute", left: "50%", top: "50%",
                   transform: "translate(-50%,-50%)", zIndex: 2,
                   width: 52, height: 52, borderRadius: "50%",
-                  background: v.is_locked ? "rgba(0,0,0,.3)" : "#fff",
-                  backdropFilter: v.is_locked ? "blur(4px)" : undefined,
-                  boxShadow: v.is_locked ? undefined : "0 6px 24px rgba(0,0,0,.20)",
+                  background: isLocked ? "rgba(0,0,0,.3)" : "#fff",
+                  backdropFilter: isLocked ? "blur(4px)" : undefined,
+                  boxShadow: isLocked ? undefined : "0 6px 24px rgba(0,0,0,.20)",
                   display: "grid", placeItems: "center",
                 }}>
-                  {v.is_locked ? (
+                  {isLocked ? (
                     <span style={{ fontSize: 18 }}>🔒</span>
                   ) : (
                     <span style={{
@@ -892,7 +935,7 @@ function VideoCarousel({ videos }: { videos: ApplyVideo[] }) {
                 </div>
 
                 {/* Duration badge */}
-                {!v.is_locked && v.duration && (
+                {!isLocked && v.duration && (
                   <span style={{
                     position: "absolute", bottom: 8, right: 8, zIndex: 2,
                     background: "rgba(0,0,0,.80)", color: "#fff",
@@ -921,7 +964,7 @@ function VideoCarousel({ videos }: { videos: ApplyVideo[] }) {
                   </span>
                 </div>
                 <h3 className="card-title">{v.title}</h3>
-                {v.is_locked && (
+                {isLocked && (
                   <p style={{ margin: 0, fontSize: 12, color: "#9B9199", fontStyle: "italic" }}>
                     Login to unlock
                   </p>

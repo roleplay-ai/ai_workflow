@@ -21,9 +21,33 @@ type ApplyVideo = {
 
 type Props = {
   videos: ApplyVideo[];
+  isLoggedIn: boolean;
   userName: string | null;
   isAdmin: boolean;
 };
+
+function extractYouTubeId(url: string): string | null {
+  const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
+function AutoVideoThumbnail({ videoUrl }: { videoUrl: string }) {
+  const ytId = extractYouTubeId(videoUrl);
+  if (ytId) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />;
+  }
+  return (
+    <video
+      src={videoUrl}
+      preload="metadata"
+      muted
+      playsInline
+      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+      onLoadedMetadata={e => { (e.target as HTMLVideoElement).currentTime = 1; }}
+    />
+  );
+}
 
 function parsePlatforms(raw: string | null): string[] {
   if (!raw?.trim()) return [];
@@ -32,10 +56,11 @@ function parsePlatforms(raw: string | null): string[] {
     : raw.split(",").map(s => s.trim()).filter(Boolean);
 }
 
-function VideoModal({ video, onClose }: { video: ApplyVideo; onClose: () => void }) {
+function VideoModal({ video, isLoggedIn, onClose }: { video: ApplyVideo; isLoggedIn: boolean; onClose: () => void }) {
   const accent = GROUP_ACCENT[video.group_name ?? ""] ?? ACCENT_FALLBACK;
   const platforms = parsePlatforms(video.platforms);
   const isYouTube = video.video_url?.includes("youtube.com") || video.video_url?.includes("youtu.be");
+  const isLocked = !isLoggedIn && video.is_locked;
 
   return (
     <div
@@ -76,7 +101,7 @@ function VideoModal({ video, onClose }: { video: ApplyVideo; onClose: () => void
             position: "relative", background: "#0f0a18",
             aspectRatio: "16 / 9",
           }}>
-            {video.video_url && !video.is_locked ? (
+            {video.video_url && !isLocked ? (
               isYouTube ? (
                 <iframe
                   src={video.video_url}
@@ -166,7 +191,7 @@ function VideoModal({ video, onClose }: { video: ApplyVideo; onClose: () => void
               </div>
             )}
 
-            {video.is_locked && (
+            {isLocked && (
               <a href="/login" style={{
                 display: "inline-block", marginTop: 18,
                 background: "#221D23", color: "#FFCE00", fontWeight: 800, fontSize: 14,
@@ -180,11 +205,18 @@ function VideoModal({ video, onClose }: { video: ApplyVideo; onClose: () => void
   );
 }
 
-export default function AllVideosClient({ videos, userName, isAdmin }: Props) {
+export default function AllVideosClient({ videos, isLoggedIn, userName, isAdmin }: Props) {
   const [filter, setFilter] = useState<string>("All");
   const [selectedVideo, setSelectedVideo] = useState<ApplyVideo | null>(null);
 
   const filtered = filter === "All" ? videos : videos.filter(v => v.group_name === filter);
+
+  // Locked videos (for guests) always appear last
+  const displayVideos = [...filtered].sort((a, b) => {
+    const aLocked = !isLoggedIn && a.is_locked ? 1 : 0;
+    const bLocked = !isLoggedIn && b.is_locked ? 1 : 0;
+    return aLocked - bLocked;
+  });
 
   return (
     <>
@@ -255,8 +287,9 @@ export default function AllVideosClient({ videos, userName, isAdmin }: Props) {
             gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
             gap: 16,
           }}>
-            {filtered.map(v => {
+            {displayVideos.map(v => {
               const accent = GROUP_ACCENT[v.group_name ?? ""] ?? ACCENT_FALLBACK;
+              const isLocked = !isLoggedIn && v.is_locked;
               const blurb = v.description
                 ? v.description.split("\n")[0].slice(0, 96) + (v.description.length > 96 ? "…" : "")
                 : null;
@@ -270,11 +303,11 @@ export default function AllVideosClient({ videos, userName, isAdmin }: Props) {
                     background: "#fff", border: "1px solid rgba(34,29,35,.06)",
                     boxShadow: "0 2px 12px rgba(0,0,0,.06)",
                     cursor: "pointer", display: "flex", flexDirection: "column",
-                    opacity: v.is_locked ? 0.65 : 1,
+                    opacity: isLocked ? 0.65 : 1,
                     transition: "transform .15s, box-shadow .15s",
                   }}
                   onMouseEnter={e => {
-                    if (!v.is_locked) {
+                    if (!isLocked) {
                       (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
                       (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 28px rgba(0,0,0,.10)";
                     }
@@ -306,17 +339,28 @@ export default function AllVideosClient({ videos, userName, isAdmin }: Props) {
                       }} />
                     )}
 
+                    {/* Auto-thumbnail: extract a frame from the video when no uploaded thumbnail */}
+                    {!v.thumbnail_url && v.video_url && (
+                      <>
+                        <AutoVideoThumbnail videoUrl={v.video_url} />
+                        <div style={{
+                          position: "absolute", inset: 0,
+                          background: "linear-gradient(to top, rgba(0,0,0,.55) 0%, rgba(0,0,0,.15) 50%, rgba(0,0,0,.25) 100%)",
+                        }} />
+                      </>
+                    )}
+
                     {/* Play / lock */}
                     <div style={{
                       position: "absolute", left: "50%", top: "50%",
                       transform: "translate(-50%,-50%)", zIndex: 2,
                       width: 52, height: 52, borderRadius: "50%",
-                      background: v.is_locked ? "rgba(0,0,0,.3)" : "#fff",
-                      backdropFilter: v.is_locked ? "blur(4px)" : undefined,
-                      boxShadow: v.is_locked ? undefined : "0 6px 24px rgba(0,0,0,.20)",
+                      background: isLocked ? "rgba(0,0,0,.3)" : "#fff",
+                      backdropFilter: isLocked ? "blur(4px)" : undefined,
+                      boxShadow: isLocked ? undefined : "0 6px 24px rgba(0,0,0,.20)",
                       display: "grid", placeItems: "center",
                     }}>
-                      {v.is_locked ? (
+                      {isLocked ? (
                         <span style={{ fontSize: 18 }}>🔒</span>
                       ) : (
                         <span style={{
@@ -330,7 +374,7 @@ export default function AllVideosClient({ videos, userName, isAdmin }: Props) {
                     </div>
 
                     {/* Duration */}
-                    {!v.is_locked && v.duration && (
+                    {!isLocked && v.duration && (
                       <span style={{
                         position: "absolute", bottom: 8, right: 8, zIndex: 2,
                         background: "rgba(0,0,0,.80)", color: "#fff",
@@ -354,14 +398,14 @@ export default function AllVideosClient({ videos, userName, isAdmin }: Props) {
                       }}>{v.category_tag ?? v.group_name ?? "Feature"}</span>
                     </div>
                     <h3 className="card-title">{v.title}</h3>
-                    {blurb && !v.is_locked && (
+                    {blurb && !isLocked && (
                       <p style={{
                         margin: 0, fontSize: 12, lineHeight: 1.5, color: "#6B6670", fontWeight: 650,
                         display: "-webkit-box", WebkitLineClamp: 2,
                         WebkitBoxOrient: "vertical" as const, overflow: "hidden",
                       }}>{blurb}</p>
                     )}
-                    {v.is_locked && (
+                    {isLocked && (
                       <p style={{ margin: 0, fontSize: 12, color: "#9B9199", fontStyle: "italic" }}>
                         Login to unlock
                       </p>
@@ -375,7 +419,7 @@ export default function AllVideosClient({ videos, userName, isAdmin }: Props) {
       </main>
 
       {selectedVideo && (
-        <VideoModal video={selectedVideo} onClose={() => setSelectedVideo(null)} />
+        <VideoModal video={selectedVideo} isLoggedIn={isLoggedIn} onClose={() => setSelectedVideo(null)} />
       )}
     </>
   );
