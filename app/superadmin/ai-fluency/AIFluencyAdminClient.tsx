@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import Topbar from "@/components/Topbar";
 import type { Profile } from "@/lib/supabase/types";
 import { probeVideoDurationFromFile, formatFileSize } from "@/lib/videoDuration";
+import { resumableUpload } from "@/lib/resumableUpload";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -315,6 +316,7 @@ function VideoUploadField({
   const supabase = createClient();
   const [phase, setPhase] = useState<UploadPhase>(null);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -324,13 +326,35 @@ function VideoUploadField({
     setPhase("reading");
     let dur: string | null = null;
     try { dur = await probeVideoDurationFromFile(file); } catch { /* ignore */ }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      setPhase(null); setPendingLabel(null);
+      alert("Upload failed: not signed in.");
+      return;
+    }
+
+    setProgress(0);
     setPhase("uploading");
     const ext = file.name.split(".").pop() ?? "mp4";
     const path = `apply-videos/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error } = await supabase.storage.from("content").upload(path, file, { cacheControl: "3600", upsert: false });
-    setPhase(null); setPendingLabel(null);
+    try {
+      await resumableUpload({
+        bucket: "content",
+        objectName: path,
+        file,
+        accessToken,
+        onProgress: (f) => setProgress(f),
+      });
+    } catch (err) {
+      setPhase(null); setPendingLabel(null); setProgress(0);
+      if (inputRef.current) inputRef.current.value = "";
+      alert("Upload failed: " + (err instanceof Error ? err.message : String(err)));
+      return;
+    }
+    setPhase(null); setPendingLabel(null); setProgress(0);
     if (inputRef.current) inputRef.current.value = "";
-    if (error) { alert("Upload failed: " + error.message); return; }
     const { data } = supabase.storage.from("content").getPublicUrl(path);
     onUploaded(data.publicUrl);
     if (dur) onDuration(dur);
@@ -342,11 +366,17 @@ function VideoUploadField({
     return (
       <div style={{ border: "1.5px dashed #E8E6DC", borderRadius: 12, padding: "18px 14px", textAlign: "center", background: "#FAFAF8" }}>
         <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
-          {phase === "reading" ? "⏱ Reading metadata…" : "⬆ Uploading…"}
+          {phase === "reading"
+            ? "⏱ Reading metadata…"
+            : `⬆ Uploading… ${Math.round(progress * 100)}%`}
         </div>
         <div style={{ fontSize: 11, color: "#9B9199", marginBottom: 8 }}>{pendingLabel}</div>
         <div style={{ height: 4, borderRadius: 4, background: "#E8E6DC", overflow: "hidden" }}>
-          <div style={{ height: "100%", width: "60%", background: "#FFCE00", borderRadius: 4, animation: "pulse 1.2s ease-in-out infinite" }} />
+          {phase === "reading" ? (
+            <div style={{ height: "100%", width: "60%", background: "#FFCE00", borderRadius: 4, animation: "pulse 1.2s ease-in-out infinite" }} />
+          ) : (
+            <div style={{ height: "100%", width: `${Math.round(progress * 100)}%`, background: "#FFCE00", borderRadius: 4, transition: "width .2s ease" }} />
+          )}
         </div>
       </div>
     );
