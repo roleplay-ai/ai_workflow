@@ -13,7 +13,12 @@ VALUES (
     'image/jpeg', 'image/png', 'image/webp', 'image/gif'
   ]
 )
-ON CONFLICT (id) DO NOTHING;
+-- DO UPDATE (not DO NOTHING) so the size limit / mime types are enforced even
+-- when the bucket already exists (e.g. created via the dashboard first).
+ON CONFLICT (id) DO UPDATE
+  SET public             = EXCLUDED.public,
+      file_size_limit    = EXCLUDED.file_size_limit,
+      allowed_mime_types = EXCLUDED.allowed_mime_types;
 
 -- Anyone can read (public CDN)
 CREATE POLICY "content: public read"

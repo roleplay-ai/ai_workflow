@@ -8,6 +8,7 @@ import { formatToolLabel } from "@/lib/tools";
 import { resolveToolLogoUrl, type ToolLogoMap } from "@/lib/toolLogos";
 import type { ToolDeepDive } from "@/lib/supabase/types";
 import ModulePlayer, { type ModuleData } from "./ModulePlayer";
+import VideoModal from "./VideoModal";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -844,6 +845,7 @@ function AutoVideoThumbnail({ videoUrl }: { videoUrl: string }) {
 
 function VideoCarousel({ videos, isLoggedIn }: { videos: ApplyVideo[]; isLoggedIn: boolean }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [selectedVideo, setSelectedVideo] = useState<ApplyVideo | null>(null);
   const scroll = (dir: "left" | "right") =>
     scrollRef.current?.scrollBy({ left: dir === "left" ? -290 : 290, behavior: "smooth" });
 
@@ -855,6 +857,7 @@ function VideoCarousel({ videos, isLoggedIn }: { videos: ApplyVideo[]; isLoggedI
   });
 
   return (
+    <>
     <div className="aif-carousel-rail">
       <button
         className="aif-arrow-btn"
@@ -871,7 +874,10 @@ function VideoCarousel({ videos, isLoggedIn }: { videos: ApplyVideo[]; isLoggedI
           const isLocked = !isLoggedIn && v.is_locked;
 
           return (
-            <article key={v.id} style={{
+            <article
+              key={v.id}
+              onClick={() => setSelectedVideo(v)}
+              style={{
               scrollSnapAlign: "start", borderRadius: 18, overflow: "hidden",
               background: "#fff", border: "1px solid rgba(34,29,35,.06)",
               boxShadow: "0 2px 12px rgba(0,0,0,.06)", cursor: "pointer",
@@ -981,5 +987,10 @@ function VideoCarousel({ videos, isLoggedIn }: { videos: ApplyVideo[]; isLoggedI
         aria-label="Next"
       >›</button>
     </div>
+
+    {selectedVideo && (
+      <VideoModal video={selectedVideo} isLoggedIn={isLoggedIn} onClose={() => setSelectedVideo(null)} />
+    )}
+    </>
   );
 }
