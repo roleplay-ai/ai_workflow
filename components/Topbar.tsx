@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import type { Profile } from "@/lib/supabase/types";
-import { AppNavLinks, type AppPage } from "@/components/AppNav";
+import { AppNavBrand, AppNavLinks, APP_NAV_HEADER_STYLE, type AppPage } from "@/components/AppNav";
 
 type Props = {
   profile: (Profile & { companies?: { name: string } | null }) | null;
@@ -32,30 +32,8 @@ export default function Topbar({ profile, role, activePage, onSignOut }: Props) 
   }, []);
 
   return (
-    <header style={{
-      height: 68, display: "flex", alignItems: "center", justifyContent: "space-between",
-      padding: "0 36px", background: "rgba(255,255,255,0.96)", borderBottom: "1px solid #E9E4DC",
-      position: "sticky", top: 0, zIndex: 100, backdropFilter: "blur(18px)",
-      fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif", gap: 16,
-    }}>
-      {/* Brand */}
-      <Link
-        href="/dashboard"
-        style={{
-          display: "flex", alignItems: "center", gap: 10, fontSize: 15, fontWeight: 900,
-          letterSpacing: "-0.04em", color: "#221D23", textDecoration: "none", whiteSpace: "nowrap",
-        }}
-      >
-        <img
-          src="/icon.png"
-          alt=""
-          width={32}
-          height={32}
-          style={{ width: 32, height: 32, borderRadius: 9, display: "block", flexShrink: 0 }}
-        />
-        <span>Nudgeable AI Work Studio</span>
-      </Link>
-
+    <header style={APP_NAV_HEADER_STYLE}>
+      <AppNavBrand />
       <AppNavLinks activePage={activePage} />
 
       {/* Actions */}

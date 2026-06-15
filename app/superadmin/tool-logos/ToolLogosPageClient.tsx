@@ -202,7 +202,7 @@ export default function ToolLogosPageClient({ profile, toolLogos, tags: initTags
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: "Roboto, ui-sans-serif, system-ui, sans-serif" }}>
       <Topbar profile={profile} role="superadmin" onSignOut={handleSignOut} />
 
       <main style={{ width: "min(1100px,calc(100% - 48px))", margin: "0 auto", padding: "28px 0 60px" }}>

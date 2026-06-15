@@ -339,7 +339,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
 
   if (steps.length === 0) {
     return (
-      <div style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
+      <div style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: "Roboto, ui-sans-serif, system-ui, sans-serif" }}>
         <AppNav
           activePage="workflows"
           userName={profile?.full_name}
@@ -356,7 +356,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
   }
 
   return (
-    <div style={{ height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
+    <div style={{ height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: "Roboto, ui-sans-serif, system-ui, sans-serif" }}>
       {/* Topbar */}
       <header style={{
         height: 68, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between",

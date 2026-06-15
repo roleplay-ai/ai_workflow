@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import AppNav from "@/components/AppNav";
-import "../ai-fluency.css";
 
 type ProCon = { content: string; sort_order: number };
 
@@ -227,11 +226,7 @@ export default function AllToolsClient({ tools, userName, isAdmin }: Props) {
   const filtered = filter === "All" ? tools : tools.filter(t => t.category_label === filter);
 
   return (
-    <div style={{
-      minHeight: "100vh", background: "#FEFCFA", color: "#221D23",
-      fontFamily: '"Visby CF", Inter, system-ui, -apple-system, sans-serif',
-      letterSpacing: "-.01em",
-    }}>
+    <>
       <AppNav activePage="ai-fluency" userName={userName} isAdmin={isAdmin} />
 
       <main style={{ width: "min(1200px,calc(100% - 56px))", margin: "34px auto 80px" }}>
@@ -347,10 +342,7 @@ export default function AllToolsClient({ tools, userName, isAdmin }: Props) {
                           {t.letter ?? t.icon_emoji ?? t.name[0]}
                         </span>
                         <div style={{ minWidth: 0 }}>
-                          <h3 style={{
-                            margin: 0, fontSize: 17, lineHeight: 1.1, fontWeight: 950,
-                            letterSpacing: "-.035em", color: "#221D23",
-                          }}>{t.name}</h3>
+                          <h3 className="card-title">{t.name}</h3>
                           {t.is_featured && (
                             <span style={{
                               display: "inline-block", marginTop: 3,
@@ -400,6 +392,6 @@ export default function AllToolsClient({ tools, userName, isAdmin }: Props) {
       {selectedTool && (
         <ToolModal tool={selectedTool} onClose={() => setSelectedTool(null)} />
       )}
-    </div>
+    </>
   );
 }

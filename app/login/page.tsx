@@ -72,7 +72,7 @@ export default function LoginPage() {
     <div style={{
       minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
       background: "linear-gradient(135deg,#FFF6CF 0%,#F8F8F6 50%,#F0EEFF 100%)",
-      fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+      fontFamily: "Roboto, ui-sans-serif, system-ui, sans-serif",
     }}>
       <div style={{
         width: "100%", maxWidth: 420, background: "white", borderRadius: 24,

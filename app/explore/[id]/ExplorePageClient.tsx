@@ -19,7 +19,7 @@ export default function ExplorePageClient({ title, pageUrl }: Props) {
   }
 
   return (
-    <div style={{ height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
+    <div style={{ height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: "Roboto, ui-sans-serif, system-ui, sans-serif" }}>
       <header style={{
         height: 68, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "0 24px", background: "rgba(255,255,255,.92)", borderBottom: "1px solid #E2E8F0",

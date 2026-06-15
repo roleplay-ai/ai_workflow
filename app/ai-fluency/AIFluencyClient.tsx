@@ -8,7 +8,6 @@ import { formatToolLabel } from "@/lib/tools";
 import { resolveToolLogoUrl, type ToolLogoMap } from "@/lib/toolLogos";
 import type { ToolDeepDive } from "@/lib/supabase/types";
 import ModulePlayer, { type ModuleData } from "./ModulePlayer";
-import "./ai-fluency.css";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -126,22 +125,16 @@ function Carousel({
       </div>
 
       {/* Scroll row */}
-      <div style={{ position: "relative" }}>
+      <div className="aif-carousel-rail">
         <button
           className="aif-arrow-btn"
           onClick={() => scroll("left")}
           aria-label="Previous"
-          style={{
-            position: "absolute", top: "44%", transform: "translateY(-50%)", zIndex: 5, left: -14,
-            width: 42, height: 52, borderRadius: 999, background: "#fff", border: "1px solid #E9E4DC",
-            boxShadow: "0 16px 35px rgba(34,29,35,.13)", display: "grid", placeItems: "center",
-            fontSize: 26, fontWeight: 950, cursor: "pointer",
-          }}
         >‹</button>
 
         <div ref={scrollRef} className="aif-slider" style={{
           display: "grid", gridAutoFlow: "column", gap: 24, overflowX: "auto",
-          padding: "4px 10px 30px", scrollSnapType: "x mandatory",
+          padding: "4px 0 30px", scrollSnapType: "x mandatory",
         }}>
           {children}
         </div>
@@ -150,12 +143,6 @@ function Carousel({
           className="aif-arrow-btn"
           onClick={() => scroll("right")}
           aria-label="Next"
-          style={{
-            position: "absolute", top: "44%", transform: "translateY(-50%)", zIndex: 5, right: -14,
-            width: 42, height: 52, borderRadius: 999, background: "#fff", border: "1px solid #E9E4DC",
-            boxShadow: "0 16px 35px rgba(34,29,35,.13)", display: "grid", placeItems: "center",
-            fontSize: 26, fontWeight: 950, cursor: "pointer",
-          }}
         >›</button>
       </div>
     </section>
@@ -196,12 +183,7 @@ export default function AIFluencyClient({
   }
 
   return (
-    <div style={{
-      minHeight: "100vh", background: "#FEFCFA", color: "#221D23",
-      fontFamily: '"Visby CF", Inter, system-ui, -apple-system, sans-serif',
-      letterSpacing: "-.01em",
-    }}>
-
+    <>
       <AppNav activePage="ai-fluency" userName={userName} isAdmin={isAdmin} />
 
       {/* ── Page ── */}
@@ -234,10 +216,7 @@ export default function AIFluencyClient({
               Updated daily
             </div>
 
-            <h1 style={{
-              margin: 0, fontSize: "clamp(50px,6.1vw,82px)", lineHeight: .94,
-              fontWeight: 950, letterSpacing: "-.075em", maxWidth: 580,
-            }}>AI Fluency</h1>
+            <h1>AI Fluency</h1>
 
             <p style={{
               maxWidth: 560, margin: "28px 0 30px", fontSize: 18, lineHeight: 1.48,
@@ -350,17 +329,11 @@ export default function AIFluencyClient({
             </div>
 
             {/* Horizontal world-card carousel */}
-            <div style={{ position: "relative" }}>
+            <div className="aif-carousel-rail">
               <button
                 className="aif-arrow-btn"
                 onClick={() => foundScrollRef.current?.scrollBy({ left: -330, behavior: "smooth" })}
                 aria-label="Previous"
-                style={{
-                  position: "absolute", top: "44%", transform: "translateY(-50%)", zIndex: 5, left: -14,
-                  width: 42, height: 52, borderRadius: 999, background: "#fff", border: "1px solid #E9E4DC",
-                  boxShadow: "0 16px 35px rgba(34,29,35,.13)", display: "grid", placeItems: "center",
-                  fontSize: 26, fontWeight: 950, cursor: "pointer",
-                }}
               >‹</button>
 
               <div
@@ -368,7 +341,7 @@ export default function AIFluencyClient({
                 className="aif-slider"
                 style={{
                   display: "grid", gridAutoFlow: "column", gridAutoColumns: 300,
-                  gap: 18, overflowX: "auto", padding: "4px 10px 24px",
+                  gap: 18, overflowX: "auto", padding: "4px 0 24px",
                   scrollSnapType: "x mandatory",
                 }}
               >
@@ -403,9 +376,7 @@ export default function AIFluencyClient({
 
                       {/* Text */}
                       <div>
-                        <h3 style={{ margin: 0, fontSize: 15, lineHeight: 1.18, fontWeight: 950, letterSpacing: "-.035em" }}>
-                          {world.title}
-                        </h3>
+                        <h3 className="card-title">{world.title}</h3>
                         <p style={{ margin: "6px 0 0", fontSize: 12, fontWeight: 900, color: isOpen ? world.color : c.textColor }}>
                           {world.fluency_modules.length} module{world.fluency_modules.length !== 1 ? "s" : ""}
                           {doneCount > 0 ? ` · ${doneCount} done` : ""}
@@ -431,12 +402,6 @@ export default function AIFluencyClient({
                 className="aif-arrow-btn"
                 onClick={() => foundScrollRef.current?.scrollBy({ left: 330, behavior: "smooth" })}
                 aria-label="Next"
-                style={{
-                  position: "absolute", top: "44%", transform: "translateY(-50%)", zIndex: 5, right: -14,
-                  width: 42, height: 52, borderRadius: 999, background: "#fff", border: "1px solid #E9E4DC",
-                  boxShadow: "0 16px 35px rgba(34,29,35,.13)", display: "grid", placeItems: "center",
-                  fontSize: 26, fontWeight: 950, cursor: "pointer",
-                }}
               >›</button>
             </div>
 
@@ -507,10 +472,7 @@ export default function AIFluencyClient({
                           {/* Title + concepts */}
                           <div>
                             <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                              <span style={{
-                                fontSize: 13, fontWeight: 800, lineHeight: 1.3,
-                                color: mod.is_locked ? "#9B9199" : "#221D23",
-                              }}>{mod.title}</span>
+                              <span className={`card-title${mod.is_locked ? " card-title--locked" : ""}`}>{mod.title}</span>
                               {done && (
                                 <span style={{
                                   fontSize: 9, fontWeight: 900, letterSpacing: ".06em",
@@ -603,7 +565,7 @@ export default function AIFluencyClient({
                       fontSize: t.letter ? 18 : 19, fontWeight: 950, color: "#fff",
                       letterSpacing: "-.02em",
                     }}>{t.letter ?? t.icon_emoji}</span>
-                    <h3 style={{ margin: 0, fontSize: 18, lineHeight: 1, fontWeight: 950, letterSpacing: "-.035em" }}>{t.name}</h3>
+                    <h3 className="card-title">{t.name}</h3>
                   </div>
                   <p style={{
                     margin: 0, fontSize: 12, lineHeight: 1.38, fontWeight: 650, color: "#514B53",
@@ -693,9 +655,7 @@ export default function AIFluencyClient({
                           <img src={logoUrl} alt="" style={{ width: 28, height: 28, objectFit: "contain" }} />
                         ) : toolInitials(slug)}
                       </div>
-                      <h3 style={{ margin: "0 0 8px", fontSize: 18, lineHeight: 1.1, fontWeight: 950, letterSpacing: "-.04em", color: "#221D23" }}>
-                        {item.title}
-                      </h3>
+                      <h3 className="card-title">{item.title}</h3>
                       <p style={{ margin: "0 0 18px", color: "#514B53", fontSize: 13, lineHeight: 1.35, fontWeight: 650 }}>
                         {desc}
                       </p>
@@ -745,9 +705,7 @@ export default function AIFluencyClient({
                         background: "#fff", color: "#221D23", fontSize: 20, fontWeight: 950,
                         marginBottom: 18, border: "1px solid rgba(34,29,35,.08)",
                       }}>{g.logo_letter}</div>
-                      <h3 style={{ margin: "0 0 8px", fontSize: 18, lineHeight: 1.1, fontWeight: 950, letterSpacing: "-.04em", color: "#221D23" }}>
-                        {g.name}
-                      </h3>
+                      <h3 className="card-title">{g.name}</h3>
                       <p style={{ margin: "0 0 18px", color: "#514B53", fontSize: 13, lineHeight: 1.35, fontWeight: 650 }}>
                         {g.description}
                       </p>
@@ -854,7 +812,7 @@ export default function AIFluencyClient({
           onComplete={handleComplete}
         />
       )}
-    </div>
+    </>
   );
 }
 
@@ -866,28 +824,19 @@ function VideoCarousel({ videos }: { videos: ApplyVideo[] }) {
     scrollRef.current?.scrollBy({ left: dir === "left" ? -290 : 290, behavior: "smooth" });
 
   return (
-    <div style={{ position: "relative" }}>
+    <div className="aif-carousel-rail">
       <button
         className="aif-arrow-btn"
         onClick={() => scroll("left")}
         aria-label="Previous"
-        style={{
-          position: "absolute", top: "44%", transform: "translateY(-50%)", zIndex: 5, left: -14,
-          width: 42, height: 52, borderRadius: 999, background: "#fff", border: "1px solid #E9E4DC",
-          boxShadow: "0 16px 35px rgba(34,29,35,.13)", display: "grid", placeItems: "center",
-          fontSize: 26, fontWeight: 950, cursor: "pointer",
-        }}
       >‹</button>
 
       <div ref={scrollRef} className="aif-slider" style={{
         display: "grid", gridAutoFlow: "column", gridAutoColumns: 268,
-        gap: 14, overflowX: "auto", padding: "4px 10px 30px", scrollSnapType: "x mandatory",
+        gap: 14, overflowX: "auto", padding: "4px 0 30px", scrollSnapType: "x mandatory",
       }}>
         {videos.map(v => {
           const accent = GROUP_ACCENT[v.group_name ?? ""] ?? "#623CEA";
-          const blurb = v.description
-            ? v.description.split("\n")[0].slice(0, 96) + (v.description.length > 96 ? "…" : "")
-            : null;
 
           return (
             <article key={v.id} style={{
@@ -971,17 +920,7 @@ function VideoCarousel({ videos }: { videos: ApplyVideo[] }) {
                     {v.category_tag ?? v.group_name ?? "Feature"}
                   </span>
                 </div>
-                <h3 style={{
-                  margin: "0 0 6px", fontSize: 15, lineHeight: 1.28,
-                  fontWeight: 800, letterSpacing: "-.03em", color: "#221D23",
-                  display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden",
-                }}>{v.title}</h3>
-                {blurb && !v.is_locked && (
-                  <p style={{
-                    margin: 0, fontSize: 12, lineHeight: 1.5, color: "#6B6670", fontWeight: 650,
-                    display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden",
-                  }}>{blurb}</p>
-                )}
+                <h3 className="card-title">{v.title}</h3>
                 {v.is_locked && (
                   <p style={{ margin: 0, fontSize: 12, color: "#9B9199", fontStyle: "italic" }}>
                     Login to unlock
@@ -997,12 +936,6 @@ function VideoCarousel({ videos }: { videos: ApplyVideo[] }) {
         className="aif-arrow-btn"
         onClick={() => scroll("right")}
         aria-label="Next"
-        style={{
-          position: "absolute", top: "44%", transform: "translateY(-50%)", zIndex: 5, right: -14,
-          width: 42, height: 52, borderRadius: 999, background: "#fff", border: "1px solid #E9E4DC",
-          boxShadow: "0 16px 35px rgba(34,29,35,.13)", display: "grid", placeItems: "center",
-          fontSize: 26, fontWeight: 950, cursor: "pointer",
-        }}
       >›</button>
     </div>
   );

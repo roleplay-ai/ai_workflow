@@ -63,7 +63,7 @@ export default function AIMasteryClient({ completedModules: initial, userName, i
   return (
     <div style={{
       height: "100vh", display: "flex", flexDirection: "column",
-      overflow: "hidden", fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+      overflow: "hidden", fontFamily: "Roboto, ui-sans-serif, system-ui, sans-serif",
     }}>
       <AppNav activePage="ai-mastery" userName={userName} isAdmin={isAdmin} />
 
