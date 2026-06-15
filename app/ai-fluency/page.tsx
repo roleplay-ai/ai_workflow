@@ -85,6 +85,7 @@ export default async function AIFluencyPage() {
       deepDives={(deepDives ?? []) as any}
       toolLogos={toolLogos}
       completedModuleIds={completedModuleIds}
+      isLoggedIn={!!user}
       userName={(profile as any)?.full_name ?? null}
       isAdmin={(profile as any)?.role === "superadmin"}
     />

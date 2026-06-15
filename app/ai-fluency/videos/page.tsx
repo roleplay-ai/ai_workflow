@@ -19,6 +19,7 @@ export default async function AllVideosPage() {
   return (
     <AllVideosClient
       videos={(videos ?? []) as any}
+      isLoggedIn={!!user}
       userName={(profile as any)?.full_name ?? null}
       isAdmin={(profile as any)?.role === "superadmin"}
     />
