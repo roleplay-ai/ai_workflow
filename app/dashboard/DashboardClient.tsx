@@ -24,6 +24,7 @@ type Props = {
   isLoggedIn: boolean;
   masteryProgressCount: number;
   brief: Brief | null;
+  viewCounts: Record<string, number>;
 };
 
 type BriefItem = { id: string; content: string; sort_order: number };
@@ -126,7 +127,7 @@ function SignUpCard({ onClose }: { onClose: () => void }) {
 const PAGE_SIZE = 10;
 
 function AllWorkflowsSection({
-  activities, selectedFunction, selectedTool, isLoggedIn, onSignUpRequired, toolLogos, tagLogos,
+  activities, selectedFunction, selectedTool, isLoggedIn, onSignUpRequired, toolLogos, tagLogos, viewCounts,
 }: {
   activities: Activity[];
   selectedFunction: string | null;
@@ -135,6 +136,7 @@ function AllWorkflowsSection({
   onSignUpRequired: () => void;
   toolLogos: ToolLogoMap;
   tagLogos: Record<string, string>;
+  viewCounts: Record<string, number>;
 }) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
@@ -193,6 +195,7 @@ function AllWorkflowsSection({
         onSignUpRequired={onSignUpRequired}
         toolLogos={toolLogos}
         tagLogos={tagLogos}
+        viewCounts={viewCounts}
         onLoadMore={hasMore ? () => setVisibleCount(c => Math.min(filtered.length, c + PAGE_SIZE)) : undefined}
       />
     </div>
@@ -324,7 +327,7 @@ function FunctionsCarousel({
 // ── HorizontalRail ────────────────────────────────────────────────────────
 
 function HorizontalRail({
-  title, subtitle, label, activities, isLoggedIn, onSignUpRequired, toolLogos, tagLogos, variant = "default", onLoadMore,
+  title, subtitle, label, activities, isLoggedIn, onSignUpRequired, toolLogos, tagLogos, variant = "default", viewCounts = {}, onLoadMore,
 }: {
   title: string;
   subtitle: string;
@@ -335,6 +338,7 @@ function HorizontalRail({
   toolLogos: ToolLogoMap;
   tagLogos: Record<string, string>;
   variant?: CardVariant;
+  viewCounts?: Record<string, number>;
   onLoadMore?: () => void;
 }) {
   const rowRef = useRef<HTMLDivElement>(null);
@@ -448,7 +452,7 @@ function HorizontalRail({
                 className={`rail-card-slot${active ? " is-active" : ""}`}
                 onMouseEnter={() => { setHoveredIdx(i); isPausedRef.current = true; }}
               >
-                <ActivityCard activity={a} focusStyle={style} isLoggedIn={isLoggedIn} onSignUpRequired={onSignUpRequired} toolLogos={toolLogos} tagLogos={tagLogos} variant={variant} />
+                <ActivityCard activity={a} focusStyle={style} isLoggedIn={isLoggedIn} onSignUpRequired={onSignUpRequired} toolLogos={toolLogos} tagLogos={tagLogos} variant={variant} viewCount={viewCounts[a.id] ?? 0} />
               </div>
             );
           })}
@@ -831,7 +835,7 @@ function AIMasteryCourseSection({ completedCount, isLoggedIn }: { completedCount
 
 // ── DashboardClient ──────────────────────────────────────────────────────
 
-export default function DashboardClient({ profile, activities, progress, toolFilters, toolLogos, tagLogos, functionLogos, functionThumbnails, functionDescriptions, isLoggedIn, masteryProgressCount, brief }: Props) {
+export default function DashboardClient({ profile, activities, progress, toolFilters, toolLogos, tagLogos, functionLogos, functionThumbnails, functionDescriptions, isLoggedIn, masteryProgressCount, brief, viewCounts }: Props) {
   const [selectedFunction, setSelectedFunction] = useState<string | null>(null);
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [showSignUp, setShowSignUp] = useState(false);
@@ -929,6 +933,7 @@ export default function DashboardClient({ profile, activities, progress, toolFil
             onSignUpRequired={() => setShowSignUp(true)}
             toolLogos={toolLogos}
             tagLogos={tagLogos}
+            viewCounts={viewCounts}
           />
         )}
 
@@ -943,6 +948,7 @@ export default function DashboardClient({ profile, activities, progress, toolFil
             onSignUpRequired={() => setShowSignUp(true)}
             toolLogos={toolLogos}
             tagLogos={tagLogos}
+            viewCounts={viewCounts}
           />
         )}
 
@@ -958,6 +964,7 @@ export default function DashboardClient({ profile, activities, progress, toolFil
             onSignUpRequired={() => setShowSignUp(true)}
             toolLogos={toolLogos}
             tagLogos={tagLogos}
+            viewCounts={viewCounts}
           />
         )}
 
@@ -970,6 +977,7 @@ export default function DashboardClient({ profile, activities, progress, toolFil
           onSignUpRequired={() => setShowSignUp(true)}
           toolLogos={toolLogos}
           tagLogos={tagLogos}
+          viewCounts={viewCounts}
         />
 
         {/* Section 4: Functions carousel (filters section 3) */}
@@ -993,6 +1001,7 @@ export default function DashboardClient({ profile, activities, progress, toolFil
             onSignUpRequired={() => setShowSignUp(true)}
             toolLogos={toolLogos}
             tagLogos={tagLogos}
+            viewCounts={viewCounts}
           />
         )}
         <AIMasteryCourseSection completedCount={masteryProgressCount} isLoggedIn={isLoggedIn} />
