@@ -4,11 +4,10 @@ import Link from "next/link";
 import type { Activity, UserProgress, Profile } from "@/lib/supabase/types";
 import { resolveToolLogoUrl, type ToolLogoMap } from "@/lib/toolLogos";
 import { formatToolLabel, normalizeActivityTools } from "@/lib/tools";
-import RotatingTools from "@/components/RotatingTools";
 import ToolIcon from "@/components/ToolIcon";
 import AppNav from "@/components/AppNav";
 import { APP_FONT } from "@/lib/fonts";
-import ActivityCard, { Scene, getTheme, timeLabel, type CardVariant } from "./ActivityCard";
+import ActivityCard, { type CardVariant } from "./ActivityCard";
 import "./netflix-dashboard.css";
 
 type Props = {
@@ -596,6 +595,10 @@ function HeroSection({
   onShowWorkflows,
   toolLogos,
   functionLogos,
+  tagLogos,
+  isLoggedIn,
+  onSignUpRequired,
+  viewCounts,
 }: {
   heroActivities: Activity[];
   allFunctions: string[];
@@ -603,6 +606,10 @@ function HeroSection({
   onShowWorkflows: (tool: string, fn: string) => void;
   toolLogos: ToolLogoMap;
   functionLogos: Record<string, string>;
+  tagLogos: Record<string, string>;
+  isLoggedIn: boolean;
+  onSignUpRequired: () => void;
+  viewCounts: Record<string, number>;
 }) {
   const [activeIdx, setActiveIdx] = useState(0);
   const [heroTool, setHeroTool] = useState("");
@@ -613,13 +620,16 @@ function HeroSection({
   const toolOptions = useMemo<HeroSelectOption[]>(() =>
     heroToolOptions.map(t => ({
       value: t,
-      label: formatToolLabel(t),
-      icon: <ToolIcon tool={t} size={20} logos={toolLogos} insetScale={0.88} />,
+      label: t === "all" ? "All" : formatToolLabel(t),
+      icon: t === "all" ? undefined : (
+        <ToolIcon tool={t} size={20} logos={toolLogos} insetScale={0.88} />
+      ),
     })),
-  [heroToolOptions, toolLogos]);
+    [heroToolOptions, toolLogos]);
 
-  const functionOptions = useMemo<HeroSelectOption[]>(() =>
-    allFunctions.map(fn => {
+  const functionOptions = useMemo<HeroSelectOption[]>(() => [
+    { value: "all", label: "All" },
+    ...allFunctions.map(fn => {
       const logo = functionLogos[fn.toLowerCase()];
       return {
         value: fn,
@@ -634,7 +644,7 @@ function HeroSection({
         ),
       };
     }),
-  [allFunctions, functionLogos]);
+  ], [allFunctions, functionLogos]);
 
   useEffect(() => {
     if (heroActivities.length === 0) return;
@@ -645,8 +655,8 @@ function HeroSection({
   useEffect(() => {
     const sc = showcaseRef.current;
     if (!sc) return;
-    const posters = sc.querySelectorAll<HTMLElement>(".hero-poster");
-    const active = posters[activeIdx];
+    const slots = sc.querySelectorAll<HTMLElement>(".hero-card-slot");
+    const active = slots[activeIdx];
     if (active) sc.scrollTo({ left: Math.max(0, active.offsetLeft - sc.offsetWidth * 0.08), behavior: "smooth" });
   }, [activeIdx]);
 
@@ -693,55 +703,30 @@ function HeroSection({
         {/* Right column — carousel */}
         <div className="hero-showcase" ref={showcaseRef} aria-label="Featured workflows">
           {heroActivities.map((a, i) => {
-            const theme = getTheme(a.id);
-            const tools = normalizeActivityTools(a.tools);
-            const chip = timeLabel(a);
             const isActive = i === activeIdx;
 
             return (
-              <article
+              <div
                 key={a.id}
-                className="hero-poster"
-                onClick={() => setActiveIdx(i)}
+                className={`hero-card-slot${isActive ? " is-active" : ""}`}
                 style={{
-                  flexBasis: isActive ? "56%" : "38%",
+                  flexBasis: isActive ? "50%" : "34%",
                   opacity: isActive ? 1 : 0.48,
-                  transform: isActive ? "scale(1)" : "scale(0.84)",
-                  boxShadow: isActive ? "0 28px 55px rgba(34, 29, 35, 0.24)" : "0 16px 30px rgba(34, 29, 35, 0.08)",
+                  transform: isActive ? "scale(1)" : "scale(0.88)",
                 }}
               >
-                <div className={`poster-visual ${theme.posterColor}${a.thumbnail_url ? " has-thumbnail" : ""}`}>
-                  {a.thumbnail_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      className="card-thumbnail"
-                      src={a.thumbnail_url}
-                      alt={a.title}
-                    />
-                  ) : (
-                    <Scene theme={theme} />
-                  )}
-                </div>
-                <div className="poster-content">
-                  <div className="poster-meta">
-                    {tools.length > 0 && (
-                      <RotatingTools
-                        tools={tools}
-                        toolLogos={toolLogos}
-                        iconSize={14}
-                        insetScale={0.9}
-                        borderColor="#E5E0D8"
-                        labelColor="#221D23"
-                        labelSize={10}
-                        chipStyle={{ padding: "6px 9px 6px 6px", fontWeight: 900 }}
-                      />
-                    )}
-                    {chip && <span className="time-chip">{chip}</span>}
-                  </div>
-                  <h2>{a.title}</h2>
-                  <p>{a.description}</p>
-                </div>
-              </article>
+                <ActivityCard
+                  activity={a}
+                  variant="dark"
+                  renderAs={isActive ? "link" : "div"}
+                  onPress={!isActive ? () => setActiveIdx(i) : undefined}
+                  isLoggedIn={isLoggedIn}
+                  onSignUpRequired={onSignUpRequired}
+                  toolLogos={toolLogos}
+                  tagLogos={tagLogos}
+                  viewCount={viewCounts[a.id] ?? 0}
+                />
+              </div>
             );
           })}
         </div>
@@ -888,12 +873,12 @@ export default function DashboardClient({ profile, activities, progress, toolFil
   }, [activities, progress, isLoggedIn]);
 
   function handleShowWorkflows(tool: string, fn: string) {
-    if (tool) setSelectedTool(tool);
-    if (fn) setSelectedFunction(fn);
+    setSelectedTool(tool && tool !== "all" ? tool : null);
+    setSelectedFunction(fn && fn !== "all" ? fn : null);
     document.getElementById("all-workflows")?.scrollIntoView({ behavior: "smooth" });
   }
 
-  const heroToolOptions = toolFilters.filter(t => t !== "all");
+  const heroToolOptions = toolFilters;
   const isAdmin = profile?.role === "admin" || profile?.role === "superadmin";
 
   return (
@@ -906,155 +891,159 @@ export default function DashboardClient({ profile, activities, progress, toolFil
 
       <div className="ndb-root" style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: APP_FONT, color: "#221D23" }}>
 
-      {showSignUp && <SignUpCard onClose={() => setShowSignUp(false)} />}
+        {showSignUp && <SignUpCard onClose={() => setShowSignUp(false)} />}
 
-      {/* ── Hero ── */}
-      <HeroSection
-        heroActivities={heroActivities}
-        allFunctions={allFunctions}
-        heroToolOptions={heroToolOptions}
-        onShowWorkflows={handleShowWorkflows}
-        toolLogos={toolLogos}
-        functionLogos={functionLogos}
-      />
-
-      {/* ── Content ── */}
-      <main className="content">
-
-        {/* Section 1: New — dark cards */}
-        {newActivities.length > 0 && (
-          <HorizontalRail
-            label="New this week"
-            title="Newly added workflows this week"
-            subtitle="Fresh workflows added for this week's practice."
-            activities={newActivities}
-            variant="dark"
-            isLoggedIn={isLoggedIn}
-            onSignUpRequired={() => setShowSignUp(true)}
-            toolLogos={toolLogos}
-            tagLogos={tagLogos}
-            viewCounts={viewCounts}
-          />
-        )}
-
-        {/* Section 1b: Continue where you left off (in_progress, logged-in only) */}
-        {isLoggedIn && pendingActivities.length > 0 && (
-          <HorizontalRail
-            label="In progress"
-            title="Continue where you left off"
-            subtitle={`You have ${pendingActivities.length} workflow${pendingActivities.length !== 1 ? "s" : ""} in progress.`}
-            activities={pendingActivities}
-            isLoggedIn={isLoggedIn}
-            onSignUpRequired={() => setShowSignUp(true)}
-            toolLogos={toolLogos}
-            tagLogos={tagLogos}
-            viewCounts={viewCounts}
-          />
-        )}
-
-        {/* Section 2: AI Mastery — yellow cards */}
-        {masteryActivities.length > 0 && (
-          <HorizontalRail
-            label="Core practice"
-            title="AI Mastery"
-            subtitle="Core workflows for improving AI fluency and everyday practice."
-            activities={masteryActivities}
-            variant="yellow"
-            isLoggedIn={isLoggedIn}
-            onSignUpRequired={() => setShowSignUp(true)}
-            toolLogos={toolLogos}
-            tagLogos={tagLogos}
-            viewCounts={viewCounts}
-          />
-        )}
-
-        {/* Section 3: All Workflows (paginated, filtered by function + tool) */}
-        <AllWorkflowsSection
-          activities={activities}
-          selectedFunction={selectedFunction}
-          selectedTool={selectedTool}
+        {/* ── Hero ── */}
+        <HeroSection
+          heroActivities={heroActivities}
+          allFunctions={allFunctions}
+          heroToolOptions={heroToolOptions}
+          onShowWorkflows={handleShowWorkflows}
+          toolLogos={toolLogos}
+          functionLogos={functionLogos}
+          tagLogos={tagLogos}
           isLoggedIn={isLoggedIn}
           onSignUpRequired={() => setShowSignUp(true)}
-          toolLogos={toolLogos}
-          tagLogos={tagLogos}
           viewCounts={viewCounts}
         />
 
-        {/* Section 4: Functions carousel (filters section 3) */}
-        <FunctionsCarousel
-          activities={activities}
-          selectedFunction={selectedFunction}
-          onSelect={fn => setSelectedFunction(fn)}
-          functionLogos={functionLogos}
-          functionThumbnails={functionThumbnails}
-          functionDescriptions={functionDescriptions}
-        />
+        {/* ── Content ── */}
+        <main className="content">
 
-        {/* Section last: Completed Workflows (logged-in only) */}
-        {isLoggedIn && completedActivities.length > 0 && (
-          <HorizontalRail
-            label="Done"
-            title="Completed Workflows"
-            subtitle={`${completedActivities.length} workflow${completedActivities.length !== 1 ? "s" : ""} you've finished — revisit anytime.`}
-            activities={completedActivities}
+          {/* Section 1: New — dark cards */}
+          {newActivities.length > 0 && (
+            <HorizontalRail
+              label="New this week"
+              title="Newly added workflows this week"
+              subtitle="Fresh workflows added for this week's practice."
+              activities={newActivities}
+              variant="dark"
+              isLoggedIn={isLoggedIn}
+              onSignUpRequired={() => setShowSignUp(true)}
+              toolLogos={toolLogos}
+              tagLogos={tagLogos}
+              viewCounts={viewCounts}
+            />
+          )}
+
+          {/* Section 1b: Continue where you left off (in_progress, logged-in only) */}
+          {isLoggedIn && pendingActivities.length > 0 && (
+            <HorizontalRail
+              label="In progress"
+              title="Continue where you left off"
+              subtitle={`You have ${pendingActivities.length} workflow${pendingActivities.length !== 1 ? "s" : ""} in progress.`}
+              activities={pendingActivities}
+              isLoggedIn={isLoggedIn}
+              onSignUpRequired={() => setShowSignUp(true)}
+              toolLogos={toolLogos}
+              tagLogos={tagLogos}
+              viewCounts={viewCounts}
+            />
+          )}
+
+          {/* Section 2: AI Mastery — yellow cards */}
+          {masteryActivities.length > 0 && (
+            <HorizontalRail
+              label="Core practice"
+              title="AI Mastery"
+              subtitle="Core workflows for improving AI fluency and everyday practice."
+              activities={masteryActivities}
+              variant="yellow"
+              isLoggedIn={isLoggedIn}
+              onSignUpRequired={() => setShowSignUp(true)}
+              toolLogos={toolLogos}
+              tagLogos={tagLogos}
+              viewCounts={viewCounts}
+            />
+          )}
+
+          {/* Section 3: All Workflows (paginated, filtered by function + tool) */}
+          <AllWorkflowsSection
+            activities={activities}
+            selectedFunction={selectedFunction}
+            selectedTool={selectedTool}
             isLoggedIn={isLoggedIn}
             onSignUpRequired={() => setShowSignUp(true)}
             toolLogos={toolLogos}
             tagLogos={tagLogos}
             viewCounts={viewCounts}
           />
-        )}
-        <AIMasteryCourseSection completedCount={masteryProgressCount} isLoggedIn={isLoggedIn} />
-        {brief && <NewsBriefCard brief={brief} />}
+
+          {/* Section 4: Functions carousel (filters section 3) */}
+          <FunctionsCarousel
+            activities={activities}
+            selectedFunction={selectedFunction}
+            onSelect={fn => setSelectedFunction(fn)}
+            functionLogos={functionLogos}
+            functionThumbnails={functionThumbnails}
+            functionDescriptions={functionDescriptions}
+          />
+
+          {/* Section last: Completed Workflows (logged-in only) */}
+          {isLoggedIn && completedActivities.length > 0 && (
+            <HorizontalRail
+              label="Done"
+              title="Completed Workflows"
+              subtitle={`${completedActivities.length} workflow${completedActivities.length !== 1 ? "s" : ""} you've finished — revisit anytime.`}
+              activities={completedActivities}
+              isLoggedIn={isLoggedIn}
+              onSignUpRequired={() => setShowSignUp(true)}
+              toolLogos={toolLogos}
+              tagLogos={tagLogos}
+              viewCounts={viewCounts}
+            />
+          )}
+          <AIMasteryCourseSection completedCount={masteryProgressCount} isLoggedIn={isLoggedIn} />
+          {brief && <NewsBriefCard brief={brief} />}
 
 
 
-      </main>
+        </main>
 
-      {/* ── Footer ── */}
-      <footer className="nudge-footer">
-        <div className="nf-inner">
-          <section className="nf-head">
-            <div className="nf-copy">
-              <h2>Nudgeable builds AI capability and behavior change at work.</h2>
-              <p>AI Work Studio, AI Coach, and Nudge Engine for learning, application, practice, and sustained action.</p>
-            </div>
-            <div className="nf-contact">
-              <a className="nf-pill" href="mailto:team@nudgeable.ai">team@nudgeable.ai</a>
-              <a className="nf-pill" href="https://www.nudgeable.ai">www.nudgeable.ai</a>
-            </div>
-          </section>
-          <section className="nf-products">
-            <article className="nf-card nf-dark">
-              <h3>AI Work Studio</h3>
-              <p>For AI learning, application, mastery, and fluency.</p>
-              <div className="nf-chips">
-                <span className="nf-chip">Masterclasses</span>
-                <span className="nf-chip">Application</span>
-                <span className="nf-chip">Mastery</span>
-                <span className="nf-chip">Fluency</span>
+        {/* ── Footer ── */}
+        <footer className="nudge-footer">
+          <div className="nf-inner">
+            <section className="nf-head">
+              <div className="nf-copy">
+                <h2>Nudgeable builds AI capability and behavior change at work.</h2>
+                <p>AI Work Studio, AI Coach, and Nudge Engine for learning, application, practice, and sustained action.</p>
               </div>
-            </article>
-            <article className="nf-card nf-coach">
-              <h3>AI Coach</h3>
-              <p>Safe practice before real workplace conversations.</p>
-              <div className="nf-chips">
-                <span className="nf-chip">Roleplays</span>
-                <span className="nf-chip">Feedback</span>
+              <div className="nf-contact">
+                <a className="nf-pill" href="mailto:team@nudgeable.ai">team@nudgeable.ai</a>
+                <a className="nf-pill" href="https://www.nudgeable.ai">www.nudgeable.ai</a>
               </div>
-            </article>
-            <article className="nf-card nf-nudge">
-              <h3>Nudge Engine</h3>
-              <p>Convert training into actions, habits, and measurement.</p>
-              <div className="nf-chips">
-                <span className="nf-chip">Actions</span>
-                <span className="nf-chip">Habits</span>
-              </div>
-            </article>
-          </section>
-        </div>
-      </footer>
-    </div>
+            </section>
+            <section className="nf-products">
+              <article className="nf-card nf-dark">
+                <h3>AI Work Studio</h3>
+                <p>For AI learning, application, mastery, and fluency.</p>
+                <div className="nf-chips">
+                  <span className="nf-chip">Masterclasses</span>
+                  <span className="nf-chip">Application</span>
+                  <span className="nf-chip">Mastery</span>
+                  <span className="nf-chip">Fluency</span>
+                </div>
+              </article>
+              <article className="nf-card nf-coach">
+                <h3>AI Coach</h3>
+                <p>Safe practice before real workplace conversations.</p>
+                <div className="nf-chips">
+                  <span className="nf-chip">Roleplays</span>
+                  <span className="nf-chip">Feedback</span>
+                </div>
+              </article>
+              <article className="nf-card nf-nudge">
+                <h3>Nudge Engine</h3>
+                <p>Convert training into actions, habits, and measurement.</p>
+                <div className="nf-chips">
+                  <span className="nf-chip">Actions</span>
+                  <span className="nf-chip">Habits</span>
+                </div>
+              </article>
+            </section>
+          </div>
+        </footer>
+      </div>
     </>
   );
 }

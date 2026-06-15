@@ -154,6 +154,9 @@ export type ActivityCardProps = {
   tagLogos: Record<string, string>;
   variant?: CardVariant;
   viewCount?: number;
+  /** When "div", renders a static card (e.g. hero carousel inactive slide) */
+  renderAs?: "link" | "div";
+  onPress?: () => void;
 };
 
 export default function ActivityCard({
@@ -165,6 +168,8 @@ export default function ActivityCard({
   tagLogos,
   variant = "default",
   viewCount = 0,
+  renderAs = "link",
+  onPress,
 }: ActivityCardProps) {
   const theme = getTheme(activity.id);
   const tools = normalizeActivityTools(activity.tools);
@@ -269,6 +274,21 @@ export default function ActivityCard({
         role="button"
         tabIndex={0}
         onKeyDown={e => { if (e.key === "Enter" || e.key === " ") onSignUpRequired(); }}
+      >
+        {inner}
+      </div>
+    );
+  }
+
+  if (renderAs === "div") {
+    return (
+      <div
+        className={cardClass}
+        style={{ ...focusStyle, cursor: onPress ? "pointer" : undefined }}
+        onClick={onPress}
+        role={onPress ? "button" : undefined}
+        tabIndex={onPress ? 0 : undefined}
+        onKeyDown={onPress ? e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onPress(); } } : undefined}
       >
         {inner}
       </div>
