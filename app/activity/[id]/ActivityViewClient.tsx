@@ -100,6 +100,21 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
     chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
+  // Record a view (fire-and-forget; works for guests and logged-in users)
+  useEffect(() => {
+    let sessionId = localStorage.getItem("nw_session_id");
+    if (!sessionId) {
+      sessionId = crypto.randomUUID();
+      localStorage.setItem("nw_session_id", sessionId);
+    }
+    fetch(`/api/activity/${activity.id}/view`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId }),
+    }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activity.id]);
+
   // Auto-generate thumbnail from the video URL
   useEffect(() => {
     const url = content?.video_url;

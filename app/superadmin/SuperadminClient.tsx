@@ -175,6 +175,7 @@ export default function SuperadminClient({ profile, companies, activities: initA
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
             <Link href="/superadmin/functions" style={{ ...btnGhost, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Manage functions</Link>
             <Link href="/superadmin/tool-logos" style={{ ...btnGhost, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Manage tools</Link>
+            <Link href="/superadmin/ai-fluency" style={{ ...btnGhost, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>AI Fluency</Link>
             <button onClick={() => setShowForm(v => !v)} style={btnAmber}>+ New Activity</button>
           </div>
         </div>

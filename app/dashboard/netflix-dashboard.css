@@ -141,7 +141,7 @@
   grid-template-columns: 0.9fr 1.1fr;
   gap: 34px;
   align-items: center;
-  overflow: visible;
+  overflow: hidden;
   position: relative;
 }
 
@@ -416,82 +416,33 @@
   z-index: 2;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   overflow: hidden;
-  padding: 14px 0;
+  padding: 18px 0;
 }
 
-.ndb-root .hero-poster {
-  flex: 0 0 38%;
-  min-height: 340px;
-  background: var(--dark);
-  color: var(--white);
-  border-radius: 24px;
-  overflow: hidden;
-  border: 1px solid rgba(34, 29, 35, 0.12);
-  box-shadow: 0 16px 30px rgba(34, 29, 35, 0.08);
-  cursor: pointer;
-  transition: transform 0.55s ease, flex-basis 0.55s ease, opacity 0.55s ease, box-shadow 0.55s ease;
+.ndb-root .hero-card-slot {
+  flex: 0 0 34%;
+  min-width: 0;
+  transition: transform 0.55s ease, flex-basis 0.55s ease, opacity 0.55s ease;
 }
 
-.ndb-root .poster-visual {
-  height: 200px;
-  position: relative;
-  overflow: hidden;
-  background: var(--warm);
-  border-bottom: 1px solid rgba(34, 29, 35, 0.1);
+.ndb-root .hero-card-slot .workflow-card {
+  height: 100%;
+  box-shadow: none;
+  filter: drop-shadow(0 10px 22px rgba(34, 29, 35, 0.14));
+  transition: filter 0.55s ease;
 }
 
-.ndb-root .poster-visual.blue {
-  background: #EAF4FF;
+.ndb-root .hero-card-slot.is-active .workflow-card {
+  filter: drop-shadow(0 16px 32px rgba(34, 29, 35, 0.22));
 }
 
-.ndb-root .poster-visual.purple {
-  background: #EFE7FF;
-}
-
-.ndb-root .poster-visual.green {
-  background: #E9FFF2;
-}
-
-.ndb-root .poster-visual.orange {
-  background: #FFF0DE;
-}
-
-.ndb-root .poster-visual::before {
-  content: "";
-  position: absolute;
-  inset: 18px;
-  border: 1px dashed rgba(34, 29, 35, 0.18);
-  border-radius: 22px;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.ndb-root .poster-content {
-  padding: 14px 16px;
-}
-
-.ndb-root .poster-content h2 {
-  margin: 10px 0 6px;
-  font-size: 20px;
-  line-height: 1.05;
-  letter-spacing: -0.055em;
-  color: var(--white);
-}
-
-.ndb-root .poster-content p {
-  margin: 0;
-  color: #D7D2DB;
-  font-size: 12px;
-  line-height: 1.4;
-}
-
-.ndb-root .poster-meta {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  flex-wrap: wrap;
+.ndb-root .hero-card-slot .workflow-card:hover {
+  box-shadow: none;
 }
 
 .ndb-root .hero-progress {
@@ -1551,13 +1502,7 @@
   aspect-ratio: unset;
 }
 
-.ndb-root .poster-visual.has-thumbnail {
-  height: auto;
-  aspect-ratio: 16 / 9;
-}
-
-.ndb-root .card-poster.has-thumbnail::before,
-.ndb-root .poster-visual.has-thumbnail::before {
+.ndb-root .card-poster.has-thumbnail::before {
   display: none;
 }
 
@@ -2528,6 +2473,7 @@
   .ndb-root .hero-showcase {
     padding: 16px 0;
     overflow-x: auto;
+    overflow-y: hidden;
     scrollbar-width: none;
   }
 
@@ -2535,17 +2481,8 @@
     display: none;
   }
 
-  .ndb-root .hero-poster {
+  .ndb-root .hero-card-slot {
     flex-basis: 78% !important;
-    min-height: 410px;
-  }
-
-  .ndb-root .poster-visual:not(.has-thumbnail) {
-    height: 245px;
-  }
-
-  .ndb-root .poster-content h2 {
-    font-size: 21px;
   }
 
   .ndb-root .filter-panel {

@@ -130,6 +130,20 @@ function TagLogosRow({
   );
 }
 
+function EyeIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function formatViewCount(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k`;
+  return String(n);
+}
+
 export type ActivityCardProps = {
   activity: Activity;
   /** Border-colour style injected by the parent rail (hover/focus state) */
@@ -139,6 +153,10 @@ export type ActivityCardProps = {
   toolLogos: ToolLogoMap;
   tagLogos: Record<string, string>;
   variant?: CardVariant;
+  viewCount?: number;
+  /** When "div", renders a static card (e.g. hero carousel inactive slide) */
+  renderAs?: "link" | "div";
+  onPress?: () => void;
 };
 
 export default function ActivityCard({
@@ -149,6 +167,9 @@ export default function ActivityCard({
   toolLogos,
   tagLogos,
   variant = "default",
+  viewCount = 0,
+  renderAs = "link",
+  onPress,
 }: ActivityCardProps) {
   const theme = getTheme(activity.id);
   const tools = normalizeActivityTools(activity.tools);
@@ -212,6 +233,30 @@ export default function ActivityCard({
             />
           )}
           {/* {chip && <span className="time-chip">{chip}</span>} */}
+          {viewCount > 0 && (
+            <span
+              className="card-view-count"
+              title={`${viewCount} view${viewCount !== 1 ? "s" : ""}`}
+              style={{
+                marginLeft: "auto",
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                fontSize: 10,
+                fontWeight: 800,
+                color: "#221D23",
+                background: "#FFCE00",
+                borderRadius: 20,
+                padding: "3px 7px 3px 5px",
+                letterSpacing: ".01em",
+                flexShrink: 0,
+                lineHeight: 1,
+              }}
+            >
+              <EyeIcon />
+              {formatViewCount(viewCount)}
+            </span>
+          )}
         </div>
         <h3 className="card-title">{activity.title}</h3>
         <TagLogosRow tags={activity.tags ?? []} tagLogos={tagLogos} variant={variant} />
@@ -229,6 +274,21 @@ export default function ActivityCard({
         role="button"
         tabIndex={0}
         onKeyDown={e => { if (e.key === "Enter" || e.key === " ") onSignUpRequired(); }}
+      >
+        {inner}
+      </div>
+    );
+  }
+
+  if (renderAs === "div") {
+    return (
+      <div
+        className={cardClass}
+        style={{ ...focusStyle, cursor: onPress ? "pointer" : undefined }}
+        onClick={onPress}
+        role={onPress ? "button" : undefined}
+        tabIndex={onPress ? 0 : undefined}
+        onKeyDown={onPress ? e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onPress(); } } : undefined}
       >
         {inner}
       </div>

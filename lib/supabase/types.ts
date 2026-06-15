@@ -87,6 +87,14 @@ export type AIMasteryProgress = {
   completed_at: string;
 };
 
+export type ActivityView = {
+  id: string;
+  activity_id: string;
+  user_id: string | null;
+  session_id: string | null;
+  created_at: string;
+};
+
 
 
 export type SlideImage = { url: string; caption?: string };
@@ -216,6 +224,11 @@ export type Database = {
       chat_logs: {
         Row: ChatLog;
         Insert: Omit<ChatLog, "id" | "created_at">;
+        Update: never;
+      };
+      activity_views: {
+        Row: ActivityView;
+        Insert: { activity_id: string; user_id?: string | null; session_id?: string | null };
         Update: never;
       };
       tool_deep_dives: {

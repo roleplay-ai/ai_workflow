@@ -57,6 +57,7 @@ export default async function DashboardPage() {
     { data: tagRows },
     { data: functionRows },
     { data: briefs },
+    { data: viewRows },
   ] = await Promise.all([
     supabase
       .from("activities")
@@ -72,7 +73,15 @@ export default async function DashboardPage() {
       .eq("is_active", true)
       .order("published_date", { ascending: false })
       .limit(1),
+    supabase.from("activity_view_counts").select("activity_id, count"),
   ]);
+
+  // Build a count map: activityId → number of views
+  const viewCounts: Record<string, number> = {};
+  for (const row of viewRows ?? []) {
+    const r = row as { activity_id: string; count: number };
+    viewCounts[r.activity_id] = Number(r.count);
+  }
 
   const tagLogos: Record<string, string> = {};
   for (const row of tagRows ?? []) {
@@ -109,6 +118,7 @@ export default async function DashboardPage() {
       isLoggedIn={!!user}
       masteryProgressCount={masteryProgressCount}
       brief={(briefs?.[0] ?? null) as any}
+      viewCounts={viewCounts}
     />
   );
 }
