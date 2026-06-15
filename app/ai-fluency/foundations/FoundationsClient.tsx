@@ -3,7 +3,6 @@
 import { useState } from "react";
 import AppNav from "@/components/AppNav";
 import ModulePlayer, { type ModuleData } from "../ModulePlayer";
-import "../ai-fluency.css";
 
 type FluencyModule = {
   id: string; title: string; emoji: string; concepts: string[];
@@ -40,11 +39,7 @@ export default function FoundationsClient({ worlds, completedModuleIds, userName
   }
 
   return (
-    <div style={{
-      minHeight: "100vh", background: "#FEFCFA", color: "#221D23",
-      fontFamily: '"Visby CF", Inter, system-ui, -apple-system, sans-serif',
-      letterSpacing: "-.01em",
-    }}>
+    <>
       <AppNav activePage="ai-fluency" userName={userName} isAdmin={isAdmin} />
 
       <main style={{ width: "min(780px,calc(100% - 56px))", margin: "34px auto 80px" }}>
@@ -154,9 +149,7 @@ export default function FoundationsClient({ worlds, completedModuleIds, userName
                   {/* Title + badges */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                      <span style={{ fontSize: 17, fontWeight: 900, letterSpacing: "-.03em", color: "#221D23" }}>
-                        {world.title}
-                      </span>
+                      <span className="card-title">{world.title}</span>
                       <span style={{
                         fontSize: 11, fontWeight: 800, padding: "2px 8px", borderRadius: 999,
                         background: `${world.color}18`, color: world.color,
@@ -232,10 +225,7 @@ export default function FoundationsClient({ worlds, completedModuleIds, userName
                             {/* Title + concepts */}
                             <div>
                               <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                                <span style={{
-                                  fontSize: 14, fontWeight: 800, lineHeight: 1.3,
-                                  color: mod.is_locked ? "#9B9199" : "#221D23",
-                                }}>{mod.title}</span>
+                                <span className={`card-title${mod.is_locked ? " card-title--locked" : ""}`}>{mod.title}</span>
                                 {done && (
                                   <span style={{
                                     fontSize: 9, fontWeight: 900, letterSpacing: ".06em",
@@ -282,6 +272,6 @@ export default function FoundationsClient({ worlds, completedModuleIds, userName
           onComplete={handleComplete}
         />
       )}
-    </div>
+    </>
   );
 }

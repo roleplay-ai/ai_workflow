@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { APP_FONT } from "@/lib/fonts";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -115,7 +116,7 @@ export default function ModulePlayer({ module, isCompleted, onClose, onComplete 
           width: "100%", maxWidth: 480, background: "#fff", borderRadius: 28,
           padding: "40px 32px", textAlign: "center",
           boxShadow: "0 32px 80px rgba(0,0,0,.40)",
-          fontFamily: '"Visby CF", Inter, system-ui, sans-serif',
+          fontFamily: APP_FONT,
         }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>{module.emoji}</div>
           <h2 style={{ margin: "0 0 10px", fontSize: 22, fontWeight: 950, letterSpacing: "-.04em" }}>
@@ -214,7 +215,7 @@ export default function ModulePlayer({ module, isCompleted, onClose, onComplete 
         width: "100%", maxWidth: 500, maxHeight: "90vh",
         overflowY: "auto", borderRadius: 28,
         boxShadow: "0 32px 80px rgba(0,0,0,.40)",
-        fontFamily: '"Visby CF", Inter, system-ui, sans-serif',
+        fontFamily: APP_FONT,
         letterSpacing: "-.01em",
         ...bgStyle,
       }}>

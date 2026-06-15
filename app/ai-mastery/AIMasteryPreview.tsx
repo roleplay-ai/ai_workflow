@@ -183,7 +183,7 @@ export default function AIMasteryPreview() {
   // Guest clicked an unlocked preview module — show just that chapter
   if (selectedModuleId) {
     return (
-      <div style={{ height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
+      <div style={{ height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: "Roboto, ui-sans-serif, system-ui, sans-serif" }}>
         <AppNav activePage="ai-mastery" />
 
         {/* Preview banner */}
@@ -231,7 +231,7 @@ export default function AIMasteryPreview() {
   return (
     <div style={{
       minHeight: "100vh", background: "#FEFCFA", color: "#221D23",
-      fontFamily: '"Visby CF", Inter, system-ui, -apple-system, sans-serif',
+      fontFamily: "Roboto, ui-sans-serif, system-ui, sans-serif",
       letterSpacing: "-.01em",
     }}>
       <AppNav activePage="ai-mastery" />

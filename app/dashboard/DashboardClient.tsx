@@ -5,7 +5,9 @@ import type { Activity, UserProgress, Profile } from "@/lib/supabase/types";
 import { resolveToolLogoUrl, type ToolLogoMap } from "@/lib/toolLogos";
 import { formatToolLabel, normalizeActivityTools } from "@/lib/tools";
 import RotatingTools from "@/components/RotatingTools";
+import ToolIcon from "@/components/ToolIcon";
 import AppNav from "@/components/AppNav";
+import { APP_FONT } from "@/lib/fonts";
 import ActivityCard, { Scene, getTheme, timeLabel, type CardVariant } from "./ActivityCard";
 import "./netflix-dashboard.css";
 
@@ -30,21 +32,21 @@ type Brief = { id: string; title: string; published_date: string; fluency_brief_
 // ── Colour helpers ────────────────────────────────────────────────────────
 
 function toolColor(tool: string): string {
-  if (tool === "claude")             return "#623CEA";
-  if (tool === "chatgpt")            return "#23CE68";
-  if (tool === "gemini")             return "#3696FC";
-  if (tool === "copilot")            return "#F68A29";
-  if (tool === "agentic-workflows")  return "#623CEA";
+  if (tool === "claude") return "#623CEA";
+  if (tool === "chatgpt") return "#23CE68";
+  if (tool === "gemini") return "#3696FC";
+  if (tool === "copilot") return "#F68A29";
+  if (tool === "agentic-workflows") return "#623CEA";
   return "#FFCE00";
 }
 
 function fnColor(fn: string): string {
   const f = fn.toLowerCase();
-  if (f.includes("finance") || f.includes("account"))           return "#23CE68";
+  if (f.includes("finance") || f.includes("account")) return "#23CE68";
   if (f.includes("hr") || f.includes("human") || f.includes("people")) return "#ED4551";
-  if (f.includes("legal") || f.includes("compliance"))          return "#623CEA";
+  if (f.includes("legal") || f.includes("compliance")) return "#623CEA";
   if (f.includes("market") || f.includes("sales") || f.includes("brand")) return "#F68A29";
-  if (f.includes("support") || f.includes("customer"))          return "#3696FC";
+  if (f.includes("support") || f.includes("customer")) return "#3696FC";
   return "#746F78";
 }
 
@@ -124,7 +126,7 @@ function SignUpCard({ onClose }: { onClose: () => void }) {
 const PAGE_SIZE = 10;
 
 function AllWorkflowsSection({
-  activities, selectedFunction, selectedTool, isLoggedIn, onSignUpRequired, toolLogos,
+  activities, selectedFunction, selectedTool, isLoggedIn, onSignUpRequired, toolLogos, tagLogos,
 }: {
   activities: Activity[];
   selectedFunction: string | null;
@@ -132,6 +134,7 @@ function AllWorkflowsSection({
   isLoggedIn: boolean;
   onSignUpRequired: () => void;
   toolLogos: ToolLogoMap;
+  tagLogos: Record<string, string>;
 }) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
@@ -157,7 +160,7 @@ function AllWorkflowsSection({
 
   const titleParts: string[] = ["All"];
   if (selectedFunction) titleParts.push(selectedFunction);
-  if (selectedTool)     titleParts.push(formatToolLabel(selectedTool));
+  if (selectedTool) titleParts.push(formatToolLabel(selectedTool));
   titleParts.push("Workflows");
   const title = titleParts.join(" ");
 
@@ -184,11 +187,12 @@ function AllWorkflowsSection({
         key={`${selectedFunction ?? "all"}-${selectedTool ?? "all"}`}
         label="Full library"
         title={title}
-        subtitle={subtitle}
+        subtitle={""}
         activities={visibleItems}
         isLoggedIn={isLoggedIn}
         onSignUpRequired={onSignUpRequired}
         toolLogos={toolLogos}
+        tagLogos={tagLogos}
         onLoadMore={hasMore ? () => setVisibleCount(c => Math.min(filtered.length, c + PAGE_SIZE)) : undefined}
       />
     </div>
@@ -320,7 +324,7 @@ function FunctionsCarousel({
 // ── HorizontalRail ────────────────────────────────────────────────────────
 
 function HorizontalRail({
-  title, subtitle, label, activities, isLoggedIn, onSignUpRequired, toolLogos, variant = "default", onLoadMore,
+  title, subtitle, label, activities, isLoggedIn, onSignUpRequired, toolLogos, tagLogos, variant = "default", onLoadMore,
 }: {
   title: string;
   subtitle: string;
@@ -329,6 +333,7 @@ function HorizontalRail({
   isLoggedIn: boolean;
   onSignUpRequired: () => void;
   toolLogos: ToolLogoMap;
+  tagLogos: Record<string, string>;
   variant?: CardVariant;
   onLoadMore?: () => void;
 }) {
@@ -388,7 +393,7 @@ function HorizontalRail({
     };
     row.addEventListener("scroll", onScroll, { passive: true });
     return () => { row.removeEventListener("scroll", onScroll); clearTimeout(t); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -432,7 +437,7 @@ function HorizontalRail({
         >
           {activities.map((a, i) => {
             const active = i === (hoveredIdx !== null ? hoveredIdx : focusedIdx);
-            const borderActive   = variant === "dark" ? "rgba(255,255,255,0.28)" : variant === "yellow" ? "#D0A600" : "#D0C7BA";
+            const borderActive = variant === "dark" ? "rgba(255,255,255,0.28)" : variant === "yellow" ? "#D0A600" : "#D0C7BA";
             const borderInactive = variant === "dark" ? "rgba(255,255,255,0.07)" : variant === "yellow" ? "#E8B800" : "#E5E0D8";
             const style: React.CSSProperties = {
               borderColor: active ? borderActive : borderInactive,
@@ -443,7 +448,7 @@ function HorizontalRail({
                 className={`rail-card-slot${active ? " is-active" : ""}`}
                 onMouseEnter={() => { setHoveredIdx(i); isPausedRef.current = true; }}
               >
-                <ActivityCard activity={a} focusStyle={style} isLoggedIn={isLoggedIn} onSignUpRequired={onSignUpRequired} toolLogos={toolLogos} variant={variant} />
+                <ActivityCard activity={a} focusStyle={style} isLoggedIn={isLoggedIn} onSignUpRequired={onSignUpRequired} toolLogos={toolLogos} tagLogos={tagLogos} variant={variant} />
               </div>
             );
           })}
@@ -451,6 +456,130 @@ function HorizontalRail({
         <button className="row-arrow right" onClick={() => scrollTo(1)}>›</button>
       </div>
     </section>
+  );
+}
+
+// ── HeroSelect ────────────────────────────────────────────────────────────
+
+type HeroSelectOption = {
+  value: string;
+  label: string;
+  icon?: React.ReactNode;
+};
+
+function HeroSelect({
+  placeholder,
+  value,
+  options,
+  isOpen,
+  onOpenChange,
+  onChange,
+}: {
+  placeholder: string;
+  value: string;
+  options: HeroSelectOption[];
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  onChange: (value: string) => void;
+}) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const selected = options.find(o => o.value === value);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onOpenChange(false);
+    }
+    function onClick(e: MouseEvent) {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) onOpenChange(false);
+    }
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onClick);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onClick);
+    };
+  }, [isOpen, onOpenChange]);
+
+  return (
+    <div
+      ref={rootRef}
+      className={`hero-select${isOpen ? " is-open" : ""}${!value ? " is-placeholder" : ""}`}
+    >
+      <button
+        type="button"
+        className="hero-select-trigger"
+        onClick={() => onOpenChange(!isOpen)}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-label={selected ? selected.label : placeholder}
+      >
+        <span className="hero-select-value">
+          {selected ? (
+            <>
+              {selected.icon && <span className="hero-select-leading">{selected.icon}</span>}
+              <span className="hero-select-label">{selected.label}</span>
+            </>
+          ) : (
+            <span className="hero-select-label">{placeholder}</span>
+          )}
+        </span>
+        <svg
+          className="hero-select-chevron"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div className="hero-select-menu" role="listbox">
+          {options.map(opt => {
+            const isSelected = value === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                role="option"
+                aria-selected={isSelected}
+                className={`hero-select-option${isSelected ? " is-selected" : ""}`}
+                onClick={() => {
+                  onChange(opt.value);
+                  onOpenChange(false);
+                }}
+              >
+                {opt.icon && <span className="hero-select-leading">{opt.icon}</span>}
+                <span className="hero-select-option-label">{opt.label}</span>
+                {isSelected && (
+                  <svg
+                    className="hero-select-check"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -462,17 +591,46 @@ function HeroSection({
   heroToolOptions,
   onShowWorkflows,
   toolLogos,
+  functionLogos,
 }: {
   heroActivities: Activity[];
   allFunctions: string[];
   heroToolOptions: string[];
   onShowWorkflows: (tool: string, fn: string) => void;
   toolLogos: ToolLogoMap;
+  functionLogos: Record<string, string>;
 }) {
-  const [activeIdx,    setActiveIdx]    = useState(0);
-  const [heroTool,     setHeroTool]     = useState("");
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [heroTool, setHeroTool] = useState("");
   const [heroFunction, setHeroFunction] = useState("");
+  const [openSelect, setOpenSelect] = useState<"tool" | "function" | null>(null);
   const showcaseRef = useRef<HTMLDivElement>(null);
+
+  const toolOptions = useMemo<HeroSelectOption[]>(() =>
+    heroToolOptions.map(t => ({
+      value: t,
+      label: formatToolLabel(t),
+      icon: <ToolIcon tool={t} size={20} logos={toolLogos} insetScale={0.88} />,
+    })),
+  [heroToolOptions, toolLogos]);
+
+  const functionOptions = useMemo<HeroSelectOption[]>(() =>
+    allFunctions.map(fn => {
+      const logo = functionLogos[fn.toLowerCase()];
+      return {
+        value: fn,
+        label: fn,
+        icon: logo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logo} alt="" className="hero-select-fn-icon" />
+        ) : (
+          <span className="hero-select-fn-fallback" style={{ background: fnColor(fn) }}>
+            {fn.slice(0, 1).toUpperCase()}
+          </span>
+        ),
+      };
+    }),
+  [allFunctions, functionLogos]);
 
   useEffect(() => {
     if (heroActivities.length === 0) return;
@@ -484,7 +642,7 @@ function HeroSection({
     const sc = showcaseRef.current;
     if (!sc) return;
     const posters = sc.querySelectorAll<HTMLElement>(".hero-poster");
-    const active  = posters[activeIdx];
+    const active = posters[activeIdx];
     if (active) sc.scrollTo({ left: Math.max(0, active.offsetLeft - sc.offsetWidth * 0.08), behavior: "smooth" });
   }, [activeIdx]);
 
@@ -492,28 +650,28 @@ function HeroSection({
     <header className="hero-shell">
       <section className="hero">
         {/* Left column */}
-        <div>
+        <div className="hero-copy">
           <div className="eyebrow"><span className="eyebrow-dot" /> Updated every week</div>
           <h1>Practical AI workflows for your daily work</h1>
           <p>Discover and run guided AI automations tailored to your tool stack and job function.</p>
 
           <div className="selector-row">
-            <label className="select-wrap">
-              <select value={heroTool} onChange={e => setHeroTool(e.target.value)}>
-                <option value="">I use...</option>
-                {heroToolOptions.map(t => (
-                  <option key={t} value={t}>I use {formatToolLabel(t)}</option>
-                ))}
-              </select>
-            </label>
-            <label className="select-wrap">
-              <select value={heroFunction} onChange={e => setHeroFunction(e.target.value)}>
-                <option value="">I work in...</option>
-                {allFunctions.map(fn => (
-                  <option key={fn} value={fn}>I work in {fn}</option>
-                ))}
-              </select>
-            </label>
+            <HeroSelect
+              placeholder="Choose tool"
+              value={heroTool}
+              options={toolOptions}
+              isOpen={openSelect === "tool"}
+              onOpenChange={open => setOpenSelect(open ? "tool" : null)}
+              onChange={setHeroTool}
+            />
+            <HeroSelect
+              placeholder="Choose function"
+              value={heroFunction}
+              options={functionOptions}
+              isOpen={openSelect === "function"}
+              onOpenChange={open => setOpenSelect(open ? "function" : null)}
+              onChange={setHeroFunction}
+            />
             <button className="btn btn-dark" onClick={() => onShowWorkflows(heroTool, heroFunction)}>
               Show me workflows
             </button>
@@ -533,7 +691,7 @@ function HeroSection({
           {heroActivities.map((a, i) => {
             const theme = getTheme(a.id);
             const tools = normalizeActivityTools(a.tools);
-            const chip  = timeLabel(a);
+            const chip = timeLabel(a);
             const isActive = i === activeIdx;
 
             return (
@@ -543,7 +701,7 @@ function HeroSection({
                 onClick={() => setActiveIdx(i)}
                 style={{
                   flexBasis: isActive ? "56%" : "38%",
-                  opacity:   isActive ? 1 : 0.48,
+                  opacity: isActive ? 1 : 0.48,
                   transform: isActive ? "scale(1)" : "scale(0.84)",
                   boxShadow: isActive ? "0 28px 55px rgba(34, 29, 35, 0.24)" : "0 16px 30px rgba(34, 29, 35, 0.08)",
                 }}
@@ -673,10 +831,10 @@ function AIMasteryCourseSection({ completedCount, isLoggedIn }: { completedCount
 
 // ── DashboardClient ──────────────────────────────────────────────────────
 
-export default function DashboardClient({ profile, activities, progress, toolFilters, toolLogos, functionLogos, functionThumbnails, functionDescriptions, isLoggedIn, masteryProgressCount, brief }: Props) {
+export default function DashboardClient({ profile, activities, progress, toolFilters, toolLogos, tagLogos, functionLogos, functionThumbnails, functionDescriptions, isLoggedIn, masteryProgressCount, brief }: Props) {
   const [selectedFunction, setSelectedFunction] = useState<string | null>(null);
-  const [selectedTool,     setSelectedTool]     = useState<string | null>(null);
-  const [showSignUp, setShowSignUp]             = useState(false);
+  const [selectedTool, setSelectedTool] = useState<string | null>(null);
+  const [showSignUp, setShowSignUp] = useState(false);
 
   // Unique functions (for HeroSection dropdowns)
   const allFunctions = useMemo(() => {
@@ -727,7 +885,7 @@ export default function DashboardClient({ profile, activities, progress, toolFil
 
   function handleShowWorkflows(tool: string, fn: string) {
     if (tool) setSelectedTool(tool);
-    if (fn)   setSelectedFunction(fn);
+    if (fn) setSelectedFunction(fn);
     document.getElementById("all-workflows")?.scrollIntoView({ behavior: "smooth" });
   }
 
@@ -735,15 +893,16 @@ export default function DashboardClient({ profile, activities, progress, toolFil
   const isAdmin = profile?.role === "admin" || profile?.role === "superadmin";
 
   return (
-    <div className="ndb-root" style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif", color: "#221D23" }}>
-
-      {showSignUp && <SignUpCard onClose={() => setShowSignUp(false)} />}
-
+    <>
       <AppNav
         activePage="workflows"
         userName={isLoggedIn ? profile?.full_name : null}
         isAdmin={isAdmin}
       />
+
+      <div className="ndb-root" style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: APP_FONT, color: "#221D23" }}>
+
+      {showSignUp && <SignUpCard onClose={() => setShowSignUp(false)} />}
 
       {/* ── Hero ── */}
       <HeroSection
@@ -752,6 +911,7 @@ export default function DashboardClient({ profile, activities, progress, toolFil
         heroToolOptions={heroToolOptions}
         onShowWorkflows={handleShowWorkflows}
         toolLogos={toolLogos}
+        functionLogos={functionLogos}
       />
 
       {/* ── Content ── */}
@@ -768,6 +928,7 @@ export default function DashboardClient({ profile, activities, progress, toolFil
             isLoggedIn={isLoggedIn}
             onSignUpRequired={() => setShowSignUp(true)}
             toolLogos={toolLogos}
+            tagLogos={tagLogos}
           />
         )}
 
@@ -781,6 +942,7 @@ export default function DashboardClient({ profile, activities, progress, toolFil
             isLoggedIn={isLoggedIn}
             onSignUpRequired={() => setShowSignUp(true)}
             toolLogos={toolLogos}
+            tagLogos={tagLogos}
           />
         )}
 
@@ -795,6 +957,7 @@ export default function DashboardClient({ profile, activities, progress, toolFil
             isLoggedIn={isLoggedIn}
             onSignUpRequired={() => setShowSignUp(true)}
             toolLogos={toolLogos}
+            tagLogos={tagLogos}
           />
         )}
 
@@ -806,6 +969,7 @@ export default function DashboardClient({ profile, activities, progress, toolFil
           isLoggedIn={isLoggedIn}
           onSignUpRequired={() => setShowSignUp(true)}
           toolLogos={toolLogos}
+          tagLogos={tagLogos}
         />
 
         {/* Section 4: Functions carousel (filters section 3) */}
@@ -828,12 +992,13 @@ export default function DashboardClient({ profile, activities, progress, toolFil
             isLoggedIn={isLoggedIn}
             onSignUpRequired={() => setShowSignUp(true)}
             toolLogos={toolLogos}
+            tagLogos={tagLogos}
           />
         )}
-
+        <AIMasteryCourseSection completedCount={masteryProgressCount} isLoggedIn={isLoggedIn} />
         {brief && <NewsBriefCard brief={brief} />}
 
-        <AIMasteryCourseSection completedCount={masteryProgressCount} isLoggedIn={isLoggedIn} />
+
 
       </main>
 
@@ -881,5 +1046,6 @@ export default function DashboardClient({ profile, activities, progress, toolFil
         </div>
       </footer>
     </div>
+    </>
   );
 }

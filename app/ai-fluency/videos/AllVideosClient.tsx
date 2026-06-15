@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import AppNav from "@/components/AppNav";
-import "../ai-fluency.css";
 
 const GROUP_ACCENT: Record<string, string> = {
   Features:  "#A855F7",
@@ -188,11 +187,7 @@ export default function AllVideosClient({ videos, userName, isAdmin }: Props) {
   const filtered = filter === "All" ? videos : videos.filter(v => v.group_name === filter);
 
   return (
-    <div style={{
-      minHeight: "100vh", background: "#FEFCFA", color: "#221D23",
-      fontFamily: '"Visby CF", Inter, system-ui, -apple-system, sans-serif',
-      letterSpacing: "-.01em",
-    }}>
+    <>
       <AppNav activePage="ai-fluency" userName={userName} isAdmin={isAdmin} />
 
       <main style={{ width: "min(1200px,calc(100% - 56px))", margin: "34px auto 80px" }}>
@@ -358,12 +353,7 @@ export default function AllVideosClient({ videos, userName, isAdmin }: Props) {
                         overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                       }}>{v.category_tag ?? v.group_name ?? "Feature"}</span>
                     </div>
-                    <h3 style={{
-                      margin: "0 0 6px", fontSize: 15, lineHeight: 1.28,
-                      fontWeight: 800, letterSpacing: "-.03em", color: "#221D23",
-                      display: "-webkit-box", WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical" as const, overflow: "hidden",
-                    }}>{v.title}</h3>
+                    <h3 className="card-title">{v.title}</h3>
                     {blurb && !v.is_locked && (
                       <p style={{
                         margin: 0, fontSize: 12, lineHeight: 1.5, color: "#6B6670", fontWeight: 650,
@@ -387,6 +377,6 @@ export default function AllVideosClient({ videos, userName, isAdmin }: Props) {
       {selectedVideo && (
         <VideoModal video={selectedVideo} onClose={() => setSelectedVideo(null)} />
       )}
-    </div>
+    </>
   );
 }
