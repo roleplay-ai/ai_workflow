@@ -95,6 +95,17 @@ export type ActivityView = {
   created_at: string;
 };
 
+export type FluencyEntityType = "video" | "tool" | "tool_guide" | "deep_dive" | "module";
+
+export type FluencyView = {
+  id: string;
+  entity_type: FluencyEntityType;
+  entity_id: string;
+  user_id: string | null;
+  session_id: string | null;
+  created_at: string;
+};
+
 
 
 export type SlideImage = { url: string; caption?: string };
@@ -229,6 +240,11 @@ export type Database = {
       activity_views: {
         Row: ActivityView;
         Insert: { activity_id: string; user_id?: string | null; session_id?: string | null };
+        Update: never;
+      };
+      fluency_views: {
+        Row: FluencyView;
+        Insert: { entity_type: FluencyEntityType; entity_id: string; user_id?: string | null; session_id?: string | null };
         Update: never;
       };
       tool_deep_dives: {

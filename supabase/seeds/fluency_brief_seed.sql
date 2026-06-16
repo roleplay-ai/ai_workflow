@@ -37,6 +37,36 @@ DO $$ BEGIN
   END IF;
 END $$;
 
+CREATE OR REPLACE FUNCTION public.get_my_role()
+RETURNS text
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$ SELECT role FROM public.profiles WHERE id = auth.uid() $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename = 'fluency_briefs' AND policyname = 'Superadmin manage briefs'
+  ) THEN
+    CREATE POLICY "Superadmin manage briefs"
+      ON public.fluency_briefs FOR ALL TO authenticated
+      USING  (public.get_my_role() = 'superadmin')
+      WITH CHECK (public.get_my_role() = 'superadmin');
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename = 'fluency_brief_items' AND policyname = 'Superadmin manage brief items'
+  ) THEN
+    CREATE POLICY "Superadmin manage brief items"
+      ON public.fluency_brief_items FOR ALL TO authenticated
+      USING  (public.get_my_role() = 'superadmin')
+      WITH CHECK (public.get_my_role() = 'superadmin');
+  END IF;
+END $$;
+
 -- Deactivate all previous briefs
 UPDATE public.fluency_briefs SET is_active = false;
 

@@ -31,7 +31,8 @@ type Tool = {
   pricing: string | null; is_featured: boolean; published: boolean; sort_order: number;
 };
 type BriefItem = { id: string; content: string; sort_order: number };
-type Brief = { id: string; title: string; published_date: string; fluency_brief_items: BriefItem[] };
+type Brief = { id: string; title: string; published_date: string; is_active: boolean; fluency_brief_items: BriefItem[] };
+type BriefEdit = { title: string; published_date: string };
 
 type Props = {
   profile: Profile & { companies: null };
@@ -923,31 +924,81 @@ function ToolsTab({ initTools }: { initTools: Tool[] }) {
 
 // ── Brief Tab ──────────────────────────────────────────────────────────────
 
+function briefDateOnly(value: string) {
+  return value.slice(0, 10);
+}
+
 function BriefTab({ initBriefs }: { initBriefs: Brief[] }) {
   const supabase = createClient();
   const [briefs, setBriefs] = useState(initBriefs);
   const [expandedId, setExpandedId] = useState<string | null>(initBriefs[0]?.id ?? null);
   const [addingItemTo, setAddingItemTo] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [editingBriefId, setEditingBriefId] = useState<string | null>(null);
+  const [briefDraft, setBriefDraft] = useState<BriefEdit>({ title: "", published_date: "" });
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [itemDraft, setItemDraft] = useState("");
 
   const [nTitle, setNTitle] = useState("");
   const [nDate, setNDate] = useState(new Date().toISOString().slice(0, 10));
   const [nItem, setNItem] = useState("");
 
+  async function deactivateOtherBriefs(activeId: string) {
+    const others = briefs.filter(b => b.id !== activeId && b.is_active);
+    if (others.length === 0) return;
+    await Promise.all(others.map(b => supabase.from("fluency_briefs").update({ is_active: false }).eq("id", b.id)));
+    setBriefs(prev => prev.map(b => b.id === activeId ? b : { ...b, is_active: false }));
+  }
+
   async function addBrief() {
+    await deactivateOtherBriefs("__new__");
     const { data, error } = await supabase.from("fluency_briefs")
-      .insert({ title: nTitle, published_date: nDate })
+      .insert({ title: nTitle, published_date: nDate, is_active: true })
       .select().single();
     if (!error && data) {
-      setBriefs(prev => [{ ...data, fluency_brief_items: [] }, ...prev]);
+      setBriefs(prev => [{ ...data, is_active: true, fluency_brief_items: [] }, ...prev.map(b => ({ ...b, is_active: false }))]);
       setNTitle(""); setShowAdd(false); setExpandedId(data.id);
     } else if (error) alert(error.message);
+  }
+
+  function startEditBrief(b: Brief) {
+    setEditingBriefId(b.id);
+    setBriefDraft({ title: b.title, published_date: briefDateOnly(b.published_date) });
+    setExpandedId(b.id);
+  }
+
+  async function saveBrief(id: string) {
+    const patch = { title: briefDraft.title.trim(), published_date: briefDateOnly(briefDraft.published_date) };
+    const { data, error } = await supabase.from("fluency_briefs").update(patch).eq("id", id).select("id").maybeSingle();
+    if (error) { alert(error.message); return; }
+    if (!data) {
+      alert("Could not save brief. Run supabase/migrations/20240624_fluency_brief_superadmin_rls.sql in the Supabase SQL editor, then try again.");
+      return;
+    }
+    setBriefs(prev => prev.map(b => b.id === id ? { ...b, ...patch } : b));
+    setEditingBriefId(null);
+  }
+
+  async function toggleActive(brief: Brief) {
+    if (brief.is_active) {
+      const { data, error } = await supabase.from("fluency_briefs").update({ is_active: false }).eq("id", brief.id).select("id").maybeSingle();
+      if (error) { alert(error.message); return; }
+      if (!data) { alert("Could not update brief status. Check database permissions."); return; }
+      setBriefs(prev => prev.map(b => b.id === brief.id ? { ...b, is_active: false } : b));
+      return;
+    }
+    await deactivateOtherBriefs(brief.id);
+    const { data, error } = await supabase.from("fluency_briefs").update({ is_active: true }).eq("id", brief.id).select("id").maybeSingle();
+    if (error) { alert(error.message); return; }
+    if (!data) { alert("Could not activate brief. Check database permissions."); return; }
+    setBriefs(prev => prev.map(b => ({ ...b, is_active: b.id === brief.id })));
   }
 
   async function deleteBrief(id: string) {
     if (!confirm("Delete this brief and all its items?")) return;
     await supabase.from("fluency_briefs").delete().eq("id", id);
     setBriefs(prev => prev.filter(b => b.id !== id));
+    if (editingBriefId === id) setEditingBriefId(null);
   }
 
   async function addItem(briefId: string) {
@@ -966,11 +1017,47 @@ function BriefTab({ initBriefs }: { initBriefs: Brief[] }) {
     } else if (error) alert(error.message);
   }
 
+  function startEditItem(item: BriefItem) {
+    setEditingItemId(item.id);
+    setItemDraft(item.content);
+  }
+
+  async function saveItem(briefId: string, itemId: string) {
+    const content = itemDraft.trim();
+    if (!content) return;
+    const { data, error } = await supabase.from("fluency_brief_items").update({ content }).eq("id", itemId).select("id").maybeSingle();
+    if (error) { alert(error.message); return; }
+    if (!data) {
+      alert("Could not save item. Run supabase/migrations/20240624_fluency_brief_superadmin_rls.sql in the Supabase SQL editor, then try again.");
+      return;
+    }
+    setBriefs(prev => prev.map(b => b.id === briefId
+      ? { ...b, fluency_brief_items: b.fluency_brief_items.map(i => i.id === itemId ? { ...i, content } : i) }
+      : b));
+    setEditingItemId(null);
+    setItemDraft("");
+  }
+
+  async function moveItem(briefId: string, itemId: string, dir: "up" | "down") {
+    const brief = briefs.find(b => b.id === briefId);
+    if (!brief) return;
+    const list = [...brief.fluency_brief_items].sort((a, b) => a.sort_order - b.sort_order);
+    const idx = list.findIndex(i => i.id === itemId);
+    const ni = dir === "up" ? idx - 1 : idx + 1;
+    if (ni < 0 || ni >= list.length) return;
+    const r = [...list]; const [m] = r.splice(idx, 1); r.splice(ni, 0, m);
+    await Promise.all(r.map((item, i) => supabase.from("fluency_brief_items").update({ sort_order: i }).eq("id", item.id)));
+    setBriefs(prev => prev.map(b => b.id === briefId
+      ? { ...b, fluency_brief_items: r.map((item, i) => ({ ...item, sort_order: i })) }
+      : b));
+  }
+
   async function deleteItem(briefId: string, itemId: string) {
     await supabase.from("fluency_brief_items").delete().eq("id", itemId);
     setBriefs(prev => prev.map(b => b.id === briefId
       ? { ...b, fluency_brief_items: b.fluency_brief_items.filter(i => i.id !== itemId) }
       : b));
+    if (editingItemId === itemId) setEditingItemId(null);
   }
 
   return (
@@ -1000,6 +1087,7 @@ function BriefTab({ initBriefs }: { initBriefs: Brief[] }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {briefs.map(b => {
           const open = expandedId === b.id;
+          const isEditingBrief = editingBriefId === b.id;
           const items = [...b.fluency_brief_items].sort((a, c) => a.sort_order - c.sort_order);
           return (
             <div key={b.id} style={card}>
@@ -1009,9 +1097,22 @@ function BriefTab({ initBriefs }: { initBriefs: Brief[] }) {
                   <div style={{ fontWeight: 800, fontSize: 14 }}>{b.title}</div>
                   <div style={{ fontSize: 11.5, color: "#9B9199", marginTop: 1 }}>
                     {b.published_date} · {items.length} item{items.length !== 1 ? "s" : ""}
+                    {b.is_active && <span style={{ color: "#17A855", fontWeight: 700 }}> · Live on dashboard</span>}
                   </div>
                 </div>
-                <div onClick={e => e.stopPropagation()} style={{ display: "flex", gap: 6 }}>
+                <div onClick={e => e.stopPropagation()} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <button
+                    onClick={() => isEditingBrief ? setEditingBriefId(null) : startEditBrief(b)}
+                    style={{ ...btnGhost, padding: "4px 12px", fontSize: 11,
+                      ...(isEditingBrief ? { background: "#F0EEE8", color: "#221D23" } : {}) }}
+                  >{isEditingBrief ? "Close" : "Edit"}</button>
+                  <ToggleBtn
+                    active={b.is_active}
+                    activeColor="#17A855"
+                    activeLabel="Live"
+                    inactiveLabel="Draft"
+                    onClick={() => toggleActive(b)}
+                  />
                   <button onClick={() => deleteBrief(b.id)} style={{ border: 0, background: "none", color: "#EF4444", cursor: "pointer", fontSize: 15 }}>×</button>
                 </div>
                 <ChevronIcon open={open} />
@@ -1019,14 +1120,55 @@ function BriefTab({ initBriefs }: { initBriefs: Brief[] }) {
 
               {open && (
                 <div style={{ borderTop: "1px solid #F0EEE8", padding: "12px 16px 14px" }}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                    {items.map((item, i) => (
-                      <div key={item.id} style={{ display: "flex", alignItems: "flex-start", gap: 9, padding: "9px 12px", borderRadius: 10, background: "#FAFAF8", border: "1px solid #F0EEE8" }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: "#B0ABA5", paddingTop: 2, flexShrink: 0, minWidth: 16, textAlign: "center" }}>{i + 1}</span>
-                        <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, flex: 1 }}>{item.content}</p>
-                        <button onClick={() => deleteItem(b.id, item.id)} style={{ border: 0, background: "none", color: "#EF4444", cursor: "pointer", fontSize: 14, flexShrink: 0 }}>×</button>
+                  {isEditingBrief && (
+                    <div style={{ marginBottom: 12, padding: 14, borderRadius: 12, background: "#FAFAF8", border: "1px solid #F0EEE8" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 180px", gap: 10, marginBottom: 10 }}>
+                        <div><label style={lbl}>Title</label><input value={briefDraft.title} onChange={e => setBriefDraft(d => ({ ...d, title: e.target.value }))} style={inp} /></div>
+                        <div><label style={lbl}>Published Date</label><input type="date" value={briefDraft.published_date} onChange={e => setBriefDraft(d => ({ ...d, published_date: e.target.value }))} style={inp} /></div>
                       </div>
-                    ))}
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button onClick={() => saveBrief(b.id)} disabled={!briefDraft.title} style={{ ...btnAmber, padding: "7px 14px", fontSize: 12 }}>Save brief</button>
+                        <button onClick={() => setEditingBriefId(null)} style={{ ...btnGhost, padding: "7px 14px", fontSize: 12 }}>Cancel</button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                    {items.map((item, i) => {
+                      const isEditingItem = editingItemId === item.id;
+                      return (
+                        <div key={item.id} style={{ display: "flex", alignItems: "flex-start", gap: 9, padding: "9px 12px", borderRadius: 10, background: "#FAFAF8", border: "1px solid #F0EEE8" }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0, paddingTop: 2 }}>
+                            <button onClick={() => moveItem(b.id, item.id, "up")} disabled={i === 0} style={{ ...posBtn, opacity: i === 0 ? .3 : 1 }}>▲</button>
+                            <button onClick={() => moveItem(b.id, item.id, "down")} disabled={i === items.length - 1} style={{ ...posBtn, opacity: i === items.length - 1 ? .3 : 1 }}>▼</button>
+                          </div>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: "#B0ABA5", paddingTop: 2, flexShrink: 0, minWidth: 16, textAlign: "center" }}>{i + 1}</span>
+                          {isEditingItem ? (
+                            <textarea
+                              value={itemDraft}
+                              onChange={e => setItemDraft(e.target.value)}
+                              rows={3}
+                              style={{ ...inp, flex: 1, resize: "vertical" }}
+                            />
+                          ) : (
+                            <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, flex: 1 }}>{item.content}</p>
+                          )}
+                          <div style={{ display: "flex", flexDirection: "column", gap: 4, flexShrink: 0 }}>
+                            {isEditingItem ? (
+                              <>
+                                <button onClick={() => saveItem(b.id, item.id)} disabled={!itemDraft.trim()} style={{ ...btnAmber, padding: "4px 10px", fontSize: 11 }}>Save</button>
+                                <button onClick={() => setEditingItemId(null)} style={{ ...btnGhost, padding: "4px 10px", fontSize: 11 }}>✕</button>
+                              </>
+                            ) : (
+                              <>
+                                <button onClick={() => startEditItem(item)} style={{ ...btnGhost, padding: "4px 10px", fontSize: 11 }}>Edit</button>
+                                <button onClick={() => deleteItem(b.id, item.id)} style={{ border: 0, background: "none", color: "#EF4444", cursor: "pointer", fontSize: 14 }}>×</button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {addingItemTo === b.id ? (
