@@ -4,8 +4,6 @@ import { useState } from "react";
 import AppNav from "@/components/AppNav";
 import ViewCountBadge from "@/components/ViewCountBadge";
 import { recordFluencyView } from "@/lib/fluencyViews";
-import ViewCountBadge from "@/components/ViewCountBadge";
-import { recordFluencyView } from "@/lib/fluencyViews";
 import VideoModal, { type ApplyVideo as ModalApplyVideo } from "../VideoModal";
 
 const GROUP_ACCENT: Record<string, string> = {
