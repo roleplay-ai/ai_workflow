@@ -231,7 +231,7 @@ export default function AIFluencyClient({
             <div style={{
               display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 13px",
               borderRadius: 999, background: "#fff", border: "1px solid #EAD993",
-              fontSize: 12, fontWeight: 950, color: "#221D23", marginBottom: 26,
+              fontSize: 12, fontWeight: 900, color: "#221D23", marginBottom: 18,
             }}>
               <span style={{
                 width: 7, height: 7, borderRadius: "50%", background: "#FFCE00",
@@ -242,10 +242,7 @@ export default function AIFluencyClient({
 
             <h1>Know</h1>
 
-            <p style={{
-              maxWidth: 560, margin: "28px 0 30px", fontSize: 18, lineHeight: 1.48,
-              color: "#514B53", fontWeight: 600, letterSpacing: "-.02em",
-            }}>
+            <p className="aif-hero-desc">
               Stay current with AI news, useful products, practical tool updates,
               and the real questions shaping work.
             </p>
