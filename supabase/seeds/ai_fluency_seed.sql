@@ -71,8 +71,27 @@ INSERT INTO public.fluency_tools (category_label, name, description, icon_emoji,
 
 -- ─── Tool Guides ─────────────────────────────────────────────────────────────
 
-INSERT INTO public.fluency_tool_guides (name, logo_letter, description, accent_color, bg_color, border_color, sort_order) VALUES
-  ('Claude',  'C',  'Best for knowledge work.',              '#623CEA', '#F4EFFD', '#DED1FF', 1),
-  ('Gemini',  'G',  'Best integrated with Google Workspace.','#FFCE00', '#FFF6CF', '#F0D978', 2),
-  ('ChatGPT', 'AI', 'Best for individual users.',            '#3699FC', '#EEF7FF', '#CFE8FF', 3),
-  ('Copilot', 'M',  'Best for the Microsoft ecosystem.',     '#23CE6B', '#ECFFF4', '#C8F3DA', 4);
+INSERT INTO public.fluency_tool_guides (
+  name, logo_letter, description, accent_color, bg_color, border_color,
+  company_name, strengths, update_label, update_date, theme_key, sort_order
+) VALUES
+  ('Claude',  'Cl',
+   'Best knowledge work assistant for documents, research, and deep analysis.',
+   '#D85A30', '#FAECE7', '#F0997B',
+   'Anthropic', ARRAY['Long context window', 'Nuanced reasoning', 'Careful & precise'],
+   'New features added', 'Jun 2026', 'claude', 1),
+  ('ChatGPT', 'GP',
+   'The everyday AI workhorse — great for drafts, code, and brainstorms.',
+   '#1D9E75', '#E1F5EE', '#5DCAA5',
+   'OpenAI', ARRAY['Huge plugin ecosystem', 'Image generation', 'Voice mode'],
+   'Pricing updated', 'May 2026', 'gpt', 2),
+  ('Gemini',  'Ge',
+   'Google''s AI built into Workspace — ideal if your work lives in Drive.',
+   '#7F77DD', '#EEEDFE', '#AFA9EC',
+   'Google', ARRAY['Google Docs & Sheets native', 'Real-time web search', 'Multimodal inputs'],
+   'New features added', 'Jun 2026', 'gemini', 3),
+  ('Copilot', 'Co',
+   'Microsoft''s 365 AI layer for emails, slides, Teams, and meeting notes.',
+   '#BA7517', '#FAEEDA', '#EF9F27',
+   'Microsoft', ARRAY['Office apps integration', 'Teams meeting summaries', 'Outlook drafts'],
+   'Model update', 'Apr 2026', 'copilot', 4);

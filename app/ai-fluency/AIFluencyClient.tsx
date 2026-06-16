@@ -15,6 +15,8 @@ import VideoModal from "./VideoModal";
 import ToolModal, { type ToolModalTool } from "./ToolModal";
 import type { FoundationModule } from "./FoundationModuleCard";
 import FoundationCardsCarousel from "./FoundationCardsCarousel";
+import ToolGuideCard, { type ToolGuide, resolveGuideToolSlug } from "./ToolGuideCard";
+import { normalizeToolSlug } from "@/lib/tools";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -26,7 +28,6 @@ type ApplyVideo = {
   is_locked: boolean; group_name: string | null; category_tag: string | null;
 };
 type FluencyTool  = ToolModalTool;
-type ToolGuide    = { id: string; name: string; logo_letter: string; description: string; accent_color: string; bg_color: string; border_color: string; guide_url: string | null };
 type Props = {
   brief:               Brief | null;
   modules:             FoundationModule[];
@@ -190,6 +191,12 @@ export default function AIFluencyClient({
   function handleComplete(moduleId: string) {
     setCompletedIds(ids => ids.includes(moduleId) ? ids : [...ids, moduleId]);
   }
+
+  const deepDiveByTool = new Map(
+    deepDives
+      .filter((d) => d.tool)
+      .map((d) => [normalizeToolSlug(d.tool!), d] as const),
+  );
 
   return (
     <>
@@ -428,11 +435,29 @@ export default function AIFluencyClient({
             </div>
           </div>
 
-          {/* Deep-dive cards — same light card style, colour-cycled */}
-          {deepDives.length > 0 && (
+          {/* Tool guide cards */}
+          {toolGuides.length > 0 ? (
+            <div className="aif-tool-guide-grid">
+              {toolGuides.map((g, i) => {
+                const deepDive = deepDiveByTool.get(resolveGuideToolSlug(g));
+                const rawUrl = g.guide_url?.trim() || (deepDive ? deepDiveHref(deepDive) : null);
+                const guideUrl = rawUrl && rawUrl !== "#" ? rawUrl : null;
+                const linkExternal = !!deepDive && (deepDive.link_type ?? "external") === "external";
+                return (
+                  <ToolGuideCard
+                    key={g.id}
+                    guide={{ ...g, guide_url: guideUrl }}
+                    sortIndex={i}
+                    toolLogos={toolLogos}
+                    deepDiveId={deepDive?.id}
+                    linkExternal={linkExternal}
+                  />
+                );
+              })}
+            </div>
+          ) : deepDives.length > 0 ? (
             <div className="aif-tool-grid" style={{
               display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 18,
-              marginBottom: toolGuides.length > 0 ? 18 : 0,
             }}>
               {deepDives.map((item, i) => {
                 const cycle      = TOOL_GUIDE_COLORS[i % TOOL_GUIDE_COLORS.length];
@@ -444,7 +469,6 @@ export default function AIFluencyClient({
 
                 const cardContent = (
                   <>
-                    {/* Top accent stripe */}
                     <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 6, background: cycle.accent }} />
                     <div>
                       <div style={{
@@ -481,49 +505,7 @@ export default function AIFluencyClient({
                 return <Link key={item.id} href={href} onClick={() => recordFluencyView("deep_dive", item.id)} style={cardStyle}>{cardContent}</Link>;
               })}
             </div>
-          )}
-
-          {/* Tool-guide overview cards */}
-          {toolGuides.length > 0 && (
-            <div className="aif-tool-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 18 }}>
-              {toolGuides.map((g, i) => {
-                const cycle  = TOOL_GUIDE_COLORS[i % TOOL_GUIDE_COLORS.length];
-                const bg     = g.bg_color     || cycle.bg;
-                const border = g.border_color || cycle.border;
-                const accent = g.accent_color || cycle.accent;
-                return (
-                  <article key={g.id} style={{
-                    minHeight: 188, padding: 22, borderRadius: 20,
-                    background: bg, border: `1px solid ${border}`,
-                    display: "flex", flexDirection: "column", justifyContent: "space-between",
-                    boxShadow: "0 18px 45px rgba(34,29,35,.08)",
-                    position: "relative", overflow: "hidden",
-                  }}>
-                    {/* Top accent stripe */}
-                    <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 6, background: accent }} />
-                    <div>
-                      <div style={{
-                        width: 46, height: 46, borderRadius: 15, display: "grid", placeItems: "center",
-                        background: "#fff", color: "#221D23", fontSize: 20, fontWeight: 950,
-                        marginBottom: 18, border: "1px solid rgba(34,29,35,.08)",
-                      }}>{g.logo_letter}</div>
-                      <h3 className="card-title">{g.name}</h3>
-                      <p style={{ margin: "0 0 18px", color: "#514B53", fontSize: 13, lineHeight: 1.35, fontWeight: 650 }}>
-                        {g.description}
-                      </p>
-                    </div>
-                    {g.guide_url ? (
-                      <Link href={g.guide_url} onClick={() => recordFluencyView("tool_guide", g.id)} style={{ color: "#221D23", fontSize: 12, fontWeight: 950, textDecoration: "none" }}>
-                        Explore guide →
-                      </Link>
-                    ) : (
-                      <span style={{ color: "#6B6670", fontSize: 12, fontWeight: 950 }}>Guide coming soon</span>
-                    )}
-                  </article>
-                );
-              })}
-            </div>
-          )}
+          ) : null}
         </section>
 
         {/* ── AI at Work POV banner ── */}
