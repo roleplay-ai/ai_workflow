@@ -1,0 +1,379 @@
+/* AI Mastery page — scoped layout helpers */
+
+.aim-root {
+  min-height: 100vh;
+  background: #FEFCFA;
+  color: #221D23;
+  font-family: var(--app-font);
+}
+
+.aim-course-shell {
+  height: calc(100vh - 68px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Hero ── */
+
+.aim-hero h1 {
+  margin: 0;
+  font-size: clamp(42px, 5.4vw, 72px);
+  font-weight: 700;
+  line-height: 1.06;
+  letter-spacing: -0.05em;
+  max-width: 650px;
+}
+
+.aim-hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 13px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid #EAD993;
+  font-size: 12px;
+  font-weight: 700;
+  color: #221D23;
+  margin-bottom: 26px;
+}
+
+.aim-hero-desc {
+  max-width: 650px;
+  margin: 28px 0 24px;
+  font-size: 17px;
+  line-height: 1.5;
+  color: #6B6670;
+  font-weight: 500;
+}
+
+.aim-hero-list {
+  display: grid;
+  gap: 14px;
+  margin: 0 0 28px;
+  padding: 0;
+  list-style: none;
+}
+
+.aim-hero-list li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  font-size: 15px;
+  line-height: 1.35;
+  font-weight: 500;
+}
+
+.aim-hero-check {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #17B55C;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.aim-hero-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.aim-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  padding: 12px 18px;
+  border-radius: 999px;
+  background: #FFCE00;
+  color: #221D23;
+  border: 1px solid rgba(34, 29, 35, 0.1);
+  font-weight: 700;
+  font-size: 13px;
+  text-decoration: none;
+  transition: 0.15s transform, 0.15s background;
+}
+
+.aim-btn-primary:hover {
+  transform: translateY(-1px);
+  background: #ffd833;
+}
+
+.aim-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  padding: 12px 18px;
+  border-radius: 999px;
+  background: #fff;
+  color: #221D23;
+  border: 1px solid #E9E4DC;
+  font-weight: 700;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.aim-hero-footnote {
+  margin-top: 16px;
+  color: #6B6670;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.aim-hero-footnote b {
+  color: #221D23;
+  font-weight: 700;
+}
+
+/* ── Section headers ── */
+
+.aim-section-head {
+  position: relative;
+  padding-left: 22px;
+}
+
+.aim-section-accent {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  width: 7px;
+  height: 58px;
+  border-radius: 999px;
+  background: #FFCE00;
+  border: 1px solid rgba(34, 29, 35, 0.18);
+}
+
+.aim-section-label {
+  display: inline-flex;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: #221D23;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+}
+
+.aim-section-title {
+  margin: 0;
+  font-size: 32px;
+  line-height: 1.03;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+.aim-section-desc {
+  margin: 8px 0 0;
+  color: #6B6670;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+/* ── Course journey ── */
+
+.aim-journey-node {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #FFCE00;
+  border: 2px solid #221D23;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.aim-journey-kicker {
+  display: block;
+  color: #6B6670;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.aim-journey-part-title {
+  margin: 3px 0 0;
+  font-size: 22px;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  font-weight: 700;
+}
+
+.aim-journey-badge {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: #FFF6CF;
+  border: 1px solid #F0D978;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.aim-journey-module-code {
+  display: block;
+  color: #623CEA;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.aim-journey-module-title {
+  display: block;
+  line-height: 1.24;
+  letter-spacing: -0.015em;
+  font-weight: 600;
+}
+
+.aim-journey-module-title--unlocked {
+  font-size: 15px;
+}
+
+.aim-journey-module-title--locked {
+  font-size: 14px;
+}
+
+.aim-journey-unlocked-badge {
+  white-space: nowrap;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: #FFCE00;
+  color: #221D23;
+  border: 1px solid rgba(34, 29, 35, 0.1);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.aim-journey-locked-badge {
+  white-space: nowrap;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: #F7F5F1;
+  color: #6B6670;
+  border: 1px solid #E9E4DC;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.aim-journey-preview-link {
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 700;
+  color: #221D23;
+}
+
+/* ── CTA banner ── */
+
+.aim-cta-banner {
+  font-family: inherit;
+}
+
+.aim-cta-kicker {
+  width: fit-content;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 206, 0, 0.14);
+  border: 1px solid rgba(255, 206, 0, 0.45);
+  color: #FFCE00;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  margin-bottom: 22px;
+}
+
+.aim-cta-banner h2 {
+  margin: 0;
+  font-size: clamp(28px, 3.2vw, 44px);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-weight: 700;
+  color: #fff;
+}
+
+.aim-cta-desc {
+  max-width: 680px;
+  margin: 18px 0 26px;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 14px;
+  line-height: 1.48;
+  font-weight: 500;
+}
+
+.aim-cta-stat-title {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.aim-cta-stat-desc {
+  display: block;
+  color: #6B6670;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* ── Preview mode bar ── */
+
+.aim-preview-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 48px;
+  background: #221D23;
+  color: #fff;
+  gap: 16px;
+  font-family: inherit;
+}
+
+.aim-preview-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #FFCE00;
+  color: #221D23;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.aim-preview-text {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+}
+
+.aim-preview-back {
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.aim-mockup {
+  font-family: inherit;
+}
+
+@media (max-width: 680px) {
+  .aim-hero h1 {
+    font-size: 39px;
+  }
+
+  .aim-section-title {
+    font-size: 28px;
+  }
+}
