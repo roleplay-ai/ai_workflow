@@ -249,49 +249,22 @@ export default function AIFluencyClient({
           {/* Brief card */}
           <div style={{ position: "relative", zIndex: 1 }}>
             {brief ? (
-              <article style={{
-                background: "linear-gradient(135deg,#191612,#211B1F 68%,#171218)",
-                color: "#fff", borderRadius: 24, padding: "30px 32px",
-                boxShadow: "0 24px 55px rgba(34,29,35,.22)", minHeight: 420,
-                display: "flex", flexDirection: "column", justifyContent: "space-between",
-                border: "1px solid rgba(255,255,255,.06)",
-              }}>
+              <article className="aif-brief-card">
                 <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18, flexWrap: "wrap" }}>
-                    <span style={{
-                      display: "inline-flex", padding: "8px 13px", borderRadius: 7,
-                      background: "#C97D3A", color: "#fff", fontSize: 11, fontWeight: 950,
-                      letterSpacing: ".12em", textTransform: "uppercase",
-                    }}>Nudgeable Brief</span>
-                    <span style={{ color: "#B9A995", fontSize: 13, fontWeight: 700 }}>
-                      {formatDate(brief.published_date)}
-                    </span>
+                  <div className="aif-brief-header">
+                    <span className="aif-brief-badge">Nudgeable Brief</span>
+                    <span className="aif-brief-date">{formatDate(brief.published_date)}</span>
                   </div>
 
-                  <h2 style={{
-                    margin: "0 0 20px", fontSize: 31, lineHeight: 1.05,
-                    fontWeight: 950, letterSpacing: "-.055em", color: "#fff",
-                  }}>{brief.title}</h2>
+                  <h2 className="aif-brief-title">{brief.title}</h2>
 
-                  <ul style={{ display: "grid", gap: 16, margin: 0, padding: 0, listStyle: "none" }}>
+                  <ul className="aif-brief-list">
                     {sortedItems.map((item, i) => (
-                      <li key={i} style={{
-                        position: "relative", paddingLeft: 24, color: "#C9B9A2",
-                        fontSize: 14, lineHeight: 1.55, fontWeight: 650,
-                      }}>
-                        <span style={{
-                          position: "absolute", left: 0, top: 9, width: 6, height: 6,
-                          borderRadius: "50%", background: "#D48742", display: "inline-block",
-                        }} />
-                        {item.content}
-                      </li>
+                      <li key={i}>{item.content}</li>
                     ))}
                   </ul>
                 </div>
-                <a href="#videos" style={{
-                  display: "inline-flex", color: "#FFCE00", fontWeight: 950,
-                  fontSize: 13, marginTop: 24, textDecoration: "none",
-                }}>Watch video updates →</a>
+                <a href="#videos" className="aif-brief-link">Watch video updates →</a>
               </article>
             ) : (
               <div style={{
@@ -734,22 +707,11 @@ export default function AIFluencyClient({
           color: "#fff", boxShadow: "0 28px 65px rgba(34,29,35,.14)", borderLeft: "8px solid #FFCE00",
         }}>
           <div style={{ padding: "36px 34px" }}>
-            <div style={{
-              width: "fit-content", padding: "8px 12px", borderRadius: 999,
-              background: "rgba(255,206,0,.14)", border: "1px solid rgba(255,206,0,.45)",
-              color: "#FFCE00", fontSize: 10, fontWeight: 950,
-              textTransform: "uppercase", letterSpacing: ".09em", marginBottom: 22,
-            }}>Thinking guide</div>
+            <div className="aif-pov-kicker">Thinking guide</div>
 
-            <h2 style={{
-              margin: 0, fontSize: "clamp(34px,4vw,50px)", lineHeight: .98,
-              letterSpacing: "-.065em", fontWeight: 950, color: "#fff",
-            }}>AI at Work: The Real Questions</h2>
+            <h2>AI at Work: The Real Questions</h2>
 
-            <p style={{
-              maxWidth: 660, margin: "18px 0 26px", color: "rgba(255,255,255,.75)",
-              fontSize: 15, lineHeight: 1.45, fontWeight: 650,
-            }}>
+            <p className="aif-pov-desc">
               A clear guide to the messy questions behind AI adoption, automation,
               capability building, and work redesign.
             </p>
@@ -758,22 +720,22 @@ export default function AIFluencyClient({
               display: "inline-flex", alignItems: "center", justifyContent: "center",
               padding: "13px 20px", borderRadius: 999, background: "#FFCE00",
               color: "#221D23", border: "1px solid rgba(34,29,35,.10)",
-              fontWeight: 950, textDecoration: "none", fontSize: 14,
+              fontWeight: 700, textDecoration: "none", fontSize: 14,
             }}>Explore the guide →</Link>
           </div>
 
           {/* Orbit visual */}
           <div className="aif-pov-visual" style={{ display: "grid", placeItems: "center", minHeight: 260 }}>
             <div style={{ position: "relative", width: 200, height: 200, border: "1px dashed rgba(255,255,255,.22)", borderRadius: "50%" }}>
-              <div style={{
+              <div className="aif-pov-orbit-core" style={{
                 position: "absolute", inset: 44, borderRadius: 24, background: "#FFCE00",
                 border: "3px solid #000", color: "#221D23", display: "grid",
-                placeItems: "center", textAlign: "center", fontWeight: 950,
+                placeItems: "center", textAlign: "center",
                 transform: "rotate(-5deg)",
               }}>
                 <div>
-                  <span style={{ fontSize: 30, display: "block", letterSpacing: "-.06em" }}>AI</span>
-                  <small style={{ fontSize: 9, letterSpacing: ".05em" }}>AT WORK</small>
+                  <span>AI</span>
+                  <small>AT WORK</small>
                 </div>
               </div>
               {[
@@ -782,9 +744,9 @@ export default function AIFluencyClient({
                 { label: "Agents", cls: { bottom: 11, right: 27 } },
                 { label: "Skills", cls: { left: -28, bottom: 46 } },
               ].map(n => (
-                <span key={n.label} style={{
+                <span key={n.label} className="aif-pov-orbit-label" style={{
                   position: "absolute", ...n.cls, padding: "8px 10px", borderRadius: 999,
-                  background: "#fff", color: "#221D23", fontSize: 10, fontWeight: 950,
+                  background: "#fff", color: "#221D23",
                   border: "1px solid rgba(34,29,35,.18)",
                 }}>{n.label}</span>
               ))}

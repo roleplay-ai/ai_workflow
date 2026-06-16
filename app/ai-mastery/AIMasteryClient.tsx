@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useEffect, useState, useTransition } from "react";
-import Link from "next/link";
 import { TOTAL_MODULES } from "@/lib/ai-mastery-course";
 import AppNav from "@/components/AppNav";
 
@@ -61,12 +60,10 @@ export default function AIMasteryClient({ completedModules: initial, userName, i
   const pct = Math.round((completed.length / TOTAL_MODULES) * 100);
 
   return (
-    <div style={{
-      height: "100vh", display: "flex", flexDirection: "column",
-      overflow: "hidden", fontFamily: "Roboto, ui-sans-serif, system-ui, sans-serif",
-    }}>
+    <>
       <AppNav activePage="ai-mastery" userName={userName} isAdmin={isAdmin} />
 
+      <div className="aim-course-shell">
       {/* Progress bar */}
       <div style={{
         flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -101,6 +98,7 @@ export default function AIMasteryClient({ completedModules: initial, userName, i
         style={{ flex: 1, width: "100%", border: 0, background: "#FEFCFA" }}
         sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
       />
-    </div>
+      </div>
+    </>
   );
 }

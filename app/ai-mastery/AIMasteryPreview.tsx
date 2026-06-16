@@ -37,7 +37,7 @@ function LaptopMockup() {
   );
 
   return (
-    <div style={{ position: "relative", width: "min(100%, 600px)", marginLeft: "auto" }}>
+    <div className="aim-mockup" style={{ position: "relative", width: "min(100%, 600px)", marginLeft: "auto" }}>
       {/* Lid */}
       <div style={{
         position: "relative", background: "linear-gradient(180deg,#D9D7D2,#CBC8C2)",
@@ -57,7 +57,7 @@ function LaptopMockup() {
             {["📚 AI for Work", "Ch. 6 · M2"].map(t => (
               <span key={t} style={{
                 padding: "7px 12px", borderRadius: 999, background: "#fff",
-                border: "1px solid #E4DDD4", fontSize: 11, fontWeight: 900,
+                border: "1px solid #E4DDD4", fontSize: 11, fontWeight: 700,
               }}>{t}</span>
             ))}
           </div>
@@ -66,7 +66,7 @@ function LaptopMockup() {
           <div style={{ display: "grid", gridTemplateColumns: "150px 1fr 156px", minHeight: 338 }}>
             {/* Sidebar */}
             <div style={{ background: "linear-gradient(180deg,#221D23,#1A171D)", color: "#fff", padding: "12px 10px" }}>
-              <div style={{ color: "#A79FA8", fontSize: 10, textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 900, marginBottom: 8 }}>
+              <div style={{ color: "#A79FA8", fontSize: 10, textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 700, marginBottom: 8 }}>
                 Course reader
               </div>
               {[
@@ -80,7 +80,7 @@ function LaptopMockup() {
                   <small style={{ display: "block", color: "#A79FA8", marginTop: 3, fontSize: 9 }}>{item.secs} sections</small>
                 </div>
               ))}
-              <div style={{ color: "#FFCE00", fontSize: 10, fontWeight: 950, letterSpacing: ".08em", margin: "12px 0 8px", textTransform: "uppercase" }}>
+              <div style={{ color: "#FFCE00", fontSize: 10, fontWeight: 700, letterSpacing: ".08em", margin: "12px 0 8px", textTransform: "uppercase" }}>
                 Part 6: Build and Create
               </div>
               {[
@@ -107,29 +107,29 @@ function LaptopMockup() {
                 padding: "16px 16px 14px", position: "relative", overflow: "hidden",
               }}>
                 <div style={{ position: "absolute", right: -28, bottom: -42, width: 138, height: 138, borderRadius: "50%", background: "rgba(255,255,255,.28)" }} />
-                <div style={{ fontSize: 10, fontWeight: 950, letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 8 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 8 }}>
                   Part 6 · Build and Create
                 </div>
                 <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 12 }}>
                   {["Ch. 6 · M2", "4 sections", "Guided reader"].map(c => (
-                    <span key={c} style={{ padding: "5px 9px", borderRadius: 999, background: "#fff", border: "1px solid rgba(34,29,35,.14)", fontSize: 10, fontWeight: 900 }}>{c}</span>
+                    <span key={c} style={{ padding: "5px 9px", borderRadius: 999, background: "#fff", border: "1px solid rgba(34,29,35,.14)", fontSize: 10, fontWeight: 700 }}>{c}</span>
                   ))}
                 </div>
-                <h3 style={{ margin: 0, maxWidth: 330, fontSize: 21, lineHeight: .96, letterSpacing: "-.05em" }}>AI Agents – From Chatbots to Action</h3>
-                <p style={{ margin: "10px 0 0", maxWidth: 305, fontSize: 10, lineHeight: 1.35, color: "#4B432F", fontWeight: 700 }}>
+                <h3 style={{ margin: 0, maxWidth: 330, fontSize: 21, lineHeight: 1.06, letterSpacing: "-.05em", fontWeight: 700 }}>AI Agents – From Chatbots to Action</h3>
+                <p style={{ margin: "10px 0 0", maxWidth: 305, fontSize: 10, lineHeight: 1.35, color: "#4B432F", fontWeight: 500 }}>
                   Learn what AI agents are, how they differ from chatbots, and where they can actually help at work.
                 </p>
               </div>
 
               <div style={{ marginTop: 14, background: "#fff", border: "1px solid #E4DDD4", borderRadius: 20, padding: 14 }}>
                 <div style={{ height: 6, borderRadius: 999, background: "linear-gradient(90deg,#623CEA,#3699FC,#23CE6B,#FFCE00)", margin: "-2px 0 12px" }} />
-                <div style={{ fontSize: 16, fontWeight: 950, letterSpacing: "-.04em", marginBottom: 8 }}>2.1 What Are AI Agents?</div>
+                <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-.04em", marginBottom: 8 }}>2.1 What Are AI Agents?</div>
                 <div style={{ display: "grid", gap: 8, marginBottom: 12 }}>
                   {["92%", "84%", "96%", "78%"].map((w, i) => (
                     <span key={i} style={{ display: "block", height: 8, borderRadius: 999, background: "#E9E5DF", width: w }} />
                   ))}
                 </div>
-                <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 10px", borderRadius: 999, background: "#FFF6CF", border: "1px solid #EFD46F", fontSize: 10, fontWeight: 950, marginBottom: 10 }}>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 10px", borderRadius: 999, background: "#FFF6CF", border: "1px solid #EFD46F", fontSize: 10, fontWeight: 700, marginBottom: 10 }}>
                   🤖 Three ways AI works
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
@@ -183,35 +183,25 @@ export default function AIMasteryPreview() {
   // Guest clicked an unlocked preview module — show just that chapter
   if (selectedModuleId) {
     return (
-      <div style={{ height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: "Roboto, ui-sans-serif, system-ui, sans-serif" }}>
+      <>
         <AppNav activePage="ai-mastery" />
 
+        <div className="aim-course-shell">
         {/* Preview banner */}
-        <div style={{
-          flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "0 24px", height: 48, background: "#221D23", color: "#fff", gap: 16,
-        }}>
+        <div className="aim-preview-bar">
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{
-              padding: "4px 10px", borderRadius: 999, background: "#FFCE00", color: "#221D23",
-              fontSize: 11, fontWeight: 950, letterSpacing: ".06em", textTransform: "uppercase",
-            }}>Preview</span>
-            <span style={{ fontSize: 13, color: "rgba(255,255,255,.70)", fontWeight: 650 }}>
+            <span className="aim-preview-badge">Preview</span>
+            <span className="aim-preview-text">
               Sign in to access all chapters and track your progress.
             </span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <a href={LOGIN_URL} style={{
-              padding: "7px 16px", borderRadius: 999, background: "#FFCE00", color: "#221D23",
-              fontSize: 12, fontWeight: 950, textDecoration: "none", whiteSpace: "nowrap",
-            }}>Sign in →</a>
+            <a href={LOGIN_URL} className="aim-btn-primary" style={{ padding: "7px 16px", fontSize: 12 }}>
+              Sign in →
+            </a>
             <button
               onClick={() => setSelectedModuleId(null)}
-              style={{
-                padding: "7px 14px", borderRadius: 999, background: "rgba(255,255,255,.12)",
-                color: "#fff", border: "1px solid rgba(255,255,255,.18)",
-                fontSize: 12, fontWeight: 900, cursor: "pointer", whiteSpace: "nowrap",
-              }}
+              className="aim-preview-back"
             >← Course overview</button>
           </div>
         </div>
@@ -224,22 +214,19 @@ export default function AIMasteryPreview() {
           style={{ flex: 1, width: "100%", border: 0, background: "#FEFCFA" }}
           sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
         />
-      </div>
+        </div>
+      </>
     );
   }
 
   return (
-    <div style={{
-      minHeight: "100vh", background: "#FEFCFA", color: "#221D23",
-      fontFamily: "Roboto, ui-sans-serif, system-ui, sans-serif",
-      letterSpacing: "-.01em",
-    }}>
+    <>
       <AppNav activePage="ai-mastery" />
 
       <main style={{ width: "min(1200px,calc(100% - 56px))", margin: "34px auto 0" }}>
 
         {/* ── Hero ── */}
-        <section style={{
+        <section className="aim-hero" style={{
           position: "relative", display: "grid", gridTemplateColumns: "1fr .98fr",
           gap: 34, padding: 44, border: "1px solid #E9E4DC", borderRadius: 28,
           overflow: "hidden", background: "#fff", boxShadow: "0 1px 0 rgba(34,29,35,.04)",
@@ -252,51 +239,37 @@ export default function AIMasteryPreview() {
 
           {/* Copy */}
           <div style={{ position: "relative", zIndex: 1 }}>
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 13px",
-              borderRadius: 999, background: "#fff", border: "1px solid #EAD993",
-              fontSize: 12, fontWeight: 950, color: "#221D23", marginBottom: 26,
-            }}>
+            <div className="aim-hero-eyebrow">
               <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#FFCE00", outline: "2px solid #221D23", display: "inline-block" }} />
               Self-paced online course
             </div>
 
-            <h1 style={{ margin: 0, maxWidth: 720, fontSize: "clamp(50px,6.4vw,86px)", lineHeight: .94, fontWeight: 950, letterSpacing: "-.075em" }}>
-              AI Mastery Online Course.
-            </h1>
+            <h1>AI Mastery Online Course.</h1>
 
-            <p style={{ maxWidth: 650, margin: "28px 0 24px", fontSize: 19, lineHeight: 1.5, color: "#6B6670", fontWeight: 650 }}>
+            <p className="aim-hero-desc">
               Everything from 40+ corporate workshops, now structured as a self-paced online course for practical AI fluency at work.
             </p>
 
-            <ul style={{ display: "grid", gap: 14, margin: "0 0 28px", padding: 0, listStyle: "none" }}>
+            <ul className="aim-hero-list">
               {[
                 "Built from 40+ corporate workshops, not recycled theory.",
                 "30+ lessons, 8 hours, 6 months access.",
                 "Covers Prompt Engineering, Data, Writing, Agents, Vibe Coding, and AI Risks.",
                 "Updated regularly, no outdated content.",
               ].map(text => (
-                <li key={text} style={{ display: "flex", gap: 12, alignItems: "flex-start", fontSize: 15, lineHeight: 1.35, fontWeight: 750 }}>
-                  <span style={{ width: 28, height: 28, borderRadius: "50%", background: "#17B55C", color: "#fff", display: "grid", placeItems: "center", fontWeight: 950, flexShrink: 0 }}>✓</span>
+                <li key={text}>
+                  <span className="aim-hero-check">✓</span>
                   <span>{text}</span>
                 </li>
               ))}
             </ul>
 
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-              <a href="#journey" style={{
-                display: "inline-flex", alignItems: "center", padding: "12px 18px", borderRadius: 999,
-                background: "#FFCE00", color: "#221D23", border: "1px solid rgba(34,29,35,.10)",
-                fontWeight: 950, fontSize: 13, textDecoration: "none",
-              }}>Explore course →</a>
-              <a href={LOGIN_URL} style={{
-                display: "inline-flex", alignItems: "center", padding: "12px 18px", borderRadius: 999,
-                background: "#fff", color: "#221D23", border: "1px solid #E9E4DC",
-                fontWeight: 950, fontSize: 13, textDecoration: "none",
-              }}>Get full access</a>
+            <div className="aim-hero-actions">
+              <a href="#journey" className="aim-btn-primary">Explore course →</a>
+              <a href={LOGIN_URL} className="aim-btn-secondary">Get full access</a>
             </div>
-            <p style={{ marginTop: 16, color: "#6B6670", fontSize: 13, fontWeight: 700 }}>
-              <b style={{ color: "#221D23" }}>Discount available.</b> Email us for access options.
+            <p className="aim-hero-footnote">
+              <b>Discount available.</b> Email us for access options.
             </p>
           </div>
 
@@ -309,20 +282,13 @@ export default function AIMasteryPreview() {
         {/* ── Course Journey ── */}
         <section style={{ marginTop: 72 }} id="journey">
           <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 22, marginBottom: 28 }}>
-            <div style={{ position: "relative", paddingLeft: 22 }}>
-              <div style={{
-                position: "absolute", left: 0, top: 4, width: 7, height: 58,
-                borderRadius: 999, background: "#FFCE00", border: "1px solid rgba(34,29,35,.18)",
-              }} />
-              <span style={{
-                display: "inline-flex", padding: "7px 10px", borderRadius: 999, background: "#221D23",
-                color: "#fff", fontSize: 10, fontWeight: 950, textTransform: "uppercase",
-                letterSpacing: ".10em", marginBottom: 8,
-              }}>Course journey</span>
-              <h2 style={{ margin: 0, fontSize: 34, lineHeight: 1.03, fontWeight: 950, letterSpacing: "-.055em" }}>
+            <div className="aim-section-head">
+              <div className="aim-section-accent" />
+              <span className="aim-section-label">Course journey</span>
+              <h2 className="aim-section-title">
                 Follow the complete AI Mastery sequence
               </h2>
-              <p style={{ margin: "8px 0 0", color: "#6B6670", fontSize: 14, fontWeight: 650, lineHeight: 1.45 }}>
+              <p className="aim-section-desc">
                 The chapters are arranged as a learning journey. Unlocked preview lessons are highlighted inside their actual part.
               </p>
             </div>
@@ -341,11 +307,7 @@ export default function AIMasteryPreview() {
                 <article key={part.number} style={{ position: "relative", display: "grid", gridTemplateColumns: "60px 1fr", gap: 18 }}>
                   {/* Node */}
                   <div style={{ position: "relative", zIndex: 2, width: 60, display: "flex", justifyContent: "center" }}>
-                    <span style={{
-                      width: 40, height: 40, borderRadius: "50%", background: "#FFCE00",
-                      border: "2px solid #221D23", display: "grid", placeItems: "center",
-                      fontSize: 12, fontWeight: 950,
-                    }}>{String(partIdx + 1).padStart(2, "0")}</span>
+                    <span className="aim-journey-node">{String(partIdx + 1).padStart(2, "0")}</span>
                   </div>
 
                   {/* Card */}
@@ -361,19 +323,19 @@ export default function AIMasteryPreview() {
                           {part.icon}
                         </div>
                         <div>
-                          <span style={{ display: "block", color: "#6B6670", fontSize: 12, fontWeight: 850 }}>
+                          <span className="aim-journey-kicker">
                             {PART_KICKERS[part.number]}
                           </span>
-                          <h3 style={{ margin: "3px 0 0", fontSize: 22, lineHeight: 1.05, letterSpacing: "-.04em", fontWeight: 950 }}>
+                          <h3 className="aim-journey-part-title">
                             {part.number === 0 ? part.title : `Part ${part.number}: ${part.title}`}
                           </h3>
                         </div>
                       </div>
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end", flexShrink: 0 }}>
-                        <span style={{ padding: "7px 10px", borderRadius: 999, background: "#FFF6CF", border: "1px solid #F0D978", whiteSpace: "nowrap", fontSize: 12, fontWeight: 900 }}>
+                        <span className="aim-journey-badge">
                           {part.modules.length} lesson{part.modules.length !== 1 ? "s" : ""}
                         </span>
-                        <span style={{ padding: "7px 10px", borderRadius: 999, background: "#FFF6CF", border: "1px solid #F0D978", whiteSpace: "nowrap", fontSize: 12, fontWeight: 900 }}>
+                        <span className="aim-journey-badge">
                           {metaLabel}
                         </span>
                       </div>
@@ -402,24 +364,24 @@ export default function AIMasteryPreview() {
                             }}
                           >
                             <div style={{ minWidth: 0, opacity: isUnlocked ? 1 : 0.74 }}>
-                              <span style={{ display: "block", color: "#623CEA", fontSize: 12, fontWeight: 900, marginBottom: 4 }}>
+                              <span className="aim-journey-module-code">
                                 {part.number === 0 ? "Start Here" : `Ch.${part.number} · M${modIdx + 1}`}
                               </span>
-                              <strong style={{ display: "block", lineHeight: 1.24, fontSize: isUnlocked ? 15 : 14, letterSpacing: "-.015em" }}>
+                              <strong className={`aim-journey-module-title ${isUnlocked ? "aim-journey-module-title--unlocked" : "aim-journey-module-title--locked"}`}>
                                 {mod.title}
                               </strong>
                             </div>
                             <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
                               {isUnlocked ? (
                                 <>
-                                  <span style={{ whiteSpace: "nowrap", padding: "7px 10px", borderRadius: 999, background: "#FFCE00", color: "#221D23", border: "1px solid rgba(34,29,35,.10)", fontSize: 11, fontWeight: 950 }}>
+                                  <span className="aim-journey-unlocked-badge">
                                     Unlocked preview
                                   </span>
-                                  <span style={{ whiteSpace: "nowrap", fontSize: 12, fontWeight: 950, color: "#221D23" }}>Preview →</span>
+                                  <span className="aim-journey-preview-link">Preview →</span>
                                 </>
                               ) : (
                                 <>
-                                  <span style={{ whiteSpace: "nowrap", padding: "7px 10px", borderRadius: 999, background: "#F7F5F1", color: "#6B6670", border: "1px solid #E9E4DC", fontSize: 11, fontWeight: 950 }}>
+                                  <span className="aim-journey-locked-badge">
                                     Locked
                                   </span>
                                   <span style={{ color: "#A49CA6", fontSize: 14 }}>🔒</span>
@@ -438,35 +400,24 @@ export default function AIMasteryPreview() {
         </section>
 
         {/* ── CTA banner ── */}
-        <section style={{
+        <section className="aim-cta-banner" style={{
           margin: "42px 0 88px", position: "relative", overflow: "hidden", minHeight: 255,
           display: "grid", gridTemplateColumns: "1.2fr .8fr", borderRadius: 26,
           background: "radial-gradient(circle at 82% 30%,rgba(255,206,0,.20),transparent 26%),radial-gradient(circle at 54% 80%,rgba(98,60,234,.20),transparent 32%),#221D23",
           color: "#fff", boxShadow: "0 28px 65px rgba(34,29,35,.14)", borderLeft: "8px solid #FFCE00",
         }}>
           <div style={{ padding: "36px 34px" }}>
-            <div style={{
-              width: "fit-content", padding: "8px 12px", borderRadius: 999,
-              background: "rgba(255,206,0,.14)", border: "1px solid rgba(255,206,0,.45)",
-              color: "#FFCE00", fontSize: 10, fontWeight: 950,
-              textTransform: "uppercase", letterSpacing: ".09em", marginBottom: 22,
-            }}>Full access</div>
-            <h2 style={{ margin: 0, fontSize: "clamp(34px,4vw,50px)", lineHeight: .98, letterSpacing: "-.065em", fontWeight: 950 }}>
-              Want the complete course?
-            </h2>
-            <p style={{ maxWidth: 680, margin: "18px 0 26px", color: "rgba(255,255,255,.75)", fontSize: 15, lineHeight: 1.45, fontWeight: 650 }}>
+            <div className="aim-cta-kicker">Full access</div>
+            <h2>Want the complete course?</h2>
+            <p className="aim-cta-desc">
               Sign in or create an account to unlock all 30+ lessons and track your progress.
             </p>
-            <a href={LOGIN_URL} style={{
-              display: "inline-flex", alignItems: "center", padding: "12px 18px", borderRadius: 999,
-              background: "#FFCE00", color: "#221D23", border: "1px solid rgba(34,29,35,.10)",
-              fontWeight: 950, fontSize: 13, textDecoration: "none",
-            }}>Sign in to access →</a>
+            <a href={LOGIN_URL} className="aim-btn-primary">Sign in to access →</a>
           </div>
           <div style={{ display: "grid", placeItems: "center", padding: 28 }}>
             <div style={{ width: "min(100%,320px)", background: "#fff", color: "#221D23", borderRadius: 22, padding: 22, boxShadow: "0 20px 48px rgba(0,0,0,.20)" }}>
-              <strong style={{ display: "block", fontSize: 16, marginBottom: 8 }}>30+ lessons · 8 hours</strong>
-              <span style={{ display: "block", color: "#6B6670", fontSize: 13, fontWeight: 650, lineHeight: 1.4 }}>
+              <strong className="aim-cta-stat-title">30+ lessons · 8 hours</strong>
+              <span className="aim-cta-stat-desc">
                 Complete AI Mastery course — learn at your own pace with lifetime updates.
               </span>
             </div>
@@ -474,6 +425,6 @@ export default function AIMasteryPreview() {
         </section>
 
       </main>
-    </div>
+    </>
   );
 }
