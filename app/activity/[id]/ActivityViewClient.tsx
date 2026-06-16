@@ -356,7 +356,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
     return (
       <div style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: "Roboto, ui-sans-serif, system-ui, sans-serif" }}>
         <AppNav
-          activePage="workflows"
+          activePage="apply"
           userName={profile?.full_name}
           isAdmin={profile?.role === "admin" || profile?.role === "superadmin"}
         />
@@ -364,7 +364,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
           <div style={{ fontSize: 48, marginBottom: 16 }}>🚧</div>
           <h2 style={{ fontWeight: 900, fontSize: 22, color: "#221D23", marginBottom: 8 }}>{activity.title}</h2>
           <p>Content for this activity hasn&apos;t been uploaded yet. Check back soon.</p>
-          <a href="/dashboard" style={{ display: "inline-block", marginTop: 24, padding: "10px 24px", borderRadius: 999, background: "#FFCE00", color: "#221D23", fontWeight: 800, textDecoration: "none" }}>← Back to dashboard</a>
+          <a href="/apply" style={{ display: "inline-block", marginTop: 24, padding: "10px 24px", borderRadius: 999, background: "#FFCE00", color: "#221D23", fontWeight: 800, textDecoration: "none" }}>← Back to Apply</a>
         </div>
       </div>
     );
@@ -397,10 +397,10 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
               <div style={{ fontSize: 17, fontWeight: 900, letterSpacing: "-.03em" }}>{activity.title}</div>
               <div style={{ fontSize: 11.5, color: "#64748B", fontWeight: 600 }}>{activity.level} · {activity.time_estimate_minutes}m</div>
             </div>
-            <a href="/dashboard" style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, height: 32, padding: "0 12px", borderRadius: 8, fontSize: 13, fontWeight: 700, color: "#221D23", background: "#facc15", border: "1px solid #d97706", textDecoration: "none", transition: "background .15s" }}
+            <a href="/apply" style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, height: 32, padding: "0 12px", borderRadius: 8, fontSize: 13, fontWeight: 700, color: "#221D23", background: "#facc15", border: "1px solid #d97706", textDecoration: "none", transition: "background .15s" }}
               onMouseEnter={e => { e.currentTarget.style.background = "#fbbf24"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "#facc15"; }}>
-              ← Dashboard
+              ← Apply
             </a>
           </div>
         </div>
@@ -814,7 +814,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
         <CelebrationModal
           activityTitle={activity.title}
           points={activity.points}
-          onContinue={() => { window.location.href = "/dashboard"; }}
+          onContinue={() => { window.location.href = "/apply"; }}
         />
       )}
 

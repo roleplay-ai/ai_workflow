@@ -14,7 +14,7 @@ export default async function AIFluencyAdminPage() {
     .eq("id", user.id)
     .single();
 
-  if (!profile || profile.role !== "superadmin") redirect("/dashboard");
+  if (!profile || profile.role !== "superadmin") redirect("/apply");
 
   const [
     { data: worlds },

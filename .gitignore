@@ -25,6 +25,7 @@ build/
 public/uploads/
 *.png
 !app/icon.png
+!public/Nudgeable-black.png
 *.jpg
 *.jpeg
 *.gif

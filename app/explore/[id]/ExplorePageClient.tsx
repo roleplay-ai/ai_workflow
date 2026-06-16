@@ -14,7 +14,7 @@ export default function ExplorePageClient({ title, pageUrl }: Props) {
 
   function handleBack() {
     startTransition(() => {
-      router.push("/dashboard");
+      router.push("/apply");
     });
   }
 
@@ -68,7 +68,7 @@ export default function ExplorePageClient({ title, pageUrl }: Props) {
                 Loading…
               </>
             ) : (
-              "← Dashboard"
+              "← Apply"
             )}
           </button>
         </div>

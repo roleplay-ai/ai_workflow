@@ -61,7 +61,7 @@ export default function AIMasteryClient({ completedModules: initial, userName, i
 
   return (
     <>
-      <AppNav activePage="ai-mastery" userName={userName} isAdmin={isAdmin} />
+      <AppNav activePage="learn" userName={userName} isAdmin={isAdmin} />
 
       <div className="aim-course-shell">
       {/* Progress bar */}

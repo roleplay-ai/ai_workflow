@@ -85,9 +85,9 @@ export default function CelebrationModal({ activityTitle, points, onContinue }: 
           {loading ? (
             <>
               <div className="card-spinner" style={{ width: 18, height: 18, borderWidth: 2.5, borderColor: "rgba(34,29,35,.2)", borderTopColor: "#221D23" }} />
-              Going to dashboard…
+              Going to Apply…
             </>
-          ) : "Back to dashboard"}
+          ) : "Back to Apply"}
         </button>
       </div>
     </div>

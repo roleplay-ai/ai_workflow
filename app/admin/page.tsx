@@ -15,7 +15,7 @@ export default async function AdminPage() {
     .eq("id", user.id)
     .single();
 
-  if (!["admin", "superadmin"].includes(profile?.role ?? "")) redirect("/dashboard");
+  if (!["admin", "superadmin"].includes(profile?.role ?? "")) redirect("/apply");
 
   const { data: company } = profile?.company_id
     ? await supabase.from("companies").select("name").eq("id", profile.company_id).single()

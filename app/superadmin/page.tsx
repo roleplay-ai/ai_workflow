@@ -24,7 +24,7 @@ export default async function SuperadminPage() {
     );
   }
 
-  if (profile.role !== "superadmin") redirect("/dashboard");
+  if (profile.role !== "superadmin") redirect("/apply");
 
   const { data: company } = profile.company_id
     ? await supabase.from("companies").select("name").eq("id", profile.company_id).single()
