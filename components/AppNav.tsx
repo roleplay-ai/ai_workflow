@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 
 import { APP_FONT } from "@/lib/fonts";
 
-export type AppPage = "workflows" | "ai-mastery" | "ai-fluency";
+export type AppPage = "apply" | "learn" | "know";
 
 export const APP_NAV_FONT = APP_FONT;
 
@@ -37,14 +37,14 @@ export const APP_NAV_BRAND_STYLE: React.CSSProperties = {
 };
 
 export const APP_NAV_LINKS: { label: string; href: string; page: AppPage }[] = [
-  { label: "Application", href: "/dashboard", page: "workflows" },
-  { label: "Mastery", href: "/ai-mastery", page: "ai-mastery" },
-  { label: "Fluency", href: "/ai-fluency", page: "ai-fluency" },
+  { label: "Apply", href: "/apply", page: "apply" },
+  { label: "Learn", href: "/learn", page: "learn" },
+  { label: "Know", href: "/know", page: "know" },
 ];
 
 export function AppNavBrand() {
   return (
-    <Link href="/dashboard" style={APP_NAV_BRAND_STYLE}>
+    <Link href="/apply" style={APP_NAV_BRAND_STYLE}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/Nudgeable-black.png"
@@ -56,7 +56,7 @@ export function AppNavBrand() {
         fontSize: 15,
         letterSpacing: "-0.02em",
         color: "#221D23",
-      }}>AI Work Studio</span>
+      }}>Practice Lab</span>
     </Link>
   );
 }
@@ -123,16 +123,16 @@ export default function AppNav({ activePage, userName, isAdmin }: Props) {
           </>
         ) : (
           <>
-            <Link href="/login" style={{
+            {/* <Link href="/login" style={{
               borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 900,
               background: "transparent", border: "1px solid #E9E4DC",
               color: "#221D23", textDecoration: "none",
-            }}>Sign in</Link>
+            }}>Sign in</Link> */}
             <Link href="/login" style={{
               borderRadius: 999, padding: "9px 18px", fontSize: 13, fontWeight: 900,
               background: "#221D23", color: "#fff",
               border: "1px solid #221D23", textDecoration: "none",
-            }}>Get started</Link>
+            }}>Sign in</Link>
           </>
         )}
       </div>

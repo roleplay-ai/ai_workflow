@@ -16,10 +16,10 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
     .eq("id", id)
     .single();
 
-  if (activityError || !activity) redirect("/dashboard");
+  if (activityError || !activity) redirect("/apply");
 
   // Guests cannot open locked activities
-  if (!user && activity.is_locked) redirect("/dashboard");
+  if (!user && activity.is_locked) redirect("/apply");
 
   let profile = null;
   let company = null;

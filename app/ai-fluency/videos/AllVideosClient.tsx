@@ -60,20 +60,20 @@ export default function AllVideosClient({ videos, isLoggedIn, userName, isAdmin 
 
   return (
     <>
-      <AppNav activePage="ai-fluency" userName={userName} isAdmin={isAdmin} />
+      <AppNav activePage="know" userName={userName} isAdmin={isAdmin} />
 
       <main style={{ width: "min(1200px,calc(100% - 56px))", margin: "34px auto 80px" }}>
 
         {/* Header */}
         <div style={{ marginBottom: 32 }}>
           <a
-            href="/ai-fluency"
+            href="/know"
             style={{
               display: "inline-flex", alignItems: "center", gap: 5, marginBottom: 18,
               fontSize: 13, fontWeight: 750, color: "#6B6670", textDecoration: "none",
             }}
           >
-            ← Back to AI Fluency
+            ← Back to Know
           </a>
 
           <div style={{ position: "relative", paddingLeft: 22 }}>

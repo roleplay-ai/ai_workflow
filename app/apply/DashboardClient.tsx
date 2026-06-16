@@ -756,7 +756,7 @@ function NewsBriefCard({ brief }: { brief: Brief }) {
 
   return (
     <section className="brief-card-section">
-      <Link href="/ai-fluency" className="brief-card">
+      <Link href="/know" className="brief-card">
         <div>
           <div className="brief-card-header">
             <span className="brief-card-badge">Nudgeable Brief</span>
@@ -769,7 +769,7 @@ function NewsBriefCard({ brief }: { brief: Brief }) {
             ))}
           </ul>
         </div>
-        <span className="brief-card-link">Explore AI Fluency →</span>
+        <span className="brief-card-link">Explore Know →</span>
       </Link>
     </section>
   );
@@ -779,7 +779,7 @@ function AIMasteryCourseSection({ completedCount, isLoggedIn }: { completedCount
   const pct = Math.round((completedCount / TOTAL_COURSE_MODULES) * 100);
   const started = completedCount > 0;
   const done = completedCount >= TOTAL_COURSE_MODULES;
-  const href = isLoggedIn ? "/ai-mastery" : "/login";
+  const href = isLoggedIn ? "/learn" : "/login";
 
   return (
     <section className="mastery-course-section" id="ai-mastery-course">
@@ -884,7 +884,7 @@ export default function DashboardClient({ profile, activities, progress, toolFil
   return (
     <>
       <AppNav
-        activePage="workflows"
+        activePage="apply"
         userName={isLoggedIn ? profile?.full_name : null}
         isAdmin={isAdmin}
       />
@@ -945,7 +945,7 @@ export default function DashboardClient({ profile, activities, progress, toolFil
           {masteryActivities.length > 0 && (
             <HorizontalRail
               label="Core practice"
-              title="AI Mastery"
+              title="Learn"
               subtitle="Core workflows for improving AI fluency and everyday practice."
               activities={masteryActivities}
               variant="yellow"
@@ -1019,9 +1019,9 @@ export default function DashboardClient({ profile, activities, progress, toolFil
                 <p>For AI learning, application, mastery, and fluency.</p>
                 <div className="nf-chips">
                   <span className="nf-chip">Masterclasses</span>
-                  <span className="nf-chip">Application</span>
-                  <span className="nf-chip">Mastery</span>
-                  <span className="nf-chip">Fluency</span>
+                  <span className="nf-chip">Apply</span>
+                  <span className="nf-chip">Learn</span>
+                  <span className="nf-chip">Know</span>
                 </div>
               </article>
               <article className="nf-card nf-coach">

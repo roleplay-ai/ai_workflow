@@ -195,7 +195,7 @@ export default function AIFluencyClient({
 
   return (
     <>
-      <AppNav activePage="ai-fluency" userName={userName} isAdmin={isAdmin} />
+      <AppNav activePage="know" userName={userName} isAdmin={isAdmin} />
 
       {/* ── Page ── */}
       <main style={{ width: "min(1200px,calc(100% - 56px))", margin: "34px auto 0" }}>
@@ -227,7 +227,7 @@ export default function AIFluencyClient({
               Updated daily
             </div>
 
-            <h1>AI Fluency</h1>
+            <h1>Know</h1>
 
             <p style={{
               maxWidth: 560, margin: "28px 0 30px", fontSize: 18, lineHeight: 1.48,
@@ -252,7 +252,7 @@ export default function AIFluencyClient({
               padding: "13px 20px", borderRadius: 999, background: "#FFCE00",
               color: "#221D23", border: "1px solid rgba(34,29,35,.10)",
               fontWeight: 950, textDecoration: "none", fontSize: 14,
-            }}>Explore AI Fluency →</a>
+            }}>Explore Know →</a>
           </div>
 
           {/* Brief card */}
@@ -307,7 +307,7 @@ export default function AIFluencyClient({
                   Short explainers that build practical AI fluency.
                 </p>
               </div>
-              <a href="/ai-fluency/foundations" style={{ fontSize: 13, fontWeight: 950, color: "#FF4B1F", whiteSpace: "nowrap", textDecoration: "none" }}>
+              <a href="/know/foundations" style={{ fontSize: 13, fontWeight: 950, color: "#FF4B1F", whiteSpace: "nowrap", textDecoration: "none" }}>
                 See all →
               </a>
             </div>
@@ -511,7 +511,7 @@ export default function AIFluencyClient({
                 Short videos on new launches across AI tools.
               </p>
             </div>
-            <a href="/ai-fluency/videos" style={{ fontSize: 13, fontWeight: 950, color: "#FF4B1F", whiteSpace: "nowrap", textDecoration: "none" }}>
+            <a href="/know/videos" style={{ fontSize: 13, fontWeight: 950, color: "#FF4B1F", whiteSpace: "nowrap", textDecoration: "none" }}>
               View all videos →
             </a>
           </div>
@@ -520,7 +520,7 @@ export default function AIFluencyClient({
         </section>
 
         {/* ── Most Useful Tools ── */}
-        <Carousel title="Most Useful Tools" label="Tools" subtitle="AI products worth trying for real work." seeAllLabel="Browse tools →" seeAllHref="/ai-fluency/tools">
+        <Carousel title="Most Useful Tools" label="Tools" subtitle="AI products worth trying for real work." seeAllLabel="Browse tools →" seeAllHref="/know/tools">
           {tools.map((t, i) => {
             const accent = TOOL_ACCENTS[i % TOOL_ACCENTS.length];
             return (
@@ -766,7 +766,7 @@ export default function AIFluencyClient({
         borderTop: "1px solid #E9E4DC", padding: "44px 24px 50px",
         textAlign: "center", background: "#fff",
       }}>
-        <h2 style={{ margin: 0, fontSize: 24, fontWeight: 950, letterSpacing: "-.045em" }}>AI Fluency</h2>
+        <h2 style={{ margin: 0, fontSize: 24, fontWeight: 950, letterSpacing: "-.045em" }}>Know</h2>
         <p style={{ margin: "10px auto 0", maxWidth: 520, color: "#6B6670", fontSize: 13, lineHeight: 1.45, fontWeight: 650 }}>
           Latest news, practical products, tool guides, and Nudgeable&apos;s view on how AI is changing work.
         </p>

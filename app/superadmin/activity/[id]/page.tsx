@@ -12,7 +12,7 @@ export default async function ActivityEditPage({ params }: { params: Promise<{ i
   if (!user) redirect("/login");
 
   const { data: profile } = await supabase.from("profiles").select("id,email,role,company_id,full_name,avatar_url,created_at").eq("id", user.id).single();
-  if (profile?.role !== "superadmin") redirect("/dashboard");
+  if (profile?.role !== "superadmin") redirect("/apply");
 
   const { data: company } = profile?.company_id
     ? await supabase.from("companies").select("name").eq("id", profile.company_id).single()

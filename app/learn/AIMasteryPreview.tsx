@@ -27,7 +27,7 @@ const PART_KICKERS: Record<number, string> = {
   9: "Future of AI at work",
 };
 
-const LOGIN_URL = "/login?redirect=/ai-mastery";
+const LOGIN_URL = "/login?redirect=/learn";
 
 // ── Laptop decorative mockup ───────────────────────────────────────────────────
 
@@ -184,7 +184,7 @@ export default function AIMasteryPreview() {
   if (selectedModuleId) {
     return (
       <>
-        <AppNav activePage="ai-mastery" />
+        <AppNav activePage="learn" />
 
         <div className="aim-course-shell">
         {/* Preview banner */}
@@ -221,7 +221,7 @@ export default function AIMasteryPreview() {
 
   return (
     <>
-      <AppNav activePage="ai-mastery" />
+      <AppNav activePage="learn" />
 
       <main style={{ width: "min(1200px,calc(100% - 56px))", margin: "34px auto 0" }}>
 
