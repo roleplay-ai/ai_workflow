@@ -6,6 +6,7 @@ import AppNav from "@/components/AppNav";
 import { deepDiveHref, deepDiveLabel } from "@/lib/deepDives";
 import { formatToolLabel } from "@/lib/tools";
 import { resolveToolLogoUrl, type ToolLogoMap } from "@/lib/toolLogos";
+import ViewCountBadge from "@/components/ViewCountBadge";
 import { recordFluencyView } from "@/lib/fluencyViews";
 import type { ToolDeepDive } from "@/lib/supabase/types";
 import ModulePlayer, { type ModuleData } from "./ModulePlayer";
@@ -42,6 +43,7 @@ type Props = {
   isLoggedIn:          boolean;
   userName?:           string | null;
   isAdmin?:            boolean;
+  viewCounts?:         Record<string, number>;
 };
 
 // ── Deep-dive helpers ────────────────────────────────────────────────────────
@@ -160,7 +162,7 @@ function Carousel({
 
 export default function AIFluencyClient({
   brief, worlds, videos, tools, toolGuides, deepDives, toolLogos, completedModuleIds,
-  isLoggedIn, userName, isAdmin,
+  isLoggedIn, userName, isAdmin, viewCounts = {},
 }: Props) {
   const sortedItems = brief
     ? [...brief.fluency_brief_items].sort((a, b) => a.sort_order - b.sort_order)
@@ -527,7 +529,7 @@ export default function AIFluencyClient({
             </a>
           </div>
 
-          <VideoCarousel videos={videos} isLoggedIn={isLoggedIn} />
+          <VideoCarousel videos={videos} isLoggedIn={isLoggedIn} viewCounts={viewCounts} />
         </section>
 
         {/* ── Most Useful Tools ── */}
@@ -836,7 +838,7 @@ function AutoVideoThumbnail({ videoUrl }: { videoUrl: string }) {
   );
 }
 
-function VideoCarousel({ videos, isLoggedIn }: { videos: ApplyVideo[]; isLoggedIn: boolean }) {
+function VideoCarousel({ videos, isLoggedIn, viewCounts = {} }: { videos: ApplyVideo[]; isLoggedIn: boolean; viewCounts?: Record<string, number> }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [selectedVideo, setSelectedVideo] = useState<ApplyVideo | null>(null);
   const scroll = (dir: "left" | "right") =>
@@ -958,9 +960,11 @@ function VideoCarousel({ videos, isLoggedIn }: { videos: ApplyVideo[]; isLoggedI
                     fontSize: 10, fontWeight: 800, letterSpacing: ".12em",
                     textTransform: "uppercase", color: "#6B6670",
                     overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    flex: 1, minWidth: 0,
                   }}>
                     {v.category_tag ?? v.group_name ?? "Feature"}
                   </span>
+                  <ViewCountBadge count={viewCounts[v.id] ?? 0} />
                 </div>
                 <h3 className="card-title">{v.title}</h3>
                 {isLocked && (

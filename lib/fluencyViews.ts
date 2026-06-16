@@ -1,5 +1,4 @@
 // Fire-and-forget view tracking for AI Fluency content items.
-// Counts are recorded silently for analytics — never surfaced in the UI.
 export type FluencyEntityType = "video" | "tool" | "tool_guide" | "deep_dive" | "module";
 
 export function recordFluencyView(entityType: FluencyEntityType, entityId: string): void {
