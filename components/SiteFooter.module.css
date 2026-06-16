@@ -1,0 +1,154 @@
+.footer {
+  width: 100%;
+  background: #221D23;
+  color: #fff;
+  padding: 34px 42px 24px;
+}
+
+.inner {
+  width: min(1440px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.12fr 0.88fr;
+  gap: 44px;
+  align-items: stretch;
+}
+
+.mastercard {
+  background: #FFCE00;
+  color: #221D23;
+  border-radius: 22px;
+  padding: 30px 34px;
+  display: flex;
+  justify-content: space-between;
+  gap: 28px;
+  align-items: center;
+  min-height: 150px;
+}
+
+.eyebrow {
+  font-size: 14px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+}
+
+.mastercard h2 {
+  margin: 0;
+  font-size: 34px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.4px;
+}
+
+.mastercard p {
+  margin: 14px 0 0;
+  max-width: 560px;
+  font-size: 17px;
+  line-height: 1.38;
+  font-weight: 750;
+}
+
+.mastercta {
+  flex-shrink: 0;
+  text-decoration: none;
+  background: #221D23;
+  color: #FFCE00;
+  border-radius: 999px;
+  padding: 15px 22px;
+  font-size: 16px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.links {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 46px;
+  align-content: center;
+}
+
+.linkgroup h3 {
+  margin: 0 0 14px;
+  font-size: 15px;
+  color: #FFCE00;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.linklist {
+  display: grid;
+  gap: 10px;
+}
+
+.linklist a {
+  color: #fff;
+  text-decoration: none;
+  font-size: 18px;
+  font-weight: 850;
+  line-height: 1.25;
+}
+
+.linklist a:hover {
+  color: #FFCE00;
+}
+
+.bottom {
+  width: min(1440px, 100%);
+  margin: 24px auto 0;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  color: #CFC7D1;
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.bottom a {
+  color: #fff;
+  text-decoration: none;
+  font-weight: 850;
+}
+
+@media (max-width: 900px) {
+  .footer {
+    padding: 28px 20px 22px;
+  }
+
+  .inner {
+    grid-template-columns: 1fr;
+  }
+
+  .mastercard {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .links {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .mastercard {
+    padding: 26px 24px;
+  }
+
+  .mastercard h2 {
+    font-size: 28px;
+  }
+
+  .links {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .bottom {
+    flex-direction: column;
+  }
+}

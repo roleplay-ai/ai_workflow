@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState, useTransition } from "react";
 import { TOTAL_MODULES } from "@/lib/ai-mastery-course";
 import AppNav from "@/components/AppNav";
+import SiteFooter from "@/components/SiteFooter";
 
 type Props = {
   completedModules: string[];
@@ -99,6 +100,8 @@ export default function AIMasteryClient({ completedModules: initial, userName, i
         sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
       />
       </div>
+
+      <SiteFooter />
     </>
   );
 }

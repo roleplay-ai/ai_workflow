@@ -6,6 +6,7 @@ import { resolveToolLogoUrl, type ToolLogoMap } from "@/lib/toolLogos";
 import { formatToolLabel, normalizeActivityTools } from "@/lib/tools";
 import ToolIcon from "@/components/ToolIcon";
 import AppNav from "@/components/AppNav";
+import SiteFooter from "@/components/SiteFooter";
 import { APP_FONT } from "@/lib/fonts";
 import ActivityCard, { type CardVariant } from "./ActivityCard";
 import "./netflix-dashboard.css";
@@ -993,56 +994,14 @@ export default function DashboardClient({ profile, activities, progress, toolFil
               viewCounts={viewCounts}
             />
           )}
-          <AIMasteryCourseSection completedCount={masteryProgressCount} isLoggedIn={isLoggedIn} />
+          {/* <AIMasteryCourseSection completedCount={masteryProgressCount} isLoggedIn={isLoggedIn} /> */}
           {brief && <NewsBriefCard brief={brief} />}
 
 
 
         </main>
 
-        {/* ── Footer ── */}
-        <footer className="nudge-footer">
-          <div className="nf-inner">
-            <section className="nf-head">
-              <div className="nf-copy">
-                <h2>Nudgeable builds AI capability and behavior change at work.</h2>
-                <p>AI Work Studio, AI Coach, and Nudge Engine for learning, application, practice, and sustained action.</p>
-              </div>
-              <div className="nf-contact">
-                <a className="nf-pill" href="mailto:team@nudgeable.ai">team@nudgeable.ai</a>
-                <a className="nf-pill" href="https://www.nudgeable.ai">www.nudgeable.ai</a>
-              </div>
-            </section>
-            <section className="nf-products">
-              <article className="nf-card nf-dark">
-                <h3>AI Work Studio</h3>
-                <p>For AI learning, application, mastery, and fluency.</p>
-                <div className="nf-chips">
-                  <span className="nf-chip">Masterclasses</span>
-                  <span className="nf-chip">Apply</span>
-                  <span className="nf-chip">Learn</span>
-                  <span className="nf-chip">Know</span>
-                </div>
-              </article>
-              <article className="nf-card nf-coach">
-                <h3>AI Coach</h3>
-                <p>Safe practice before real workplace conversations.</p>
-                <div className="nf-chips">
-                  <span className="nf-chip">Roleplays</span>
-                  <span className="nf-chip">Feedback</span>
-                </div>
-              </article>
-              <article className="nf-card nf-nudge">
-                <h3>Nudge Engine</h3>
-                <p>Convert training into actions, habits, and measurement.</p>
-                <div className="nf-chips">
-                  <span className="nf-chip">Actions</span>
-                  <span className="nf-chip">Habits</span>
-                </div>
-              </article>
-            </section>
-          </div>
-        </footer>
+        <SiteFooter />
       </div>
     </>
   );

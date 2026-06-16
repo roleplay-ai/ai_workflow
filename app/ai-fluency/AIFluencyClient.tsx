@@ -17,6 +17,7 @@ import type { FoundationModule } from "./FoundationModuleCard";
 import FoundationCardsCarousel from "./FoundationCardsCarousel";
 import ToolGuideCard, { type ToolGuide, resolveGuideToolSlug } from "./ToolGuideCard";
 import { normalizeToolSlug } from "@/lib/tools";
+import SiteFooter from "@/components/SiteFooter";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -659,16 +660,7 @@ export default function AIFluencyClient({
 
       </main>
 
-      {/* ── Footer ── */}
-      <footer style={{
-        borderTop: "1px solid #E9E4DC", padding: "44px 24px 50px",
-        textAlign: "center", background: "#fff",
-      }}>
-        <h2 style={{ margin: 0, fontSize: 24, fontWeight: 950, letterSpacing: "-.045em" }}>Know</h2>
-        <p style={{ margin: "10px auto 0", maxWidth: 520, color: "#6B6670", fontSize: 13, lineHeight: 1.45, fontWeight: 650 }}>
-          Latest news, practical products, tool guides, and Nudgeable&apos;s view on how AI is changing work.
-        </p>
-      </footer>
+      <SiteFooter />
 
       {/* ── Module HTML popup ── */}
       {htmlModule && (
