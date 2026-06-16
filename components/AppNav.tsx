@@ -49,7 +49,7 @@ export function AppNavBrand() {
       <img
         src="/Nudgeable-black.png"
         alt="Nudgeable"
-        style={{ display: "block", flexShrink: 0, height: 32, width: "auto" }}
+        style={{ display: "block", flexShrink: 0, height: 40, width: "auto" }}
       />
       <span style={{
         fontWeight: 400,
