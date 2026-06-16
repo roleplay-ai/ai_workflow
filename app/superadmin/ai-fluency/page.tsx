@@ -17,14 +17,14 @@ export default async function AIFluencyAdminPage() {
   if (!profile || profile.role !== "superadmin") redirect("/apply");
 
   const [
-    { data: worlds },
+    { data: modules },
     { data: videos },
     { data: tools },
     { data: briefs },
   ] = await Promise.all([
     supabase
-      .from("fluency_worlds")
-      .select("id, title, emoji, color, sort_order, published, fluency_modules(id, title, emoji, concepts, sort_order, is_locked, next_module_hint, html_path)")
+      .from("fluency_modules")
+      .select("id, title, description, emoji, concepts, sort_order, is_locked, published, next_module_hint, html_path")
       .order("sort_order"),
     supabase
       .from("apply_videos")
@@ -41,15 +41,10 @@ export default async function AIFluencyAdminPage() {
       .limit(10),
   ]);
 
-  const sortedWorlds = (worlds ?? []).map((w: any) => ({
-    ...w,
-    fluency_modules: [...(w.fluency_modules ?? [])].sort((a: any, b: any) => a.sort_order - b.sort_order),
-  }));
-
   return (
     <AIFluencyAdminClient
       profile={profile as any}
-      worlds={sortedWorlds as any}
+      modules={(modules ?? []) as any}
       videos={videos as any ?? []}
       tools={tools as any ?? []}
       briefs={briefs as any ?? []}

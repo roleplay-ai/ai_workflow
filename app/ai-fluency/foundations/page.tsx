@@ -10,10 +10,10 @@ export default async function FoundationsPage() {
     ? await supabase.from("profiles").select("full_name, role").eq("id", user.id).single()
     : { data: null };
 
-  const [{ data: worlds }, { data: progressRows }] = await Promise.all([
+  const [{ data: modules }, { data: progressRows }] = await Promise.all([
     supabase
-      .from("fluency_worlds")
-      .select("id, title, emoji, color, fluency_modules(id, title, emoji, concepts, sort_order, is_locked, next_module_hint)")
+      .from("fluency_modules")
+      .select("id, title, emoji, description, concepts, sort_order, is_locked, next_module_hint, html_path")
       .eq("published", true)
       .order("sort_order"),
     user
@@ -21,16 +21,9 @@ export default async function FoundationsPage() {
       : Promise.resolve({ data: [] as { module_id: string }[] }),
   ]);
 
-  const sortedWorlds = (worlds ?? []).map((w: any) => ({
-    ...w,
-    fluency_modules: [...(w.fluency_modules ?? [])].sort(
-      (a: any, b: any) => a.sort_order - b.sort_order
-    ),
-  }));
-
   return (
     <FoundationsClient
-      worlds={sortedWorlds as any}
+      modules={(modules ?? []) as any}
       completedModuleIds={(progressRows ?? []).map((r: any) => r.module_id as string)}
       userName={(profile as any)?.full_name ?? null}
       isAdmin={(profile as any)?.role === "superadmin"}
