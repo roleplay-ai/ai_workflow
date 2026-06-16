@@ -10,13 +10,9 @@ import { resumableUpload } from "@/lib/resumableUpload";
 // ── Types ──────────────────────────────────────────────────────────────────
 
 type FluencyModule = {
-  id: string; title: string; emoji: string; concepts: string[];
-  sort_order: number; is_locked: boolean; next_module_hint: string | null;
-  html_path: string | null;
-};
-type World = {
-  id: string; title: string; emoji: string; color: string;
-  sort_order: number; published: boolean; fluency_modules: FluencyModule[];
+  id: string; title: string; description: string | null; emoji: string; concepts: string[];
+  sort_order: number; is_locked: boolean; published: boolean;
+  next_module_hint: string | null; html_path: string | null;
 };
 type Video = {
   id: string; title: string; description: string | null;
@@ -37,7 +33,7 @@ type BriefEdit = { title: string; published_date: string };
 
 type Props = {
   profile: Profile & { companies: null };
-  worlds: World[];
+  modules: FluencyModule[];
   videos: Video[];
   tools: Tool[];
   briefs: Brief[];
@@ -83,230 +79,137 @@ function ToggleBtn({ active, activeColor, activeLabel, inactiveLabel, onClick }:
   );
 }
 
-// ── Worlds & Modules Tab ───────────────────────────────────────────────────
+// ── Modules Tab ────────────────────────────────────────────────────────────
 
-function WorldsTab({ initWorlds }: { initWorlds: World[] }) {
+function ModulesTab({ initModules }: { initModules: FluencyModule[] }) {
   const supabase = createClient();
-  const [worlds, setWorlds] = useState(initWorlds);
-  const [expandedId, setExpandedId] = useState<string | null>(initWorlds[0]?.id ?? null);
-  const [addingModTo, setAddingModTo] = useState<string | null>(null);
-  const [showAddWorld, setShowAddWorld] = useState(false);
-
-  const [wTitle, setWTitle] = useState("");
-  const [wEmoji, setWEmoji] = useState("🌍");
-  const [wColor, setWColor] = useState("#623CEA");
+  const [modules, setModules] = useState(initModules);
+  const [showAdd, setShowAdd] = useState(false);
 
   const [mTitle, setMTitle] = useState("");
+  const [mDesc, setMDesc] = useState("");
   const [mEmoji, setMEmoji] = useState("📖");
   const [mConcepts, setMConcepts] = useState("");
 
-  const sorted = [...worlds].sort((a, b) => a.sort_order - b.sort_order);
+  const sorted = [...modules].sort((a, b) => a.sort_order - b.sort_order);
 
-  async function addWorld() {
+  async function addModule() {
     const nextSort = sorted.length > 0 ? sorted[sorted.length - 1].sort_order + 1 : 0;
-    const { data, error } = await supabase.from("fluency_worlds")
-      .insert({ title: wTitle, emoji: wEmoji, color: wColor, sort_order: nextSort, published: false })
-      .select().single();
-    if (!error && data) {
-      setWorlds(prev => [...prev, { ...data, fluency_modules: [] }]);
-      setWTitle(""); setShowAddWorld(false);
-    } else if (error) alert(error.message);
-  }
-
-  async function togglePublished(world: World) {
-    const { error } = await supabase.from("fluency_worlds").update({ published: !world.published }).eq("id", world.id);
-    if (error) { alert(error.message); return; }
-    setWorlds(prev => prev.map(w => w.id === world.id ? { ...w, published: !w.published } : w));
-  }
-
-  async function deleteWorld(id: string) {
-    if (!confirm("Delete this world and all its modules?")) return;
-    await supabase.from("fluency_worlds").delete().eq("id", id);
-    setWorlds(prev => prev.filter(w => w.id !== id));
-  }
-
-  async function moveWorld(id: string, dir: "up" | "down") {
-    const list = [...sorted];
-    const idx = list.findIndex(w => w.id === id);
-    const ni = dir === "up" ? idx - 1 : idx + 1;
-    if (ni < 0 || ni >= list.length) return;
-    const r = [...list]; const [m] = r.splice(idx, 1); r.splice(ni, 0, m);
-    await Promise.all(r.map((w, i) => supabase.from("fluency_worlds").update({ sort_order: i }).eq("id", w.id)));
-    setWorlds(prev => {
-      const posMap: Record<string, number> = {};
-      r.forEach((w, i) => { posMap[w.id] = i; });
-      return prev.map(w => posMap[w.id] !== undefined ? { ...w, sort_order: posMap[w.id] } : w);
-    });
-  }
-
-  async function addModule(worldId: string) {
-    const world = worlds.find(w => w.id === worldId);
-    if (!world) return;
-    const mods = world.fluency_modules;
-    const nextSort = mods.length > 0 ? Math.max(...mods.map(m => m.sort_order)) + 1 : 0;
     const concepts = mConcepts.split(",").map(s => s.trim()).filter(Boolean);
     const { data, error } = await supabase.from("fluency_modules")
-      .insert({ world_id: worldId, title: mTitle, emoji: mEmoji, concepts, sort_order: nextSort, is_locked: false })
+      .insert({
+        title: mTitle,
+        description: mDesc.trim() || null,
+        emoji: mEmoji,
+        concepts,
+        sort_order: nextSort,
+        is_locked: false,
+        published: false,
+      })
       .select().single();
     if (!error && data) {
-      setWorlds(prev => prev.map(w => w.id === worldId
-        ? { ...w, fluency_modules: [...w.fluency_modules, data as FluencyModule] }
-        : w));
-      setMTitle(""); setMConcepts(""); setAddingModTo(null);
+      setModules(prev => [...prev, data as FluencyModule]);
+      setMTitle(""); setMDesc(""); setMConcepts(""); setShowAdd(false);
     } else if (error) alert(error.message);
   }
 
-  async function toggleLocked(worldId: string, mod: FluencyModule) {
+  async function togglePublished(mod: FluencyModule) {
+    const { error } = await supabase.from("fluency_modules").update({ published: !mod.published }).eq("id", mod.id);
+    if (error) { alert(error.message); return; }
+    setModules(prev => prev.map(m => m.id === mod.id ? { ...m, published: !m.published } : m));
+  }
+
+  async function toggleLocked(mod: FluencyModule) {
     const { error } = await supabase.from("fluency_modules").update({ is_locked: !mod.is_locked }).eq("id", mod.id);
     if (error) { alert(error.message); return; }
-    setWorlds(prev => prev.map(w => w.id === worldId
-      ? { ...w, fluency_modules: w.fluency_modules.map(m => m.id === mod.id ? { ...m, is_locked: !m.is_locked } : m) }
-      : w));
+    setModules(prev => prev.map(m => m.id === mod.id ? { ...m, is_locked: !m.is_locked } : m));
   }
 
-  async function deleteModule(worldId: string, modId: string) {
+  async function deleteModule(modId: string) {
     if (!confirm("Delete this module?")) return;
     await supabase.from("fluency_modules").delete().eq("id", modId);
-    setWorlds(prev => prev.map(w => w.id === worldId
-      ? { ...w, fluency_modules: w.fluency_modules.filter(m => m.id !== modId) }
-      : w));
+    setModules(prev => prev.filter(m => m.id !== modId));
   }
 
-  async function moveModule(worldId: string, modId: string, dir: "up" | "down") {
-    const world = worlds.find(w => w.id === worldId);
-    if (!world) return;
-    const list = [...world.fluency_modules].sort((a, b) => a.sort_order - b.sort_order);
+  async function moveModule(modId: string, dir: "up" | "down") {
+    const list = [...sorted];
     const idx = list.findIndex(m => m.id === modId);
     const ni = dir === "up" ? idx - 1 : idx + 1;
     if (ni < 0 || ni >= list.length) return;
     const r = [...list]; const [m] = r.splice(idx, 1); r.splice(ni, 0, m);
     await Promise.all(r.map((mod, i) => supabase.from("fluency_modules").update({ sort_order: i }).eq("id", mod.id)));
-    setWorlds(prev => prev.map(w => w.id === worldId
-      ? { ...w, fluency_modules: r.map((mod, i) => ({ ...mod, sort_order: i })) }
-      : w));
+    setModules(r.map((mod, i) => ({ ...mod, sort_order: i })));
+  }
+
+  function updateModuleHtml(modId: string, path: string | null) {
+    setModules(prev => prev.map(m => m.id === modId ? { ...m, html_path: path } : m));
   }
 
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900 }}>Worlds & Modules</h2>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900 }}>AI Foundations</h2>
           <p style={{ margin: "3px 0 0", color: "#6B6B6B", fontSize: 13 }}>
-            {worlds.length} worlds · {worlds.reduce((n, w) => n + w.fluency_modules.length, 0)} modules total
+            {modules.length} module{modules.length !== 1 ? "s" : ""} · upload HTML per topic card
           </p>
         </div>
-        <button onClick={() => setShowAddWorld(v => !v)} style={btnAmber}>+ New World</button>
+        <button onClick={() => setShowAdd(v => !v)} style={btnAmber}>+ New Module</button>
       </div>
 
-      {showAddWorld && (
+      {showAdd && (
         <div style={{ ...card, padding: 18, marginBottom: 14, borderColor: "#FFCE00" }}>
-          <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 12 }}>New World</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 72px 160px", gap: 10, marginBottom: 10 }}>
-            <div><label style={lbl}>Title</label><input value={wTitle} onChange={e => setWTitle(e.target.value)} placeholder="e.g. The Foundations" style={inp} /></div>
-            <div><label style={lbl}>Emoji</label><input value={wEmoji} onChange={e => setWEmoji(e.target.value)} style={inp} /></div>
-            <div><label style={lbl}>Accent color</label><input value={wColor} onChange={e => setWColor(e.target.value)} placeholder="#623CEA" style={{ ...inp, fontFamily: "monospace" }} /></div>
+          <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 12 }}>New Module</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 64px", gap: 10, marginBottom: 10 }}>
+            <div><label style={lbl}>Title</label><input value={mTitle} onChange={e => setMTitle(e.target.value)} placeholder="e.g. Tokens" style={inp} /></div>
+            <div><label style={lbl}>Emoji</label><input value={mEmoji} onChange={e => setMEmoji(e.target.value)} style={inp} /></div>
+          </div>
+          <div style={{ marginBottom: 10 }}>
+            <label style={lbl}>Subtitle (card description)</label>
+            <input value={mDesc} onChange={e => setMDesc(e.target.value)} placeholder="e.g. How AI counts your words" style={inp} />
+          </div>
+          <div style={{ marginBottom: 10 }}>
+            <label style={lbl}>Concepts (comma-separated, optional)</label>
+            <input value={mConcepts} onChange={e => setMConcepts(e.target.value)} placeholder="Tokens, Tokenization" style={inp} />
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={addWorld} disabled={!wTitle} style={btnAmber}>Create World</button>
-            <button onClick={() => setShowAddWorld(false)} style={btnGhost}>Cancel</button>
+            <button onClick={addModule} disabled={!mTitle} style={btnAmber}>Create Module</button>
+            <button onClick={() => setShowAdd(false)} style={btnGhost}>Cancel</button>
           </div>
         </div>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {sorted.map((world, idx) => {
-          const open = expandedId === world.id;
-          const mods = [...world.fluency_modules].sort((a, b) => a.sort_order - b.sort_order);
-          return (
-            <div key={world.id} style={card}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 16px", cursor: "pointer" }}
-                onClick={() => setExpandedId(open ? null : world.id)}>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                  <button onClick={() => moveWorld(world.id, "up")} disabled={idx === 0} style={{ ...posBtn, opacity: idx === 0 ? .3 : 1 }}>▲</button>
-                  <button onClick={() => moveWorld(world.id, "down")} disabled={idx === sorted.length - 1} style={{ ...posBtn, opacity: idx === sorted.length - 1 ? .3 : 1 }}>▼</button>
-                </div>
-
-                <div style={{
-                  width: 38, height: 38, borderRadius: 11, flexShrink: 0, fontSize: 20,
-                  background: world.color + "22", border: `1.5px solid ${world.color}44`,
-                  display: "grid", placeItems: "center",
-                }}>{world.emoji}</div>
-
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 800, fontSize: 14 }}>{world.title}</div>
-                  <div style={{ fontSize: 11.5, color: "#9B9199", marginTop: 1 }}>
-                    {mods.length} module{mods.length !== 1 ? "s" : ""} · <span style={{ fontFamily: "monospace" }}>{world.color}</span>
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", gap: 6, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                  <ToggleBtn active={world.published} activeColor="#17A855" activeLabel="Live" inactiveLabel="Draft" onClick={() => togglePublished(world)} />
-                  <button onClick={() => deleteWorld(world.id)} style={{ border: 0, background: "none", color: "#EF4444", cursor: "pointer", fontSize: 16, lineHeight: 1 }}>×</button>
-                </div>
-
-                <ChevronIcon open={open} />
-              </div>
-
-              {open && (
-                <div style={{ borderTop: "1px solid #F0EEE8", padding: "12px 16px 16px" }}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                    {mods.map((mod, mi) => (
-                      <div key={mod.id} style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 12px", borderRadius: 12, background: "#FAFAF8", border: "1px solid #F0EEE8" }}>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }}>
-                          <button onClick={() => moveModule(world.id, mod.id, "up")} disabled={mi === 0} style={{ ...posBtn, opacity: mi === 0 ? .3 : 1 }}>▲</button>
-                          <button onClick={() => moveModule(world.id, mod.id, "down")} disabled={mi === mods.length - 1} style={{ ...posBtn, opacity: mi === mods.length - 1 ? .3 : 1 }}>▼</button>
-                        </div>
-                        <span style={{ fontSize: 18, flexShrink: 0 }}>{mod.emoji}</span>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, fontSize: 13 }}>{mod.title}</div>
-                          {mod.concepts.length > 0 && (
-                            <div style={{ fontSize: 11, color: "#9B9199", marginTop: 1 }}>{mod.concepts.slice(0, 4).join(" · ")}</div>
-                          )}
-                        </div>
-                        <div style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "center" }}>
-                          <ModuleHtmlUpload
-                            moduleId={mod.id}
-                            htmlPath={mod.html_path}
-                            onUploaded={(path) => setWorlds(prev => prev.map(w => w.id === world.id
-                              ? { ...w, fluency_modules: w.fluency_modules.map(m => m.id === mod.id ? { ...m, html_path: path } : m) }
-                              : w
-                            ))}
-                          />
-                          <Link href={`/superadmin/modules/${mod.id}`} style={{
-                            padding: "4px 10px", borderRadius: 999, border: "1px solid #E8E6DC",
-                            background: "white", color: "#221D23", fontSize: 11, fontWeight: 700, textDecoration: "none",
-                          }}>Edit content</Link>
-                          <ToggleBtn active={mod.is_locked} activeColor="#DC2626" activeLabel="🔒 Locked" inactiveLabel="🔓 Open" onClick={() => toggleLocked(world.id, mod)} />
-                          <button onClick={() => deleteModule(world.id, mod.id)} style={{ border: 0, background: "none", color: "#EF4444", cursor: "pointer", fontSize: 15 }}>×</button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {addingModTo === world.id ? (
-                    <div style={{ marginTop: 10, padding: 14, borderRadius: 12, background: "#F8F8F6", border: "1px dashed #E8E6DC" }}>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 64px", gap: 10, marginBottom: 8 }}>
-                        <div><label style={lbl}>Title</label><input value={mTitle} onChange={e => setMTitle(e.target.value)} placeholder="Module title" style={inp} /></div>
-                        <div><label style={lbl}>Emoji</label><input value={mEmoji} onChange={e => setMEmoji(e.target.value)} style={inp} /></div>
-                      </div>
-                      <div style={{ marginBottom: 10 }}>
-                        <label style={lbl}>Concepts (comma-separated)</label>
-                        <input value={mConcepts} onChange={e => setMConcepts(e.target.value)} placeholder="Prompting, Context, Output" style={inp} />
-                      </div>
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <button onClick={() => addModule(world.id)} disabled={!mTitle} style={{ ...btnAmber, padding: "7px 14px", fontSize: 12 }}>Add Module</button>
-                        <button onClick={() => setAddingModTo(null)} style={{ ...btnGhost, padding: "7px 14px", fontSize: 12 }}>Cancel</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button onClick={() => setAddingModTo(world.id)} style={{ ...btnGhost, marginTop: 10, fontSize: 12, width: "100%", padding: "8px" }}>+ Add Module</button>
-                  )}
-                </div>
-              )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {sorted.map((mod, mi) => (
+          <div key={mod.id} style={{ ...card, display: "flex", alignItems: "center", gap: 9, padding: "12px 16px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }}>
+              <button onClick={() => moveModule(mod.id, "up")} disabled={mi === 0} style={{ ...posBtn, opacity: mi === 0 ? .3 : 1 }}>▲</button>
+              <button onClick={() => moveModule(mod.id, "down")} disabled={mi === sorted.length - 1} style={{ ...posBtn, opacity: mi === sorted.length - 1 ? .3 : 1 }}>▼</button>
             </div>
-          );
-        })}
+            <span style={{ fontSize: 10, fontWeight: 700, color: "#B0ABA5", width: 20, textAlign: "center", flexShrink: 0 }}>#{mi + 1}</span>
+            <span style={{ fontSize: 20, flexShrink: 0 }}>{mod.emoji}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: 13 }}>{mod.title}</div>
+              <div style={{ fontSize: 11, color: "#9B9199", marginTop: 1 }}>
+                {mod.description || (mod.concepts.length > 0 ? mod.concepts.slice(0, 3).join(" · ") : "No subtitle")}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "center" }}>
+              <ModuleHtmlUpload
+                moduleId={mod.id}
+                htmlPath={mod.html_path}
+                onUploaded={path => updateModuleHtml(mod.id, path)}
+              />
+              <Link href={`/superadmin/modules/${mod.id}`} style={{
+                padding: "4px 10px", borderRadius: 999, border: "1px solid #E8E6DC",
+                background: "white", color: "#221D23", fontSize: 11, fontWeight: 700, textDecoration: "none",
+              }}>Edit content</Link>
+              <ToggleBtn active={mod.is_locked} activeColor="#DC2626" activeLabel="🔒 Locked" inactiveLabel="🔓 Open" onClick={() => toggleLocked(mod)} />
+              <ToggleBtn active={mod.published} activeColor="#17A855" activeLabel="Live" inactiveLabel="Draft" onClick={() => togglePublished(mod)} />
+              <button onClick={() => deleteModule(mod.id)} style={{ border: 0, background: "none", color: "#EF4444", cursor: "pointer", fontSize: 15 }}>×</button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -1290,16 +1193,16 @@ function BriefTab({ initBriefs }: { initBriefs: Brief[] }) {
 
 // ── Root component ─────────────────────────────────────────────────────────
 
-type Tab = "worlds" | "videos" | "tools" | "brief";
+type Tab = "modules" | "videos" | "tools" | "brief";
 const TABS: { key: Tab; label: string }[] = [
-  { key: "worlds", label: "Worlds & Modules" },
+  { key: "modules", label: "Modules" },
   { key: "videos", label: "Videos" },
   { key: "tools",  label: "Tools" },
   { key: "brief",  label: "Brief" },
 ];
 
-export default function AIFluencyAdminClient({ profile, worlds, videos, tools, briefs }: Props) {
-  const [tab, setTab] = useState<Tab>("worlds");
+export default function AIFluencyAdminClient({ profile, modules, videos, tools, briefs }: Props) {
+  const [tab, setTab] = useState<Tab>("modules");
   const supabase = createClient();
 
   async function handleSignOut() {
@@ -1317,7 +1220,7 @@ export default function AIFluencyAdminClient({ profile, worlds, videos, tools, b
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
           <div>
             <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, letterSpacing: "-.04em" }}>AI Fluency</h1>
-            <p style={{ margin: "3px 0 0", color: "#6B6B6B", fontSize: 13 }}>Manage worlds, modules, videos, tools, and briefs</p>
+            <p style={{ margin: "3px 0 0", color: "#6B6B6B", fontSize: 13 }}>Manage foundation modules, videos, tools, and briefs</p>
           </div>
           <Link href="/superadmin" style={{ ...btnGhost, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>← Activities</Link>
         </div>
@@ -1336,7 +1239,7 @@ export default function AIFluencyAdminClient({ profile, worlds, videos, tools, b
           ))}
         </div>
 
-        {tab === "worlds" && <WorldsTab initWorlds={worlds} />}
+        {tab === "modules" && <ModulesTab initModules={modules} />}
         {tab === "videos" && <VideosTab initVideos={videos} />}
         {tab === "tools"  && <ToolsTab  initTools={tools}  />}
         {tab === "brief"  && <BriefTab  initBriefs={briefs} />}

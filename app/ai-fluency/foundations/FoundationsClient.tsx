@@ -2,28 +2,33 @@
 
 import { useState } from "react";
 import AppNav from "@/components/AppNav";
+import { recordFluencyView } from "@/lib/fluencyViews";
 import ModulePlayer, { type ModuleData } from "../ModulePlayer";
+import ModuleHtmlModal from "../ModuleHtmlModal";
+import FoundationModuleCard, { MODULE_CARD_COLORS, type FoundationModule } from "../FoundationModuleCard";
 
-type FluencyModule = {
-  id: string; title: string; emoji: string; concepts: string[];
-  sort_order: number; is_locked: boolean; next_module_hint: string | null;
-};
-type World = { id: string; title: string; emoji: string; color: string; fluency_modules: FluencyModule[] };
 type Props = {
-  worlds: World[];
+  modules: FoundationModule[];
   completedModuleIds: string[];
   userName: string | null;
   isAdmin: boolean;
 };
 
-export default function FoundationsClient({ worlds, completedModuleIds, userName, isAdmin }: Props) {
-  const [openWorldId, setOpenWorldId] = useState<string | null>(worlds[0]?.id ?? null);
+export default function FoundationsClient({ modules, completedModuleIds, userName, isAdmin }: Props) {
   const [completedIds, setCompletedIds] = useState<string[]>(completedModuleIds);
   const [openModule, setOpenModule] = useState<ModuleData | null>(null);
+  const [htmlModule, setHtmlModule] = useState<FoundationModule | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
-  async function handleModuleClick(mod: FluencyModule) {
+  async function handleModuleClick(mod: FoundationModule) {
     if (mod.is_locked) return;
+    recordFluencyView("module", mod.id);
+
+    if (mod.html_path) {
+      setHtmlModule(mod);
+      return;
+    }
+
     setLoadingId(mod.id);
     try {
       const res = await fetch(`/api/fluency/module/${mod.id}`);
@@ -44,7 +49,6 @@ export default function FoundationsClient({ worlds, completedModuleIds, userName
 
       <main style={{ width: "min(1280px,calc(100% - 72px))", margin: "34px auto 80px" }}>
 
-        {/* Back + header */}
         <div style={{ marginBottom: 36 }}>
           <a
             href="/know"
@@ -68,12 +72,11 @@ export default function FoundationsClient({ worlds, completedModuleIds, userName
               fontWeight: 950, letterSpacing: "-.055em",
             }}>AI Foundations</h1>
             <p style={{ margin: "8px 0 0", color: "#6B6670", fontSize: 14, fontWeight: 650, lineHeight: 1.45 }}>
-              Short explainers that build practical AI fluency, world by world.
+              Short explainers that build practical AI fluency.
             </p>
           </div>
         </div>
 
-        {/* Summary stats */}
         <div style={{
           display: "flex", gap: 24, marginBottom: 32,
           padding: "14px 20px", background: "#fff",
@@ -81,19 +84,10 @@ export default function FoundationsClient({ worlds, completedModuleIds, userName
         }}>
           <div>
             <div style={{ fontSize: 24, fontWeight: 950, letterSpacing: "-.05em" }}>
-              {worlds.length}
+              {modules.length}
             </div>
             <div style={{ fontSize: 11, fontWeight: 700, color: "#9B9199", textTransform: "uppercase", letterSpacing: ".08em" }}>
-              Worlds
-            </div>
-          </div>
-          <div style={{ width: 1, background: "rgba(34,29,35,.08)" }} />
-          <div>
-            <div style={{ fontSize: 24, fontWeight: 950, letterSpacing: "-.05em" }}>
-              {worlds.reduce((n, w) => n + w.fluency_modules.length, 0)}
-            </div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#9B9199", textTransform: "uppercase", letterSpacing: ".08em" }}>
-              Modules
+              Topics
             </div>
           </div>
           <div style={{ width: 1, background: "rgba(34,29,35,.08)" }} />
@@ -107,162 +101,28 @@ export default function FoundationsClient({ worlds, completedModuleIds, userName
           </div>
         </div>
 
-        {/* Accordion */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {worlds.map((world) => {
-            const isOpen = openWorldId === world.id;
-            const total = world.fluency_modules.length;
-            const doneCount = world.fluency_modules.filter(m => completedIds.includes(m.id)).length;
-
-            return (
-              <div
-                key={world.id}
-                style={{
-                  background: "#fff",
-                  border: "1px solid rgba(34,29,35,.08)",
-                  borderLeft: `4px solid ${world.color}`,
-                  borderRadius: 16,
-                  overflow: "hidden",
-                  boxShadow: isOpen ? "0 4px 20px rgba(0,0,0,.07)" : "0 1px 6px rgba(0,0,0,.04)",
-                  transition: "box-shadow .2s",
-                }}
-              >
-                {/* World header */}
-                <button
-                  onClick={() => setOpenWorldId(isOpen ? null : world.id)}
-                  style={{
-                    width: "100%", display: "flex", alignItems: "center", gap: 14,
-                    padding: "18px 20px", background: "none", border: "none",
-                    cursor: "pointer", textAlign: "left",
-                  }}
-                >
-                  {/* Emoji box */}
-                  <div style={{
-                    width: 52, height: 52, borderRadius: 14, flexShrink: 0,
-                    background: `${world.color}18`,
-                    border: `1.5px solid ${world.color}35`,
-                    display: "grid", placeItems: "center", fontSize: 26,
-                  }}>
-                    {world.emoji}
-                  </div>
-
-                  {/* Title + badges */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                      <span className="card-title">{world.title}</span>
-                      <span style={{
-                        fontSize: 11, fontWeight: 800, padding: "2px 8px", borderRadius: 999,
-                        background: `${world.color}18`, color: world.color,
-                        border: `1px solid ${world.color}35`,
-                      }}>
-                        {total} module{total !== 1 ? "s" : ""}
-                      </span>
-                      {doneCount > 0 && (
-                        <span style={{
-                          fontSize: 11, fontWeight: 800, padding: "2px 8px", borderRadius: 999,
-                          background: "#F0FFF4", color: "#16a34a", border: "1px solid #BBF7D0",
-                        }}>
-                          {doneCount}/{total} done
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Chevron */}
-                  <span style={{
-                    fontSize: 22, fontWeight: 900, color: world.color,
-                    transform: isOpen ? "rotate(90deg)" : "none",
-                    transition: "transform .2s", flexShrink: 0, lineHeight: 1,
-                  }}>›</span>
-                </button>
-
-                {/* Expanded module list */}
-                {isOpen && (
-                  <div style={{
-                    borderTop: `1px solid ${world.color}25`,
-                    padding: "8px 20px 16px",
-                    background: `${world.color}06`,
-                  }}>
-                    <div style={{ display: "grid", gap: 2 }}>
-                      {world.fluency_modules.map((mod, i) => {
-                        const done = completedIds.includes(mod.id);
-                        const loading = loadingId === mod.id;
-
-                        return (
-                          <button
-                            key={mod.id}
-                            onClick={() => handleModuleClick(mod)}
-                            disabled={mod.is_locked || loading}
-                            style={{
-                              width: "100%", display: "grid",
-                              gridTemplateColumns: "32px 1fr 20px", gap: 12, alignItems: "center",
-                              padding: "11px 8px", borderRadius: 12,
-                              background: "none", border: "none",
-                              cursor: mod.is_locked ? "not-allowed" : "pointer",
-                              textAlign: "left", transition: "background .12s ease",
-                            }}
-                            onMouseEnter={e => {
-                              if (!mod.is_locked) (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,.90)";
-                            }}
-                            onMouseLeave={e => {
-                              (e.currentTarget as HTMLButtonElement).style.background = "none";
-                            }}
-                          >
-                            {/* Number / done / lock badge */}
-                            <div style={{
-                              width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
-                              display: "grid", placeItems: "center", fontSize: 13, fontWeight: 900,
-                              ...(done
-                                ? { background: "rgba(34,197,94,.12)", border: "1.5px solid rgba(34,197,94,.35)", color: "#16a34a" }
-                                : mod.is_locked
-                                ? { background: "rgba(34,29,35,.07)", border: "1.5px solid rgba(34,29,35,.12)", color: "#9e8e7a" }
-                                : { background: `${world.color}18`, border: `1.5px solid ${world.color}35`, color: world.color }
-                              ),
-                            }}>
-                              {done ? "✓" : mod.is_locked ? "🔒" : i + 1}
-                            </div>
-
-                            {/* Title + concepts */}
-                            <div>
-                              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                                <span className={`card-title${mod.is_locked ? " card-title--locked" : ""}`}>{mod.title}</span>
-                                {done && (
-                                  <span style={{
-                                    fontSize: 9, fontWeight: 900, letterSpacing: ".06em",
-                                    padding: "2px 6px", borderRadius: 999,
-                                    background: "#F0FFF4", color: "#16a34a", border: "1px solid #BBF7D0",
-                                  }}>DONE</span>
-                                )}
-                              </div>
-                              {mod.concepts.length > 0 && (
-                                <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 5 }}>
-                                  {mod.concepts.slice(0, 3).map(c => (
-                                    <span key={c} style={{
-                                      fontSize: 10, color: "#6B6670",
-                                      background: "rgba(34,29,35,.05)",
-                                      padding: "2px 7px", borderRadius: 6,
-                                    }}>{c}</span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Arrow / spinner */}
-                            <span style={{
-                              fontSize: 18, fontWeight: 900,
-                              color: loading ? world.color : mod.is_locked ? "rgba(34,29,35,.20)" : "rgba(34,29,35,.35)",
-                            }}>{loading ? "…" : "›"}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        <div className="aif-foundation-grid">
+          {modules.map((mod, i) => (
+            <FoundationModuleCard
+              key={mod.id}
+              module={mod}
+              accentColor={MODULE_CARD_COLORS[i % MODULE_CARD_COLORS.length]}
+              done={completedIds.includes(mod.id)}
+              disabled={mod.is_locked || loadingId === mod.id}
+              onClick={() => handleModuleClick(mod)}
+            />
+          ))}
         </div>
       </main>
+
+      {htmlModule && (
+        <ModuleHtmlModal
+          moduleId={htmlModule.id}
+          moduleTitle={htmlModule.title}
+          moduleEmoji={htmlModule.emoji}
+          onClose={() => setHtmlModule(null)}
+        />
+      )}
 
       {openModule && (
         <ModulePlayer

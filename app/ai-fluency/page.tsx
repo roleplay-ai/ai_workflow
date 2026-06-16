@@ -12,7 +12,7 @@ export default async function AIFluencyPage() {
 
   const [
     { data: briefs },
-    { data: worlds },
+    { data: modules },
     { data: videos },
     { data: tools },
     { data: toolGuides },
@@ -28,8 +28,8 @@ export default async function AIFluencyPage() {
       .order("published_date", { ascending: false })
       .limit(1),
     supabase
-      .from("fluency_worlds")
-      .select("id, title, emoji, color, fluency_modules(id, title, emoji, concepts, sort_order, is_locked, next_module_hint, html_path)")
+      .from("fluency_modules")
+      .select("id, title, emoji, description, concepts, sort_order, is_locked, next_module_hint, html_path")
       .eq("published", true)
       .order("sort_order"),
     supabase
@@ -73,20 +73,12 @@ export default async function AIFluencyPage() {
     if (row.tool && row.logo_url) toolLogos[row.tool as string] = row.logo_url as string;
   }
 
-  // Sort modules within each world by sort_order
-  const sortedWorlds = (worlds ?? []).map((w: any) => ({
-    ...w,
-    fluency_modules: [...(w.fluency_modules ?? [])].sort(
-      (a: any, b: any) => a.sort_order - b.sort_order
-    ),
-  }));
-
   const completedModuleIds = (progressRows ?? []).map((r: any) => r.module_id as string);
 
   return (
     <AIFluencyClient
       brief={(briefs?.[0] ?? null) as any}
-      worlds={sortedWorlds as any}
+      modules={(modules ?? []) as any}
       videos={(videos ?? []) as any}
       tools={(tools ?? []) as any}
       toolGuides={(toolGuides ?? []) as any}

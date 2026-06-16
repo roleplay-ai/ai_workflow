@@ -13,17 +13,13 @@ import ModulePlayer, { type ModuleData } from "./ModulePlayer";
 import ModuleHtmlModal from "./ModuleHtmlModal";
 import VideoModal from "./VideoModal";
 import ToolModal, { type ToolModalTool } from "./ToolModal";
+import type { FoundationModule } from "./FoundationModuleCard";
+import FoundationCardsCarousel from "./FoundationCardsCarousel";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type BriefItem  = { id: string; content: string; sort_order: number };
 type Brief      = { id: string; title: string; published_date: string; fluency_brief_items: BriefItem[] };
-type FluencyModule = {
-  id: string; title: string; emoji: string; concepts: string[];
-  sort_order: number; is_locked: boolean; next_module_hint: string | null;
-  html_path: string | null;
-};
-type World = { id: string; title: string; emoji: string; color: string; fluency_modules: FluencyModule[] };
 type ApplyVideo = {
   id: string; title: string; description: string | null; video_url: string | null;
   thumbnail_url: string | null; duration: string | null; order_index: number;
@@ -33,7 +29,7 @@ type FluencyTool  = ToolModalTool;
 type ToolGuide    = { id: string; name: string; logo_letter: string; description: string; accent_color: string; bg_color: string; border_color: string; guide_url: string | null };
 type Props = {
   brief:               Brief | null;
-  worlds:              World[];
+  modules:             FoundationModule[];
   videos:              ApplyVideo[];
   tools:               FluencyTool[];
   toolGuides:          ToolGuide[];
@@ -71,15 +67,6 @@ const GROUP_ACCENT: Record<string, string> = {
   Workflows: "#F68A29",
   Skills:    "#3699FC",
 };
-
-// Foundation-card colours — cycles for each world card (matches HTML exactly)
-const WORLD_CARD_COLORS = [
-  { bg: "#FDF0E2", border: "#F68A29", textColor: "#ED4551", circleBg: "#F68A29", circleText: "#fff"    },
-  { bg: "#FDECEC", border: "#ED4551", textColor: "#ED4551", circleBg: "#ED4551", circleText: "#fff"    },
-  { bg: "#EAF6F4", border: "#36BBD1", textColor: "#2EADCB", circleBg: "#36BBD1", circleText: "#fff"    },
-  { bg: "#F2EDFF", border: "#A984FF", textColor: "#9B76FA", circleBg: "#A984FF", circleText: "#fff"    },
-  { bg: "#ECFFF4", border: "#23CE6B", textColor: "#159E4B", circleBg: "#23CE6B", circleText: "#221D23" },
-];
 
 const TOOL_ACCENTS = ["#17614B", "#326EA9", "#AA577C", "#C66D38", "#623CEA", "#1E8B5C"];
 
@@ -161,7 +148,7 @@ function Carousel({
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function AIFluencyClient({
-  brief, worlds, videos, tools, toolGuides, deepDives, toolLogos, completedModuleIds,
+  brief, modules, videos, tools, toolGuides, deepDives, toolLogos, completedModuleIds,
   isLoggedIn, userName, isAdmin, viewCounts = {},
 }: Props) {
   const sortedItems = brief
@@ -170,18 +157,16 @@ export default function AIFluencyClient({
 
   const [completedIds,  setCompletedIds]  = useState<string[]>(completedModuleIds);
   const [openModule,    setOpenModule]    = useState<ModuleData | null>(null);
-  const [htmlModule,    setHtmlModule]    = useState<FluencyModule | null>(null);
+  const [htmlModule,    setHtmlModule]    = useState<FoundationModule | null>(null);
   const [loadingId,     setLoadingId]     = useState<string | null>(null);
-  const [openWorldId,   setOpenWorldId]   = useState<string | null>(null);
   const [selectedTool,  setSelectedTool]  = useState<FluencyTool | null>(null);
-  const foundScrollRef = useRef<HTMLDivElement>(null);
 
   function openToolDetails(tool: FluencyTool) {
     recordFluencyView("tool", tool.id);
     setSelectedTool(tool);
   }
 
-  async function handleModuleClick(mod: FluencyModule) {
+  async function handleModuleClick(mod: FoundationModule) {
     if (mod.is_locked) return;
     recordFluencyView("module", mod.id);
 
@@ -294,10 +279,9 @@ export default function AIFluencyClient({
           </div>
         </section>
 
-        {/* ── AI Foundations (horizontal world cards + expandable modules panel) ── */}
-        {worlds.length > 0 && (
+        {/* ── AI Foundations (module cards) ── */}
+        {modules.length > 0 && (
           <section style={{ marginTop: 70 }}>
-            {/* Section header */}
             <div style={{
               display: "flex", alignItems: "flex-end", justifyContent: "space-between",
               gap: 22, marginBottom: 22,
@@ -317,189 +301,17 @@ export default function AIFluencyClient({
                   Short explainers that build practical AI fluency.
                 </p>
               </div>
-              <a href="/know/foundations" style={{ fontSize: 13, fontWeight: 950, color: "#FF4B1F", whiteSpace: "nowrap", textDecoration: "none" }}>
-                See all →
+              <a href="/know/foundations" style={{ fontSize: 13, fontWeight: 700, color: "#623CEA", whiteSpace: "nowrap", textDecoration: "none" }}>
+                See all topics →
               </a>
             </div>
 
-            {/* Horizontal world-card carousel */}
-            <div className="aif-carousel-rail">
-              <button
-                className="aif-arrow-btn"
-                onClick={() => foundScrollRef.current?.scrollBy({ left: -330, behavior: "smooth" })}
-                aria-label="Previous"
-              >‹</button>
-
-              <div
-                ref={foundScrollRef}
-                className="aif-slider"
-                style={{
-                  display: "grid", gridAutoFlow: "column", gridAutoColumns: 300,
-                  gap: 18, overflowX: "auto", padding: "4px 0 24px",
-                  scrollSnapType: "x mandatory",
-                }}
-              >
-                {worlds.map((world, i) => {
-                  const c      = WORLD_CARD_COLORS[i % WORLD_CARD_COLORS.length];
-                  const isOpen = openWorldId === world.id;
-                  const doneCount = completedIds.filter(id => world.fluency_modules.some(m => m.id === id)).length;
-
-                  return (
-                    <article
-                      key={world.id}
-                      onClick={() => setOpenWorldId(isOpen ? null : world.id)}
-                      style={{
-                        scrollSnapAlign: "start",
-                        minHeight: 96, borderRadius: 21,
-                        padding: "19px 18px",
-                        display: "grid", gridTemplateColumns: "52px 1fr 42px",
-                        gap: 14, alignItems: "center",
-                        background: isOpen ? `${world.color}12` : c.bg,
-                        border: `3px solid ${isOpen ? world.color : c.border}`,
-                        boxShadow: "0 12px 30px rgba(34,29,35,.05)",
-                        cursor: "pointer",
-                        transition: "border-color .18s ease, background .18s ease",
-                      }}
-                    >
-                      {/* Icon */}
-                      <div style={{
-                        width: 52, height: 52, borderRadius: 16,
-                        background: "rgba(255,255,255,.55)", border: "1px solid rgba(34,29,35,.10)",
-                        display: "grid", placeItems: "center", fontSize: 24, flexShrink: 0,
-                      }}>{world.emoji}</div>
-
-                      {/* Text */}
-                      <div>
-                        <h3 className="card-title">{world.title}</h3>
-                        <p style={{ margin: "6px 0 0", fontSize: 12, fontWeight: 900, color: isOpen ? world.color : c.textColor }}>
-                          {world.fluency_modules.length} module{world.fluency_modules.length !== 1 ? "s" : ""}
-                          {doneCount > 0 ? ` · ${doneCount} done` : ""}
-                        </p>
-                      </div>
-
-                      {/* Go circle */}
-                      <div style={{
-                        width: 42, height: 42, borderRadius: "50%", flexShrink: 0,
-                        background: isOpen ? world.color : c.circleBg,
-                        color: isOpen ? "#221D23" : c.circleText,
-                        display: "grid", placeItems: "center",
-                        fontSize: 24, fontWeight: 950,
-                        transform: isOpen ? "rotate(90deg)" : "none",
-                        transition: "transform .2s ease, background .18s ease",
-                      }}>›</div>
-                    </article>
-                  );
-                })}
-              </div>
-
-              <button
-                className="aif-arrow-btn"
-                onClick={() => foundScrollRef.current?.scrollBy({ left: 330, behavior: "smooth" })}
-                aria-label="Next"
-              >›</button>
-            </div>
-
-            {/* Expanded modules panel — slides in below carousel when a world is selected */}
-            {(() => {
-              const world = worlds.find(w => w.id === openWorldId);
-              if (!world) return null;
-              return (
-                <div style={{
-                  marginTop: 14,
-                  borderRadius: 20,
-                  border: `1px solid ${world.color}30`,
-                  background: `${world.color}06`,
-                  padding: "20px 22px 16px",
-                }}>
-                  {/* Panel heading */}
-                  <div style={{
-                    display: "flex", alignItems: "center", gap: 10, marginBottom: 14,
-                    paddingBottom: 14, borderBottom: `1px solid ${world.color}20`,
-                  }}>
-                    <span style={{ fontSize: 20 }}>{world.emoji}</span>
-                    <span style={{ fontSize: 14, fontWeight: 900, color: "#221D23", letterSpacing: "-.03em" }}>
-                      {world.title}
-                    </span>
-                    <span style={{
-                      fontSize: 10, fontWeight: 800, padding: "3px 9px", borderRadius: 999,
-                      background: `${world.color}18`, color: world.color, marginLeft: "auto",
-                    }}>
-                      {completedIds.filter(id => world.fluency_modules.some(m => m.id === id)).length} / {world.fluency_modules.length} done
-                    </span>
-                  </div>
-
-                  {/* Module rows */}
-                  <div style={{ display: "grid", gap: 2 }}>
-                    {world.fluency_modules.map((mod, i) => {
-                      const done    = completedIds.includes(mod.id);
-                      const loading = loadingId === mod.id;
-                      return (
-                        <button
-                          key={mod.id}
-                          onClick={() => handleModuleClick(mod)}
-                          disabled={mod.is_locked || loading}
-                          style={{
-                            width: "100%", display: "grid",
-                            gridTemplateColumns: "32px 1fr 20px", gap: 12, alignItems: "center",
-                            padding: "11px 8px", borderRadius: 12,
-                            background: "none", border: "none",
-                            cursor: mod.is_locked ? "not-allowed" : "pointer",
-                            textAlign: "left", transition: "background .12s ease",
-                          }}
-                          onMouseEnter={e => { if (!mod.is_locked) (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,.80)"; }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "none"; }}
-                        >
-                          {/* Number / done / lock badge */}
-                          <div style={{
-                            width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
-                            display: "grid", placeItems: "center", fontSize: 13, fontWeight: 900,
-                            ...(done
-                              ? { background: "rgba(34,197,94,.12)", border: "1.5px solid rgba(34,197,94,.35)", color: "#16a34a" }
-                              : mod.is_locked
-                              ? { background: "rgba(34,29,35,.07)", border: "1.5px solid rgba(34,29,35,.12)", color: "#9e8e7a" }
-                              : { background: `${world.color}18`, border: `1.5px solid ${world.color}35`, color: world.color }
-                            ),
-                          }}>
-                            {done ? "✓" : mod.is_locked ? "🔒" : i + 1}
-                          </div>
-
-                          {/* Title + concepts */}
-                          <div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                              <span className={`card-title${mod.is_locked ? " card-title--locked" : ""}`}>{mod.title}</span>
-                              {done && (
-                                <span style={{
-                                  fontSize: 9, fontWeight: 900, letterSpacing: ".06em",
-                                  padding: "2px 6px", borderRadius: 999,
-                                  background: "#F0FFF4", color: "#16a34a", border: "1px solid #BBF7D0",
-                                }}>DONE</span>
-                              )}
-                            </div>
-                            {mod.concepts.length > 0 && (
-                              <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 5 }}>
-                                {mod.concepts.slice(0, 3).map(c => (
-                                  <span key={c} style={{
-                                    fontSize: 10, color: "#6B6670",
-                                    background: "rgba(34,29,35,.05)",
-                                    padding: "2px 6px", borderRadius: 6,
-                                  }}>{c}</span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Arrow / spinner */}
-                          <span style={{
-                            fontSize: 16, fontWeight: 900,
-                            color: loading ? world.color : mod.is_locked ? "rgba(34,29,35,.25)" : "rgba(34,29,35,.4)",
-                          }}>{loading ? "…" : "›"}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })()}
+            <FoundationCardsCarousel
+              modules={modules}
+              completedIds={completedIds}
+              loadingId={loadingId}
+              onModuleClick={handleModuleClick}
+            />
           </section>
         )}
 
