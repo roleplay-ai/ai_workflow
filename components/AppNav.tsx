@@ -31,10 +31,6 @@ export const APP_NAV_BRAND_STYLE: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: 10,
-  fontWeight: 900,
-  fontSize: 15,
-  letterSpacing: "-0.04em",
-  color: "#221D23",
   textDecoration: "none",
   whiteSpace: "nowrap",
   fontFamily: APP_NAV_FONT,
@@ -51,13 +47,16 @@ export function AppNavBrand() {
     <Link href="/dashboard" style={APP_NAV_BRAND_STYLE}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/icon.png"
-        alt=""
-        width={32}
-        height={32}
-        style={{ borderRadius: 9, display: "block", flexShrink: 0 }}
+        src="/Nudgeable-black.png"
+        alt="Nudgeable"
+        style={{ display: "block", flexShrink: 0, height: 32, width: "auto" }}
       />
-      <span>Nudgeable AI Work Studio</span>
+      <span style={{
+        fontWeight: 400,
+        fontSize: 15,
+        letterSpacing: "-0.02em",
+        color: "#221D23",
+      }}>AI Work Studio</span>
     </Link>
   );
 }

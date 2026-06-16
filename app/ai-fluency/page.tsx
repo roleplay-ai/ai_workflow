@@ -40,7 +40,7 @@ export default async function AIFluencyPage() {
       .limit(10),
     supabase
       .from("fluency_tools")
-      .select("*")
+      .select("*, fluency_tool_pros(content, sort_order), fluency_tool_cons(content, sort_order)")
       .eq("published", true)
       .order("sort_order")
       .limit(10),

@@ -6,9 +6,11 @@ import AppNav from "@/components/AppNav";
 import { deepDiveHref, deepDiveLabel } from "@/lib/deepDives";
 import { formatToolLabel } from "@/lib/tools";
 import { resolveToolLogoUrl, type ToolLogoMap } from "@/lib/toolLogos";
+import { recordFluencyView } from "@/lib/fluencyViews";
 import type { ToolDeepDive } from "@/lib/supabase/types";
 import ModulePlayer, { type ModuleData } from "./ModulePlayer";
 import VideoModal from "./VideoModal";
+import ToolModal, { type ToolModalTool } from "./ToolModal";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -24,7 +26,7 @@ type ApplyVideo = {
   thumbnail_url: string | null; duration: string | null; order_index: number;
   is_locked: boolean; group_name: string | null; category_tag: string | null;
 };
-type FluencyTool  = { id: string; category_label: string; name: string; description: string; icon_emoji: string | null; letter: string | null; color: string | null; company_name: string | null; try_url: string | null; best_for: string | null; pricing: string | null; is_featured: boolean };
+type FluencyTool  = ToolModalTool;
 type ToolGuide    = { id: string; name: string; logo_letter: string; description: string; accent_color: string; bg_color: string; border_color: string; guide_url: string | null };
 type Props = {
   brief:               Brief | null;
@@ -166,10 +168,17 @@ export default function AIFluencyClient({
   const [openModule,    setOpenModule]    = useState<ModuleData | null>(null);
   const [loadingId,     setLoadingId]     = useState<string | null>(null);
   const [openWorldId,   setOpenWorldId]   = useState<string | null>(null);
+  const [selectedTool,  setSelectedTool]  = useState<FluencyTool | null>(null);
   const foundScrollRef = useRef<HTMLDivElement>(null);
+
+  function openToolDetails(tool: FluencyTool) {
+    recordFluencyView("tool", tool.id);
+    setSelectedTool(tool);
+  }
 
   async function handleModuleClick(mod: FluencyModule) {
     if (mod.is_locked) return;
+    recordFluencyView("module", mod.id);
     setLoadingId(mod.id);
     try {
       const res  = await fetch(`/api/fluency/module/${mod.id}`);
@@ -561,19 +570,15 @@ export default function AIFluencyClient({
                     <span style={{ fontSize: 11, color: "#6B6670", fontWeight: 850 }}>
                       {t.company_name ? <>by <strong style={{ color: "#221D23" }}>{t.company_name}</strong></> : null}
                     </span>
-                    {t.try_url ? (
-                      <a href={t.try_url} target="_blank" rel="noopener noreferrer" style={{
-                        display: "inline-flex", background: "#FFCE00", color: "#221D23",
+                    <button
+                      type="button"
+                      onClick={() => openToolDetails(t)}
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: 4,
+                        background: "#FFCE00", color: "#221D23", cursor: "pointer",
                         borderRadius: 999, padding: "8px 13px", fontSize: 11, fontWeight: 950,
-                        whiteSpace: "nowrap", border: "1px solid rgba(34,29,35,.10)", textDecoration: "none",
-                      }}>Try it →</a>
-                    ) : (
-                      <span style={{
-                        display: "inline-flex", background: "#F7F2E9", color: "#6B6670",
-                        borderRadius: 999, padding: "8px 13px", fontSize: 11, fontWeight: 950,
-                        whiteSpace: "nowrap", border: "1px solid #E9E4DC",
-                      }}>Coming soon</span>
-                    )}
+                        whiteSpace: "nowrap", border: "1px solid rgba(34,29,35,.10)",
+                      }}>Details ›</button>
                   </div>
                 </div>
               </article>
@@ -649,9 +654,9 @@ export default function AIFluencyClient({
                 };
 
                 if (isExternal) {
-                  return <a key={item.id} href={href} target="_blank" rel="noopener noreferrer" style={cardStyle}>{cardContent}</a>;
+                  return <a key={item.id} href={href} target="_blank" rel="noopener noreferrer" onClick={() => recordFluencyView("deep_dive", item.id)} style={cardStyle}>{cardContent}</a>;
                 }
-                return <Link key={item.id} href={href} style={cardStyle}>{cardContent}</Link>;
+                return <Link key={item.id} href={href} onClick={() => recordFluencyView("deep_dive", item.id)} style={cardStyle}>{cardContent}</Link>;
               })}
             </div>
           )}
@@ -686,7 +691,7 @@ export default function AIFluencyClient({
                       </p>
                     </div>
                     {g.guide_url ? (
-                      <Link href={g.guide_url} style={{ color: "#221D23", fontSize: 12, fontWeight: 950, textDecoration: "none" }}>
+                      <Link href={g.guide_url} onClick={() => recordFluencyView("tool_guide", g.id)} style={{ color: "#221D23", fontSize: 12, fontWeight: 950, textDecoration: "none" }}>
                         Explore guide →
                       </Link>
                     ) : (
@@ -776,6 +781,11 @@ export default function AIFluencyClient({
           onComplete={handleComplete}
         />
       )}
+
+      {/* ── Tool details modal ── */}
+      {selectedTool && (
+        <ToolModal tool={selectedTool} onClose={() => setSelectedTool(null)} />
+      )}
     </>
   );
 }
@@ -838,7 +848,7 @@ function VideoCarousel({ videos, isLoggedIn }: { videos: ApplyVideo[]; isLoggedI
           return (
             <article
               key={v.id}
-              onClick={() => setSelectedVideo(v)}
+              onClick={() => { recordFluencyView("video", v.id); setSelectedVideo(v); }}
               style={{
               scrollSnapAlign: "start", borderRadius: 18, overflow: "hidden",
               background: "#fff", border: "1px solid rgba(34,29,35,.06)",
