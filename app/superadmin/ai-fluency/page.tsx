@@ -24,7 +24,7 @@ export default async function AIFluencyAdminPage() {
   ] = await Promise.all([
     supabase
       .from("fluency_worlds")
-      .select("id, title, emoji, color, sort_order, published, fluency_modules(id, title, emoji, concepts, sort_order, is_locked, next_module_hint)")
+      .select("id, title, emoji, color, sort_order, published, fluency_modules(id, title, emoji, concepts, sort_order, is_locked, next_module_hint, html_path)")
       .order("sort_order"),
     supabase
       .from("apply_videos")

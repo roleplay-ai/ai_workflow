@@ -12,6 +12,7 @@ import { resumableUpload } from "@/lib/resumableUpload";
 type FluencyModule = {
   id: string; title: string; emoji: string; concepts: string[];
   sort_order: number; is_locked: boolean; next_module_hint: string | null;
+  html_path: string | null;
 };
 type World = {
   id: string; title: string; emoji: string; color: string;
@@ -263,7 +264,15 @@ function WorldsTab({ initWorlds }: { initWorlds: World[] }) {
                             <div style={{ fontSize: 11, color: "#9B9199", marginTop: 1 }}>{mod.concepts.slice(0, 4).join(" · ")}</div>
                           )}
                         </div>
-                        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                        <div style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "center" }}>
+                          <ModuleHtmlUpload
+                            moduleId={mod.id}
+                            htmlPath={mod.html_path}
+                            onUploaded={(path) => setWorlds(prev => prev.map(w => w.id === world.id
+                              ? { ...w, fluency_modules: w.fluency_modules.map(m => m.id === mod.id ? { ...m, html_path: path } : m) }
+                              : w
+                            ))}
+                          />
                           <Link href={`/superadmin/modules/${mod.id}`} style={{
                             padding: "4px 10px", borderRadius: 999, border: "1px solid #E8E6DC",
                             background: "white", color: "#221D23", fontSize: 11, fontWeight: 700, textDecoration: "none",
@@ -299,6 +308,89 @@ function WorldsTab({ initWorlds }: { initWorlds: World[] }) {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// ── Module HTML upload ─────────────────────────────────────────────────────
+
+const FLUENCY_MODULE_HTML_BUCKET = "fluency-module-html";
+
+function ModuleHtmlUpload({
+  moduleId, htmlPath, onUploaded,
+}: {
+  moduleId: string; htmlPath: string | null; onUploaded: (path: string | null) => void;
+}) {
+  const supabase = createClient();
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const path = `modules/${moduleId}.html`;
+      const { error } = await supabase.storage
+        .from(FLUENCY_MODULE_HTML_BUCKET)
+        .upload(path, file, { contentType: "text/html", upsert: true });
+      if (error) { alert("Upload failed: " + error.message); return; }
+      const { error: dbErr } = await supabase
+        .from("fluency_modules")
+        .update({ html_path: path })
+        .eq("id", moduleId);
+      if (dbErr) { alert("DB update failed: " + dbErr.message); return; }
+      onUploaded(path);
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+
+  async function removeHtml() {
+    if (!htmlPath || !confirm("Remove HTML content from this module?")) return;
+    await supabase.storage.from(FLUENCY_MODULE_HTML_BUCKET).remove([htmlPath]);
+    await supabase.from("fluency_modules").update({ html_path: null }).eq("id", moduleId);
+    onUploaded(null);
+  }
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+      {htmlPath ? (
+        <>
+          <span style={{
+            fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 999,
+            background: "#ECFFF4", color: "#159E4B", border: "1px solid #BBF7D0",
+          }}>HTML ✓</span>
+          <button
+            onClick={() => inputRef.current?.click()}
+            disabled={uploading}
+            title="Replace HTML"
+            style={{ border: 0, background: "none", color: "#6B6B6B", cursor: "pointer", fontSize: 12, fontWeight: 700, padding: "3px 6px" }}
+          >{uploading ? "…" : "↺"}</button>
+          <button
+            onClick={removeHtml}
+            title="Remove HTML"
+            style={{ border: 0, background: "none", color: "#EF4444", cursor: "pointer", fontSize: 13 }}
+          >×</button>
+        </>
+      ) : (
+        <button
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          style={{
+            padding: "3px 10px", borderRadius: 999, border: "1px solid #E8E6DC",
+            background: "white", color: "#221D23", fontSize: 11, fontWeight: 700, cursor: "pointer",
+          }}
+        >{uploading ? "Uploading…" : "Upload HTML"}</button>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".html,text/html"
+        style={{ display: "none" }}
+        onChange={handleFile}
+      />
     </div>
   );
 }

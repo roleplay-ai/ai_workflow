@@ -9,6 +9,7 @@ import { resolveToolLogoUrl, type ToolLogoMap } from "@/lib/toolLogos";
 import { recordFluencyView } from "@/lib/fluencyViews";
 import type { ToolDeepDive } from "@/lib/supabase/types";
 import ModulePlayer, { type ModuleData } from "./ModulePlayer";
+import ModuleHtmlModal from "./ModuleHtmlModal";
 import VideoModal from "./VideoModal";
 import ToolModal, { type ToolModalTool } from "./ToolModal";
 
@@ -19,6 +20,7 @@ type Brief      = { id: string; title: string; published_date: string; fluency_b
 type FluencyModule = {
   id: string; title: string; emoji: string; concepts: string[];
   sort_order: number; is_locked: boolean; next_module_hint: string | null;
+  html_path: string | null;
 };
 type World = { id: string; title: string; emoji: string; color: string; fluency_modules: FluencyModule[] };
 type ApplyVideo = {
@@ -166,6 +168,7 @@ export default function AIFluencyClient({
 
   const [completedIds,  setCompletedIds]  = useState<string[]>(completedModuleIds);
   const [openModule,    setOpenModule]    = useState<ModuleData | null>(null);
+  const [htmlModule,    setHtmlModule]    = useState<FluencyModule | null>(null);
   const [loadingId,     setLoadingId]     = useState<string | null>(null);
   const [openWorldId,   setOpenWorldId]   = useState<string | null>(null);
   const [selectedTool,  setSelectedTool]  = useState<FluencyTool | null>(null);
@@ -179,6 +182,14 @@ export default function AIFluencyClient({
   async function handleModuleClick(mod: FluencyModule) {
     if (mod.is_locked) return;
     recordFluencyView("module", mod.id);
+
+    // If the module has uploaded HTML content, show it in the HTML popup
+    if (mod.html_path) {
+      setHtmlModule(mod);
+      return;
+    }
+
+    // Otherwise fall back to the structured screen player
     setLoadingId(mod.id);
     try {
       const res  = await fetch(`/api/fluency/module/${mod.id}`);
@@ -771,6 +782,16 @@ export default function AIFluencyClient({
           Latest news, practical products, tool guides, and Nudgeable&apos;s view on how AI is changing work.
         </p>
       </footer>
+
+      {/* ── Module HTML popup ── */}
+      {htmlModule && (
+        <ModuleHtmlModal
+          moduleId={htmlModule.id}
+          moduleTitle={htmlModule.title}
+          moduleEmoji={htmlModule.emoji}
+          onClose={() => setHtmlModule(null)}
+        />
+      )}
 
       {/* ── Module player modal ── */}
       {openModule && (

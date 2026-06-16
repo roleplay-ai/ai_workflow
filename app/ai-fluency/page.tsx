@@ -28,7 +28,7 @@ export default async function AIFluencyPage() {
       .limit(1),
     supabase
       .from("fluency_worlds")
-      .select("id, title, emoji, color, fluency_modules(id, title, emoji, concepts, sort_order, is_locked, next_module_hint)")
+      .select("id, title, emoji, color, fluency_modules(id, title, emoji, concepts, sort_order, is_locked, next_module_hint, html_path)")
       .eq("published", true)
       .order("sort_order"),
     supabase
