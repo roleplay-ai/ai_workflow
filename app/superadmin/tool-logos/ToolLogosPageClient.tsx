@@ -205,7 +205,7 @@ export default function ToolLogosPageClient({ profile, toolLogos, tags: initTags
     <div style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: "Roboto, ui-sans-serif, system-ui, sans-serif" }}>
       <Topbar profile={profile} role="superadmin" onSignOut={handleSignOut} />
 
-      <main style={{ width: "min(1100px,calc(100% - 48px))", margin: "0 auto", padding: "28px 0 60px" }}>
+      <main style={{ width: "min(1280px,calc(100% - 72px))", margin: "0 auto", padding: "28px 0 60px" }}>
         <div style={{ marginBottom: 22 }}>
           <Link href="/superadmin" style={{ display: "inline-flex", alignItems: "center", gap: 5, marginBottom: 12, fontSize: 13, fontWeight: 600, color: "#6B6B6B", textDecoration: "none" }}>
             ← Activities

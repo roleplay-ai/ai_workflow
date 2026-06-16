@@ -211,7 +211,7 @@ export default function AIFluencyClient({
       <AppNav activePage="know" userName={userName} isAdmin={isAdmin} />
 
       {/* ── Page ── */}
-      <main style={{ width: "min(1200px,calc(100% - 56px))", margin: "34px auto 0" }}>
+      <main style={{ width: "min(1280px,calc(100% - 72px))", margin: "34px auto 0" }}>
 
         {/* ── Hero ── */}
         <section className="aif-hero" style={{

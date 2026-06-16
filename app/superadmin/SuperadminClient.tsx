@@ -166,7 +166,7 @@ export default function SuperadminClient({ profile, companies, activities: initA
     <div style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: "Roboto, ui-sans-serif, system-ui, sans-serif" }}>
       <Topbar profile={profile} role="superadmin" onSignOut={handleSignOut} />
 
-      <main style={{ width: "min(1100px,calc(100% - 48px))", margin: "0 auto", padding: "28px 0 60px" }}>
+      <main style={{ width: "min(1280px,calc(100% - 72px))", margin: "0 auto", padding: "28px 0 60px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
           <div>
             <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, letterSpacing: "-.04em" }}>Activities</h1>

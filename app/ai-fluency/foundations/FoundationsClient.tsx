@@ -42,7 +42,7 @@ export default function FoundationsClient({ worlds, completedModuleIds, userName
     <>
       <AppNav activePage="know" userName={userName} isAdmin={isAdmin} />
 
-      <main style={{ width: "min(780px,calc(100% - 56px))", margin: "34px auto 80px" }}>
+      <main style={{ width: "min(1280px,calc(100% - 72px))", margin: "34px auto 80px" }}>
 
         {/* Back + header */}
         <div style={{ marginBottom: 36 }}>

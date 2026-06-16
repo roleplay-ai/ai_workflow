@@ -39,7 +39,7 @@ export default function AdminClient({ profile, companyUsers, allProgress, totalA
     <div style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: "Roboto, ui-sans-serif, system-ui, sans-serif" }}>
       <Topbar profile={profile} role={profile.role} onSignOut={handleSignOut} />
 
-      <main style={{ width: "min(1100px,calc(100% - 48px))", margin: "0 auto", padding: "32px 0 60px" }}>
+      <main style={{ width: "min(1280px,calc(100% - 72px))", margin: "0 auto", padding: "32px 0 60px" }}>
         <div style={{ marginBottom: 28 }}>
           <h1 style={{ margin: 0, fontSize: 28, fontWeight: 900, letterSpacing: "-.05em" }}>
             {(profile.companies as any)?.name ?? "Company"} — Admin
