@@ -19,6 +19,7 @@ export default async function AIFluencyPage() {
     { data: deepDives },
     { data: toolLogoRows },
     { data: progressRows },
+    { data: viewRows },
   ] = await Promise.all([
     supabase
       .from("fluency_briefs")
@@ -28,7 +29,7 @@ export default async function AIFluencyPage() {
       .limit(1),
     supabase
       .from("fluency_worlds")
-      .select("id, title, emoji, color, fluency_modules(id, title, emoji, concepts, sort_order, is_locked, next_module_hint)")
+      .select("id, title, emoji, color, fluency_modules(id, title, emoji, concepts, sort_order, is_locked, next_module_hint, html_path)")
       .eq("published", true)
       .order("sort_order"),
     supabase
@@ -58,7 +59,14 @@ export default async function AIFluencyPage() {
     user
       ? supabase.from("fluency_module_progress").select("module_id").eq("user_id", user.id)
       : Promise.resolve({ data: [] as { module_id: string }[] }),
+    supabase.from("fluency_view_counts").select("entity_id, count").eq("entity_type", "video"),
   ]);
+
+  const viewCounts: Record<string, number> = {};
+  for (const row of viewRows ?? []) {
+    const r = row as { entity_id: string; count: number };
+    viewCounts[r.entity_id] = Number(r.count);
+  }
 
   const toolLogos: Record<string, string> = {};
   for (const row of toolLogoRows ?? []) {
@@ -88,6 +96,7 @@ export default async function AIFluencyPage() {
       isLoggedIn={!!user}
       userName={(profile as any)?.full_name ?? null}
       isAdmin={(profile as any)?.role === "superadmin"}
+      viewCounts={viewCounts}
     />
   );
 }

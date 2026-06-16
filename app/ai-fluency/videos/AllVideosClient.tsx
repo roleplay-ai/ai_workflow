@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import AppNav from "@/components/AppNav";
+import ViewCountBadge from "@/components/ViewCountBadge";
+import { recordFluencyView } from "@/lib/fluencyViews";
 import VideoModal, { type ApplyVideo as ModalApplyVideo } from "../VideoModal";
 
 const GROUP_ACCENT: Record<string, string> = {
@@ -20,6 +22,7 @@ type Props = {
   isLoggedIn: boolean;
   userName: string | null;
   isAdmin: boolean;
+  viewCounts?: Record<string, number>;
 };
 
 function extractYouTubeId(url: string): string | null {
@@ -45,7 +48,7 @@ function AutoVideoThumbnail({ videoUrl }: { videoUrl: string }) {
   );
 }
 
-export default function AllVideosClient({ videos, isLoggedIn, userName, isAdmin }: Props) {
+export default function AllVideosClient({ videos, isLoggedIn, userName, isAdmin, viewCounts = {} }: Props) {
   const [filter, setFilter] = useState<string>("All");
   const [selectedVideo, setSelectedVideo] = useState<ApplyVideo | null>(null);
 
@@ -137,7 +140,7 @@ export default function AllVideosClient({ videos, isLoggedIn, userName, isAdmin 
               return (
                 <article
                   key={v.id}
-                  onClick={() => setSelectedVideo(v)}
+                  onClick={() => { recordFluencyView("video", v.id); setSelectedVideo(v); }}
                   style={{
                     borderRadius: 18, overflow: "hidden",
                     background: "#fff", border: "1px solid rgba(34,29,35,.06)",
@@ -235,7 +238,9 @@ export default function AllVideosClient({ videos, isLoggedIn, userName, isAdmin 
                         fontSize: 10, fontWeight: 800, letterSpacing: ".12em",
                         textTransform: "uppercase", color: "#6B6670",
                         overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        flex: 1, minWidth: 0,
                       }}>{v.category_tag ?? v.group_name ?? "Feature"}</span>
+                      <ViewCountBadge count={viewCounts[v.id] ?? 0} />
                     </div>
                     <h3 className="card-title">{v.title}</h3>
                     {blurb && !isLocked && (

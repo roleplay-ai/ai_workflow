@@ -6,9 +6,11 @@ import AppNav from "@/components/AppNav";
 import { deepDiveHref, deepDiveLabel } from "@/lib/deepDives";
 import { formatToolLabel } from "@/lib/tools";
 import { resolveToolLogoUrl, type ToolLogoMap } from "@/lib/toolLogos";
+import ViewCountBadge from "@/components/ViewCountBadge";
 import { recordFluencyView } from "@/lib/fluencyViews";
 import type { ToolDeepDive } from "@/lib/supabase/types";
 import ModulePlayer, { type ModuleData } from "./ModulePlayer";
+import ModuleHtmlModal from "./ModuleHtmlModal";
 import VideoModal from "./VideoModal";
 import ToolModal, { type ToolModalTool } from "./ToolModal";
 
@@ -19,6 +21,7 @@ type Brief      = { id: string; title: string; published_date: string; fluency_b
 type FluencyModule = {
   id: string; title: string; emoji: string; concepts: string[];
   sort_order: number; is_locked: boolean; next_module_hint: string | null;
+  html_path: string | null;
 };
 type World = { id: string; title: string; emoji: string; color: string; fluency_modules: FluencyModule[] };
 type ApplyVideo = {
@@ -40,6 +43,7 @@ type Props = {
   isLoggedIn:          boolean;
   userName?:           string | null;
   isAdmin?:            boolean;
+  viewCounts?:         Record<string, number>;
 };
 
 // ── Deep-dive helpers ────────────────────────────────────────────────────────
@@ -158,7 +162,7 @@ function Carousel({
 
 export default function AIFluencyClient({
   brief, worlds, videos, tools, toolGuides, deepDives, toolLogos, completedModuleIds,
-  isLoggedIn, userName, isAdmin,
+  isLoggedIn, userName, isAdmin, viewCounts = {},
 }: Props) {
   const sortedItems = brief
     ? [...brief.fluency_brief_items].sort((a, b) => a.sort_order - b.sort_order)
@@ -166,6 +170,7 @@ export default function AIFluencyClient({
 
   const [completedIds,  setCompletedIds]  = useState<string[]>(completedModuleIds);
   const [openModule,    setOpenModule]    = useState<ModuleData | null>(null);
+  const [htmlModule,    setHtmlModule]    = useState<FluencyModule | null>(null);
   const [loadingId,     setLoadingId]     = useState<string | null>(null);
   const [openWorldId,   setOpenWorldId]   = useState<string | null>(null);
   const [selectedTool,  setSelectedTool]  = useState<FluencyTool | null>(null);
@@ -179,6 +184,14 @@ export default function AIFluencyClient({
   async function handleModuleClick(mod: FluencyModule) {
     if (mod.is_locked) return;
     recordFluencyView("module", mod.id);
+
+    // If the module has uploaded HTML content, show it in the HTML popup
+    if (mod.html_path) {
+      setHtmlModule(mod);
+      return;
+    }
+
+    // Otherwise fall back to the structured screen player
     setLoadingId(mod.id);
     try {
       const res  = await fetch(`/api/fluency/module/${mod.id}`);
@@ -516,7 +529,7 @@ export default function AIFluencyClient({
             </a>
           </div>
 
-          <VideoCarousel videos={videos} isLoggedIn={isLoggedIn} />
+          <VideoCarousel videos={videos} isLoggedIn={isLoggedIn} viewCounts={viewCounts} />
         </section>
 
         {/* ── Most Useful Tools ── */}
@@ -772,6 +785,16 @@ export default function AIFluencyClient({
         </p>
       </footer>
 
+      {/* ── Module HTML popup ── */}
+      {htmlModule && (
+        <ModuleHtmlModal
+          moduleId={htmlModule.id}
+          moduleTitle={htmlModule.title}
+          moduleEmoji={htmlModule.emoji}
+          onClose={() => setHtmlModule(null)}
+        />
+      )}
+
       {/* ── Module player modal ── */}
       {openModule && (
         <ModulePlayer
@@ -815,7 +838,7 @@ function AutoVideoThumbnail({ videoUrl }: { videoUrl: string }) {
   );
 }
 
-function VideoCarousel({ videos, isLoggedIn }: { videos: ApplyVideo[]; isLoggedIn: boolean }) {
+function VideoCarousel({ videos, isLoggedIn, viewCounts = {} }: { videos: ApplyVideo[]; isLoggedIn: boolean; viewCounts?: Record<string, number> }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [selectedVideo, setSelectedVideo] = useState<ApplyVideo | null>(null);
   const scroll = (dir: "left" | "right") =>
@@ -937,9 +960,11 @@ function VideoCarousel({ videos, isLoggedIn }: { videos: ApplyVideo[]; isLoggedI
                     fontSize: 10, fontWeight: 800, letterSpacing: ".12em",
                     textTransform: "uppercase", color: "#6B6670",
                     overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    flex: 1, minWidth: 0,
                   }}>
                     {v.category_tag ?? v.group_name ?? "Feature"}
                   </span>
+                  <ViewCountBadge count={viewCounts[v.id] ?? 0} />
                 </div>
                 <h3 className="card-title">{v.title}</h3>
                 {isLocked && (
