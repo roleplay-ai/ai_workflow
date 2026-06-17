@@ -938,7 +938,7 @@ export default function DashboardClient({ profile, activities, progress, toolFil
           {masteryActivities.length > 0 && (
             <HorizontalRail
               label="Core practice"
-              title="Learn"
+              title="Chatbot Essentials"
               subtitle="Core workflows for improving AI fluency and everyday practice."
               activities={masteryActivities}
               variant="yellow"

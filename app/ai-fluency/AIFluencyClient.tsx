@@ -169,8 +169,9 @@ function ToolsSection({ tools, onOpenTool }: { tools: FluencyTool[]; onOpenTool:
       <div className="aif-carousel-rail">
         <button className="aif-arrow-btn" onClick={() => scroll("left")} aria-label="Previous">‹</button>
         <div ref={scrollRef} className="aif-slider" style={{
-          display: "grid", gridAutoFlow: "column", gap: 24, overflowX: "auto",
-          padding: "4px 0 30px", scrollSnapType: "x mandatory",
+          display: "grid", gridAutoFlow: "column", gridAutoColumns: 292, gap: 24,
+          overflowX: "auto", padding: "4px 0 30px", scrollSnapType: "x mandatory",
+          justifyContent: "start",
         }}>
           {visibleItems.map((t, i) => {
             const accent = TOOL_ACCENTS[i % TOOL_ACCENTS.length];
