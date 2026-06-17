@@ -1794,7 +1794,7 @@
 }
 
 .ndb-root .brief-news-card-link .brief-news-card {
-  max-width: none;
+  max-width: 600px;
 }
 
 .ndb-root .brief-news-card-link .brief-news-top {
