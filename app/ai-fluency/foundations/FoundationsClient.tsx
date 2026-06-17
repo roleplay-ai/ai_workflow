@@ -5,7 +5,7 @@ import AppNav from "@/components/AppNav";
 import { recordFluencyView } from "@/lib/fluencyViews";
 import ModulePlayer, { type ModuleData } from "../ModulePlayer";
 import ModuleHtmlModal from "../ModuleHtmlModal";
-import FoundationModuleCard, { MODULE_CARD_COLORS, type FoundationModule } from "../FoundationModuleCard";
+import FoundationModuleCard, { type FoundationModule } from "../FoundationModuleCard";
 
 type Props = {
   modules: FoundationModule[];
@@ -106,7 +106,7 @@ export default function FoundationsClient({ modules, completedModuleIds, userNam
             <FoundationModuleCard
               key={mod.id}
               module={mod}
-              accentColor={MODULE_CARD_COLORS[i % MODULE_CARD_COLORS.length]}
+              themeIndex={i}
               done={completedIds.includes(mod.id)}
               disabled={mod.is_locked || loadingId === mod.id}
               onClick={() => handleModuleClick(mod)}

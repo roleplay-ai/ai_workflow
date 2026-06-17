@@ -1,5 +1,8 @@
 "use client";
 
+import FoundationCardIcon from "./FoundationCardIcon";
+import { getFoundationCardTheme } from "./foundationCardThemes";
+
 export type FoundationModule = {
   id: string;
   title: string;
@@ -12,11 +15,6 @@ export type FoundationModule = {
   html_path: string | null;
 };
 
-export const MODULE_CARD_COLORS = [
-  "#FFCE00", "#3696FC", "#623CEA", "#23CE68", "#F68A29", "#ED4551",
-  "#623CEA", "#3696FC", "#F68A29", "#FFCE00",
-];
-
 export function moduleSubtitle(mod: FoundationModule): string {
   if (mod.description?.trim()) return mod.description.trim();
   if (mod.concepts.length > 0) return mod.concepts[0];
@@ -25,15 +23,15 @@ export function moduleSubtitle(mod: FoundationModule): string {
 
 type Props = {
   module: FoundationModule;
-  accentColor: string;
+  themeIndex?: number;
   onClick: () => void;
   disabled?: boolean;
   done?: boolean;
 };
 
-export default function FoundationModuleCard({ module, accentColor, onClick, disabled, done }: Props) {
+export default function FoundationModuleCard({ module, themeIndex = 0, onClick, disabled, done }: Props) {
   const sub = moduleSubtitle(module);
-  const lightTop = accentColor === "#FFCE00";
+  const theme = getFoundationCardTheme(module.title, themeIndex);
 
   return (
     <div className="aif-foundation-card-slot">
@@ -43,25 +41,23 @@ export default function FoundationModuleCard({ module, accentColor, onClick, dis
         onClick={onClick}
         disabled={disabled}
         aria-label={`Learn about ${module.title}`}
+        style={{
+          ["--aif-foundation-soft" as string]: theme.soft,
+          ["--aif-foundation-accent" as string]: theme.accent,
+        }}
       >
-      <div className="aif-foundation-card-top" style={{ background: accentColor }}>
-        <span
-          className="aif-foundation-card-emoji"
-          style={{ filter: module.is_locked ? "grayscale(0.4)" : undefined }}
-        >
-          {module.is_locked ? "🔒" : module.emoji}
-        </span>
-      </div>
-      <div className="aif-foundation-card-body">
+        <div className="aif-foundation-card-badge">
+          {module.is_locked ? (
+            <span className="aif-foundation-card-lock" aria-hidden="true">🔒</span>
+          ) : (
+            <FoundationCardIcon name={theme.icon} />
+          )}
+        </div>
         <div className="aif-foundation-card-topic">{module.title}</div>
         <div className="aif-foundation-card-sub">{sub || "\u00A0"}</div>
-        <span
-          className="aif-foundation-card-cta"
-          style={lightTop ? { color: "#221D23" } : undefined}
-        >
+        <span className="aif-foundation-card-cta">
           {done ? "Done ✓" : "Learn →"}
         </span>
-      </div>
       </button>
     </div>
   );

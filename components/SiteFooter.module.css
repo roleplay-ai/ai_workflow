@@ -2,11 +2,11 @@
   width: 100%;
   background: #221D23;
   color: #fff;
-  padding: 34px 42px 24px;
+  padding: 34px var(--page-gutter) 24px;
 }
 
 .inner {
-  width: min(1440px, 100%);
+  width: var(--page-content-width);
   margin: 0 auto;
   display: grid;
   grid-template-columns: 1.12fr 0.88fr;
@@ -96,7 +96,7 @@
 }
 
 .bottom {
-  width: min(1440px, 100%);
+  width: var(--page-content-width);
   margin: 24px auto 0;
   padding-top: 18px;
   border-top: 1px solid rgba(255, 255, 255, 0.16);

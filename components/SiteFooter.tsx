@@ -36,8 +36,8 @@ export default function SiteFooter() {
           <div className={styles.linkgroup}>
             <h3>Nudgeable Products</h3>
             <div className={styles.linklist}>
-              <a href="https://www.nudgeable.ai" target="_blank" rel="noopener noreferrer">AI Roleplays</a>
-              <a href="https://www.nudgeable.ai" target="_blank" rel="noopener noreferrer">Nudge Engine</a>
+              <a href="https://www.nudgeable.ai/ai-role-play" target="_blank" rel="noopener noreferrer">AI Roleplays</a>
+              <a href="https://www.nudgeable.ai/nudgeengine" target="_blank" rel="noopener noreferrer">Nudge Engine</a>
             </div>
           </div>
         </div>

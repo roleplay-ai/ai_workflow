@@ -126,11 +126,18 @@
 /* ── Hero ────────────────────────────────────────────────────────────────── */
 
 .ndb-root .hero-shell {
-  padding: 22px 36px 12px;
+  padding: 34px 36px 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.ndb-root .hero-shell:has(.hero-select.is-open) {
+  z-index: 90;
 }
 
 .ndb-root .hero {
-  max-width: 1280px;
+  max-width: var(--page-max-width);
+  width: 100%;
   min-height: 420px;
   margin: 0 auto;
   background: var(--white);
@@ -148,6 +155,10 @@
 .ndb-root .hero-copy {
   position: relative;
   z-index: 4;
+}
+
+.ndb-root .hero:has(.hero-select.is-open) {
+  overflow: visible;
 }
 
 .ndb-root .hero::before {
@@ -228,6 +239,10 @@
 .ndb-root .hero-select {
   position: relative;
   min-width: 188px;
+}
+
+.ndb-root .hero-select.is-open {
+  z-index: 100;
 }
 
 .ndb-root .hero-select-trigger {
@@ -328,7 +343,7 @@
   top: calc(100% + 8px);
   left: 0;
   right: 0;
-  z-index: 30;
+  z-index: 100;
   min-width: 240px;
   max-height: 280px;
   overflow-y: auto;
@@ -950,9 +965,9 @@
 /* ── Content area ────────────────────────────────────────────────────────── */
 
 .ndb-root .content {
-  max-width: 1280px;
+  width: var(--page-content-width);
   margin: 0 auto;
-  padding: 0 36px 58px;
+  padding: 0 0 58px;
 }
 
 /* ── Filter panel ────────────────────────────────────────────────────────── */
@@ -1767,96 +1782,33 @@
   margin: 48px 0 24px;
 }
 
-.ndb-root .brief-card {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  min-height: 320px;
-  padding: 30px 32px;
-  border-radius: 24px;
-  background: linear-gradient(135deg, #191612, #211B1F 68%, #171218);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 24px 55px rgba(34, 29, 35, 0.22);
+.ndb-root .brief-news-card-link {
+  display: block;
   text-decoration: none;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  color: inherit;
 }
 
-.ndb-root .brief-card:hover {
+.ndb-root .brief-news-card-link:hover .brief-news-card {
   transform: translateY(-2px);
-  box-shadow: 0 28px 60px rgba(34, 29, 35, 0.28);
+  box-shadow: 0 32px 78px rgba(34, 29, 35, 0.16);
 }
 
-.ndb-root .brief-card-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 18px;
-  flex-wrap: wrap;
+.ndb-root .brief-news-card-link .brief-news-card {
+  max-width: none;
 }
 
-.ndb-root .brief-card-badge {
-  display: inline-flex;
-  padding: 8px 13px;
-  border-radius: 7px;
-  background: #221D23;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 950;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+.ndb-root .brief-news-card-link .brief-news-top {
+  min-height: 64px;
+  padding: 0 28px;
 }
 
-.ndb-root .brief-card-date {
-  color: #B9A995;
-  font-size: 13px;
-  font-weight: 700;
+.ndb-root .brief-news-card-link .brief-news-top h2 {
+  font-size: 24px;
 }
 
-.ndb-root .brief-card-title {
-  margin: 0 0 20px;
-  font-size: clamp(24px, 3vw, 31px);
-  line-height: 1.05;
-  font-weight: 950;
-  letter-spacing: -0.055em;
-  color: #fff;
-}
-
-.ndb-root .brief-card-list {
-  display: grid;
-  gap: 16px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.ndb-root .brief-card-list li {
-  position: relative;
-  padding-left: 24px;
-  color: #C9B9A2;
-  font-size: 14px;
-  line-height: 1.55;
-  font-weight: 650;
-}
-
-.ndb-root .brief-card-list li::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 9px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #D48742;
-}
-
-.ndb-root .brief-card-link {
-  display: inline-flex;
-  color: #FFCE00;
-  font-weight: 950;
-  font-size: 13px;
-  margin-top: 24px;
-  text-decoration: none;
+.ndb-root .brief-news-card-link .brief-news-date-pill {
+  padding: 10px 18px;
+  font-size: 15px;
 }
 
 /* ── AI Mastery course section ───────────────────────────────────────────── */
@@ -2241,7 +2193,7 @@
 }
 
 .ndb-root .nf-inner {
-  width: min(1280px, calc(100% - 72px));
+  width: var(--page-content-width);
   margin: 0 auto;
   padding: 20px 0;
 }

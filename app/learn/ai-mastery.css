@@ -177,6 +177,53 @@
 
 /* ── Course journey ── */
 
+.aim-journey-part-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 20px;
+  border: 0;
+  border-bottom: 1px solid #E9E4DC;
+  background: linear-gradient(180deg, #fff, #FEFCFA);
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.aim-journey-part-header:hover {
+  background: linear-gradient(180deg, #FEFCFA, #F7F5F1);
+}
+
+.aim-journey-part-header[aria-expanded="false"] {
+  border-bottom: 0;
+}
+
+.aim-journey-toggle {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: #F7F5F1;
+  border: 1px solid #E9E4DC;
+  color: #544E56;
+  flex-shrink: 0;
+  transition: transform 0.2s ease, background 0.15s ease;
+}
+
+.aim-journey-toggle--expanded {
+  transform: rotate(180deg);
+}
+
+.aim-journey-part-header:hover .aim-journey-toggle {
+  background: #FFF6CF;
+  border-color: #F0D978;
+}
+
 .aim-journey-node {
   width: 40px;
   height: 40px;
@@ -235,17 +282,6 @@
 
 .aim-journey-module-title--locked {
   font-size: 14px;
-}
-
-.aim-journey-unlocked-badge {
-  white-space: nowrap;
-  padding: 7px 10px;
-  border-radius: 999px;
-  background: #FFCE00;
-  color: #221D23;
-  border: 1px solid rgba(34, 29, 35, 0.1);
-  font-size: 11px;
-  font-weight: 700;
 }
 
 .aim-journey-locked-badge {

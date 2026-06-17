@@ -1,0 +1,123 @@
+.brief-news-card {
+  width: 100%;
+  max-width: 760px;
+  background: #ffffff;
+  border: 1.5px solid #dcd3c6;
+  border-radius: 30px;
+  overflow: hidden;
+  box-shadow: 0 28px 70px rgba(34, 29, 35, 0.12);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.brief-news-top {
+  min-height: 96px;
+  background: #221d23;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 0 36px;
+}
+
+.brief-news-top h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 32px;
+  line-height: 1.1;
+  font-weight: 950;
+  letter-spacing: -0.2px;
+}
+
+.brief-news-date-pill {
+  flex: 0 0 auto;
+  background: #ffce00;
+  color: #221d23;
+  border-radius: 999px;
+  padding: 14px 22px;
+  font-size: 19px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.brief-news-list {
+  background: #ffffff;
+}
+
+.brief-news-item {
+  padding: 26px 32px;
+  border-bottom: 1px solid #eee7dc;
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 20px;
+  align-items: center;
+}
+
+.brief-news-item:last-child {
+  border-bottom: 0;
+}
+
+.brief-news-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 15px;
+  background: #ffce00;
+  color: #221d23;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid rgba(34, 29, 35, 0.16);
+}
+
+.brief-news-icon svg {
+  width: 24px;
+  height: 24px;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.brief-news-item h3 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.18;
+  font-weight: 400;
+  letter-spacing: -0.2px;
+  color: #221d23;
+}
+
+.brief-news-empty {
+  padding: 48px 32px;
+  text-align: center;
+  color: #746f78;
+  font-size: 18px;
+  font-weight: 650;
+}
+
+@media (max-width: 560px) {
+  .brief-news-top {
+    min-height: auto;
+    padding: 24px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .brief-news-top h2 {
+    font-size: 28px;
+  }
+
+  .brief-news-date-pill {
+    font-size: 16px;
+    padding: 12px 18px;
+  }
+
+  .brief-news-item {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 24px;
+  }
+
+  .brief-news-item h3 {
+    font-size: 21px;
+  }
+}

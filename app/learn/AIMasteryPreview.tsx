@@ -4,16 +4,16 @@ import { useState } from "react";
 import AppNav from "@/components/AppNav";
 import { COURSE_PARTS } from "@/lib/ai-mastery-course";
 import SiteFooter from "@/components/SiteFooter";
+import { PAGE_CONTENT_WIDTH } from "@/lib/layout";
 
-// Modules available as free preview
-const UNLOCKED_IDS = new Set([
-  "ch2-m3-the-ai-mindset",
-  "ch3-m3-prompting-techniques",
-  "ch4-m3-document-analysis",
-  "ch5-m1-ai-meets-your-spreadsheet",
-  "ch6-m3-vibe-coding",
-  "ch8-m1-your-ai-learning-plan",
-]);
+// Journey cards 01 and 02 expanded by default; all their modules unlocked for guests
+const GUEST_PREVIEW_PART_INDICES = new Set([0, 1]);
+
+const UNLOCKED_IDS = new Set(
+  COURSE_PARTS
+    .filter((_, idx) => GUEST_PREVIEW_PART_INDICES.has(idx))
+    .flatMap(part => part.modules.map(mod => mod.id))
+);
 
 const PART_KICKERS: Record<number, string> = {
   0: "Begin the course",
@@ -29,6 +29,8 @@ const PART_KICKERS: Record<number, string> = {
 };
 
 const LOGIN_URL = "/login?redirect=/learn";
+
+const DEFAULT_EXPANDED_PARTS = GUEST_PREVIEW_PART_INDICES;
 
 // ── Laptop decorative mockup ───────────────────────────────────────────────────
 
@@ -180,6 +182,16 @@ function LaptopMockup() {
 
 export default function AIMasteryPreview() {
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
+  const [expandedParts, setExpandedParts] = useState<Set<number>>(() => new Set(DEFAULT_EXPANDED_PARTS));
+
+  const togglePart = (partIdx: number) => {
+    setExpandedParts(prev => {
+      const next = new Set(prev);
+      if (next.has(partIdx)) next.delete(partIdx);
+      else next.add(partIdx);
+      return next;
+    });
+  };
 
   // Guest clicked an unlocked preview module — show just that chapter
   if (selectedModuleId) {
@@ -224,7 +236,7 @@ export default function AIMasteryPreview() {
     <>
       <AppNav activePage="learn" />
 
-      <main style={{ width: "min(1280px,calc(100% - 72px))", margin: "34px auto 0" }}>
+      <main style={{ width: PAGE_CONTENT_WIDTH, margin: "34px auto 0" }}>
 
         {/* ── Hero ── */}
         <section className="aim-hero" style={{
@@ -302,7 +314,8 @@ export default function AIMasteryPreview() {
 
             {COURSE_PARTS.map((part, partIdx) => {
               const unlockedCount = part.modules.filter(m => UNLOCKED_IDS.has(m.id)).length;
-              const metaLabel = unlockedCount > 0 ? `${unlockedCount} unlocked` : "Full access";
+              const metaLabel = unlockedCount > 0 ? `${unlockedCount} unlocked` : "Need login";
+              const isExpanded = expandedParts.has(partIdx);
 
               return (
                 <article key={part.number} style={{ position: "relative", display: "grid", gridTemplateColumns: "60px 1fr", gap: 18 }}>
@@ -313,13 +326,15 @@ export default function AIMasteryPreview() {
 
                   {/* Card */}
                   <div style={{ background: "#fff", border: "1px solid #E9E4DC", borderRadius: 24, boxShadow: "0 12px 34px rgba(34,29,35,.06)", overflow: "hidden" }}>
-                    {/* Part header */}
-                    <div style={{
-                      display: "flex", alignItems: "flex-start", justifyContent: "space-between",
-                      gap: 16, padding: 20, borderBottom: "1px solid #E9E4DC",
-                      background: "linear-gradient(180deg,#fff,#FEFCFA)",
-                    }}>
-                      <div style={{ display: "flex", gap: 13, alignItems: "flex-start" }}>
+                    {/* Part header — click to expand/collapse */}
+                    <button
+                      type="button"
+                      className="aim-journey-part-header"
+                      aria-expanded={isExpanded}
+                      aria-controls={`aim-journey-modules-${part.number}`}
+                      onClick={() => togglePart(partIdx)}
+                    >
+                      <div style={{ display: "flex", gap: 13, alignItems: "flex-start", textAlign: "left" }}>
                         <div style={{ width: 46, height: 46, borderRadius: 16, background: "#221D23", color: "#fff", display: "grid", placeItems: "center", fontSize: 22, flexShrink: 0 }}>
                           {part.icon}
                         </div>
@@ -332,18 +347,24 @@ export default function AIMasteryPreview() {
                           </h3>
                         </div>
                       </div>
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end", flexShrink: 0 }}>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end", flexShrink: 0, alignItems: "center" }}>
                         <span className="aim-journey-badge">
                           {part.modules.length} lesson{part.modules.length !== 1 ? "s" : ""}
                         </span>
                         <span className="aim-journey-badge">
                           {metaLabel}
                         </span>
+                        <span className={`aim-journey-toggle${isExpanded ? " aim-journey-toggle--expanded" : ""}`} aria-hidden="true">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="6 9 12 15 18 9" />
+                          </svg>
+                        </span>
                       </div>
-                    </div>
+                    </button>
 
                     {/* Module rows */}
-                    <div>
+                    {isExpanded && (
+                    <div id={`aim-journey-modules-${part.number}`}>
                       {part.modules.map((mod, modIdx) => {
                         const isUnlocked = UNLOCKED_IDS.has(mod.id);
                         return (
@@ -374,12 +395,7 @@ export default function AIMasteryPreview() {
                             </div>
                             <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
                               {isUnlocked ? (
-                                <>
-                                  <span className="aim-journey-unlocked-badge">
-                                    Unlocked preview
-                                  </span>
-                                  <span className="aim-journey-preview-link">Preview →</span>
-                                </>
+                                <span className="aim-journey-preview-link">Preview →</span>
                               ) : (
                                 <>
                                   <span className="aim-journey-locked-badge">
@@ -393,6 +409,7 @@ export default function AIMasteryPreview() {
                         );
                       })}
                     </div>
+                    )}
                   </div>
                 </article>
               );
