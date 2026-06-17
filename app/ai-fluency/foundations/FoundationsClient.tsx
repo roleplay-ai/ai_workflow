@@ -67,10 +67,7 @@ export default function FoundationsClient({ modules, completedModuleIds, userNam
               fontSize: 12, fontWeight: 800, letterSpacing: ".1em",
               textTransform: "uppercase", color: "#221D23",
             }}>Learn</span>
-            <h1 style={{
-              margin: "4px 0 0", fontSize: 34, lineHeight: 1.03,
-              fontWeight: 950, letterSpacing: "-.055em",
-            }}>AI Foundations</h1>
+            <h1 className="aif-page-title">AI Foundations</h1>
             <p style={{ margin: "8px 0 0", color: "#6B6670", fontSize: 14, fontWeight: 650, lineHeight: 1.45 }}>
               Short explainers that build practical AI fluency.
             </p>

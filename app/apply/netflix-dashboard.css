@@ -199,7 +199,7 @@
 .ndb-root .hero h1 {
   margin: 0;
   font-size: clamp(42px, 5.4vw, 72px);
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.06;
   letter-spacing: -0.05em;
   max-width: 650px;
@@ -993,6 +993,7 @@
 .ndb-root .filter-head h2 {
   margin: 0;
   font-size: 17px;
+  font-weight: 600;
   letter-spacing: -0.04em;
 }
 
@@ -1124,7 +1125,7 @@
 .ndb-root .rail-title h2 {
   margin: 0;
   font-size: 26px;
-  font-weight: 900;
+  font-weight: 600;
   letter-spacing: -0.06em;
 }
 
@@ -1807,6 +1808,7 @@
 
 .ndb-root .brief-news-card-link .brief-news-top h2 {
   font-size: 20px;
+  font-weight: 600;
 }
 
 .ndb-root .brief-news-card-link .brief-news-date-pill {
@@ -1881,7 +1883,7 @@
 .ndb-root .mastery-course-title {
   margin: 0 0 10px;
   font-size: 26px;
-  font-weight: 950;
+  font-weight: 600;
   line-height: 1.1;
   letter-spacing: -0.04em;
   color: #221D23;
@@ -2074,6 +2076,7 @@
   margin: 0;
   max-width: 620px;
   font-size: clamp(28px, 3.2vw, 44px);
+  font-weight: 600;
   line-height: 0.97;
   letter-spacing: -0.07em;
   color: var(--white);
@@ -2241,7 +2244,7 @@
   font-size: 26px;
   line-height: 1.1;
   letter-spacing: -.055em;
-  font-weight: 950;
+  font-weight: 600;
   color: var(--dark);
 }
 

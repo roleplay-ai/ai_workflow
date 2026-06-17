@@ -136,7 +136,7 @@ function ToolsSection({ tools, onOpenTool }: { tools: FluencyTool[]; onOpenTool:
             color: "#fff", fontSize: 10, fontWeight: 950, textTransform: "uppercase",
             letterSpacing: ".10em", marginBottom: 8,
           }}>Tools</span>
-          <h2 style={{ margin: 0, fontSize: 32, lineHeight: 1.03, fontWeight: 950, letterSpacing: "-.055em" }}>Most Useful Tools</h2>
+          <h2 className="aif-section-title">Most Useful Tools</h2>
           <p style={{ margin: "8px 0 0", color: "#6B6670", fontSize: 14, fontWeight: 650, lineHeight: 1.45 }}>AI products worth trying for real work.</p>
         </div>
         <a href="/know/tools" style={{ fontSize: 13, fontWeight: 950, color: "#FF4B1F", whiteSpace: "nowrap", textDecoration: "none" }}>Browse tools →</a>
@@ -269,7 +269,7 @@ function Carousel({
               letterSpacing: ".10em", marginBottom: 8,
             }}>{label}</span>
           )}
-          <h2 style={{ margin: 0, fontSize: 32, lineHeight: 1.03, fontWeight: 950, letterSpacing: "-.055em" }}>{title}</h2>
+          <h2 className="aif-section-title">{title}</h2>
           <p style={{ margin: "8px 0 0", color: "#6B6670", fontSize: 14, fontWeight: 650, lineHeight: 1.45 }}>{subtitle}</p>
         </div>
         <a href={seeAllHref ?? "#"} style={{ fontSize: 13, fontWeight: 950, color: "#FF4B1F", whiteSpace: "nowrap", textDecoration: "none" }}>{seeAllLabel}</a>
@@ -398,7 +398,7 @@ export default function AIFluencyClient({
                   color: "#fff", fontSize: 10, fontWeight: 950, textTransform: "uppercase",
                   letterSpacing: ".10em", marginBottom: 8,
                 }}>Learn</span>
-                <h2 style={{ margin: 0, fontSize: 32, lineHeight: 1.03, fontWeight: 950, letterSpacing: "-.055em" }}>AI Foundations</h2>
+                <h2 className="aif-section-title">AI Foundations</h2>
                 <p style={{ margin: "8px 0 0", color: "#6B6670", fontSize: 14, fontWeight: 650, lineHeight: 1.45 }}>
                   Short explainers that build practical AI fluency.
                 </p>
@@ -430,7 +430,7 @@ export default function AIFluencyClient({
                 color: "#fff", fontSize: 10, fontWeight: 950, textTransform: "uppercase",
                 letterSpacing: ".10em", marginBottom: 8,
               }}>Videos</span>
-              <h2 style={{ margin: 0, fontSize: 32, lineHeight: 1.03, fontWeight: 950, letterSpacing: "-.055em" }}>Latest Launches</h2>
+              <h2 className="aif-section-title">Latest Launches</h2>
               <p style={{ margin: "8px 0 0", color: "#6B6670", fontSize: 14, fontWeight: 650, lineHeight: 1.45 }}>
                 Short videos on new launches across AI tools.
               </p>
@@ -457,7 +457,7 @@ export default function AIFluencyClient({
                 position: "absolute", left: 0, top: 4, width: 7, height: 58,
                 borderRadius: 999, background: "#FFCE00", border: "1px solid rgba(34,29,35,.18)",
               }} />
-              <h2 style={{ margin: 0, fontSize: 32, lineHeight: 1.03, fontWeight: 950, letterSpacing: "-.055em" }}>
+              <h2 className="aif-section-title">
                 AI Tool Guides
               </h2>
               <p style={{ margin: "8px 0 0", color: "#6B6670", fontSize: 14, fontWeight: 650, lineHeight: 1.45 }}>
