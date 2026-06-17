@@ -3,6 +3,7 @@
 import { useState } from "react";
 import AppNav from "@/components/AppNav";
 import { COURSE_PARTS } from "@/lib/ai-mastery-course";
+import SiteFooter from "@/components/SiteFooter";
 
 // Modules available as free preview
 const UNLOCKED_IDS = new Set([
@@ -425,6 +426,8 @@ export default function AIMasteryPreview() {
         </section>
 
       </main>
+
+      <SiteFooter />
     </>
   );
 }

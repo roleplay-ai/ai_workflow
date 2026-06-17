@@ -3,6 +3,7 @@
 import { useState } from "react";
 import AppNav from "@/components/AppNav";
 import ToolModal, { type ToolModalTool } from "../ToolModal";
+import SiteFooter from "@/components/SiteFooter";
 
 type FluencyTool = ToolModalTool;
 
@@ -186,6 +187,8 @@ export default function AllToolsClient({ tools, userName, isAdmin }: Props) {
           </div>
         )}
       </main>
+
+      <SiteFooter />
 
       {selectedTool && (
         <ToolModal tool={selectedTool} onClose={() => setSelectedTool(null)} />
