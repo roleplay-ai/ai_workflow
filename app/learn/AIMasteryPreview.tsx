@@ -4,6 +4,7 @@ import { useState } from "react";
 import AppNav from "@/components/AppNav";
 import { COURSE_PARTS } from "@/lib/ai-mastery-course";
 import SiteFooter from "@/components/SiteFooter";
+import { PAGE_CONTENT_WIDTH } from "@/lib/layout";
 
 // Modules available as free preview
 const UNLOCKED_IDS = new Set([
@@ -224,7 +225,7 @@ export default function AIMasteryPreview() {
     <>
       <AppNav activePage="learn" />
 
-      <main style={{ width: "min(1280px,calc(100% - 72px))", margin: "34px auto 0" }}>
+      <main style={{ width: PAGE_CONTENT_WIDTH, margin: "34px auto 0" }}>
 
         {/* ── Hero ── */}
         <section className="aim-hero" style={{

@@ -92,7 +92,7 @@ export default function AppNav({ activePage, userName, isAdmin }: Props) {
   async function handleSignOut() {
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push("/login");
+    router.push("/apply");
     router.refresh();
   }
 

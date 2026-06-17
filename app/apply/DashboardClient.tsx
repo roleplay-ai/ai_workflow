@@ -7,6 +7,7 @@ import { formatToolLabel, normalizeActivityTools } from "@/lib/tools";
 import ToolIcon from "@/components/ToolIcon";
 import AppNav from "@/components/AppNav";
 import SiteFooter from "@/components/SiteFooter";
+import BriefNewsCard from "@/components/BriefNewsCard";
 import { APP_FONT } from "@/lib/fonts";
 import ActivityCard, { type CardVariant } from "./ActivityCard";
 import "./netflix-dashboard.css";
@@ -746,31 +747,18 @@ function toolInitials(tool: string): string {
 
 const TOTAL_COURSE_MODULES = 30;
 
-function formatBriefDate(d: string) {
-  return new Date(d + "T12:00:00").toLocaleDateString("en-US", {
-    month: "short", day: "numeric", year: "numeric",
-  });
-}
-
 function NewsBriefCard({ brief }: { brief: Brief }) {
-  const items = [...brief.fluency_brief_items].sort((a, b) => a.sort_order - b.sort_order).slice(0, 3);
-
   return (
     <section className="brief-card-section">
-      <Link href="/know" className="brief-card">
-        <div>
-          <div className="brief-card-header">
-            <span className="brief-card-badge">Nudgeable Brief</span>
-            <span className="brief-card-date">{formatBriefDate(brief.published_date)}</span>
-          </div>
-          <h2 className="brief-card-title">{brief.title}</h2>
-          <ul className="brief-card-list">
-            {items.map((item, i) => (
-              <li key={item.id ?? i}>{item.content}</li>
-            ))}
-          </ul>
+      <div className="rail-header" style={{ marginBottom: 30 }}>
+        <div className="rail-title">
+          <span className="section-label">Updated every week</span>
+          <h2>Stay current with AI</h2>
+          <p>Latest AI news, tools, videos, and practical updates, curated for people using AI at work.</p>
         </div>
-        <span className="brief-card-link">Explore Know →</span>
+      </div>
+      <Link href="/know" className="brief-news-card-link">
+        <BriefNewsCard items={brief.fluency_brief_items} />
       </Link>
     </section>
   );

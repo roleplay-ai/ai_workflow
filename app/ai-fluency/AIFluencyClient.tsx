@@ -18,6 +18,8 @@ import FoundationCardsCarousel from "./FoundationCardsCarousel";
 import ToolGuideCard, { type ToolGuide, resolveGuideToolSlug } from "./ToolGuideCard";
 import { normalizeToolSlug } from "@/lib/tools";
 import SiteFooter from "@/components/SiteFooter";
+import BriefNewsCard from "@/components/BriefNewsCard";
+import { PAGE_CONTENT_WIDTH } from "@/lib/layout";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -81,12 +83,6 @@ const TOOL_GUIDE_COLORS = [
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatDate(d: string) {
-  return new Date(d + "T12:00:00").toLocaleDateString("en-US", {
-    month: "short", day: "numeric", year: "numeric",
-  });
-}
 
 // ── Tools section (filterable + paginated) ────────────────────────────────────
 
@@ -183,8 +179,8 @@ function ToolsSection({ tools, onOpenTool }: { tools: FluencyTool[]; onOpenTool:
                 key={t.id}
                 className="aif-product-card"
                 style={{
-                  scrollSnapAlign: "start", height: 258, borderRadius: 20,
-                  padding: "18px 18px 16px", color: "#221D23",
+                  scrollSnapAlign: "start", height: 220, borderRadius: 20,
+                  padding: "16px 16px 14px", color: "#221D23",
                   display: "flex", flexDirection: "column", justifyContent: "space-between",
                   overflow: "hidden", position: "relative", background: "#fff",
                   border: "1px solid #E9E4DC", boxShadow: "0 18px 45px rgba(34,29,35,.08)",
@@ -196,7 +192,7 @@ function ToolsSection({ tools, onOpenTool }: { tools: FluencyTool[]; onOpenTool:
                   <div style={{ color: accent, fontSize: 11, fontWeight: 950, letterSpacing: ".08em", textTransform: "uppercase" }}>
                     {t.category_label}
                   </div>
-                  <div style={{ display: "flex", gap: 12, alignItems: "center", margin: "12px 0" }}>
+                  <div style={{ display: "flex", gap: 12, alignItems: "center", margin: "8px 0" }}>
                     <span style={{
                       width: 42, height: 42, borderRadius: 12, flexShrink: 0,
                       background: t.color ?? "#FFCE00",
@@ -208,12 +204,12 @@ function ToolsSection({ tools, onOpenTool }: { tools: FluencyTool[]; onOpenTool:
                   </div>
                   <p style={{
                     margin: 0, fontSize: 12, lineHeight: 1.38, fontWeight: 650, color: "#514B53",
-                    display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden",
+                    display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
                   }}>{t.description}</p>
                 </div>
 
                 <div style={{
-                  position: "relative", zIndex: 1, paddingTop: 12,
+                  position: "relative", zIndex: 1, paddingTop: 10,
                   borderTop: "1px solid #E9E4DC",
                 }}>
                   {t.pricing && (
@@ -311,10 +307,6 @@ export default function AIFluencyClient({
   brief, modules, videos, tools, toolGuides, deepDives, toolLogos, completedModuleIds,
   isLoggedIn, userName, isAdmin, viewCounts = {},
 }: Props) {
-  const sortedItems = brief
-    ? [...brief.fluency_brief_items].sort((a, b) => a.sort_order - b.sort_order)
-    : [];
-
   const [completedIds, setCompletedIds] = useState<string[]>(completedModuleIds);
   const [openModule, setOpenModule] = useState<ModuleData | null>(null);
   const [htmlModule, setHtmlModule] = useState<FoundationModule | null>(null);
@@ -362,85 +354,32 @@ export default function AIFluencyClient({
       <AppNav activePage="know" userName={userName} isAdmin={isAdmin} />
 
       {/* ── Page ── */}
-      <main style={{ width: "min(1280px,calc(100% - 72px))", margin: "34px auto 0" }}>
+      <main style={{ width: PAGE_CONTENT_WIDTH, margin: "34px auto 0" }}>
 
         {/* ── Hero ── */}
-        <section className="aif-hero" style={{
-          position: "relative", minHeight: 520, display: "grid",
-          gridTemplateColumns: ".9fr 1.1fr", gap: 34, padding: 44,
-          border: "1px solid #E9E4DC", borderRadius: 28, overflow: "hidden",
-          background: "#fff", boxShadow: "0 1px 0 rgba(34,29,35,.04)",
-        }}>
-          {/* Decorative circle */}
-          <div style={{
-            position: "absolute", right: -100, top: -130, width: 430, height: 430,
-            borderRadius: "50%", background: "#FFF6CF", zIndex: 0, pointerEvents: "none",
-          }} />
-
-          {/* Copy */}
-          <div style={{ position: "relative", zIndex: 1 }}>
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 13px",
-              borderRadius: 999, background: "#fff", border: "1px solid #EAD993",
-              fontSize: 12, fontWeight: 900, color: "#221D23", marginBottom: 18,
-            }}>
-              <span style={{
-                width: 7, height: 7, borderRadius: "50%", background: "#FFCE00",
-                outline: "2px solid #221D23", display: "inline-block",
-              }} />
-              Updated daily
+        <section className="aif-hero">
+          <div className="aif-hero-left">
+            <div className="aif-hero-pill">
+              <span className="aif-hero-pill-dot" />
+              Updated every week
             </div>
 
-            <h1>Know</h1>
+            <h1>Stay current with AI</h1>
 
             <p className="aif-hero-desc">
-              Stay current with AI news, useful products, practical tool updates,
-              and the real questions shaping work.
+              Latest AI news, tools, videos, and practical updates, curated for people using AI at work.
             </p>
 
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 24 }}>
-              {["Videos", "Products", "AI Foundations", "Tool Guides"].map(tag => (
-                <span key={tag} style={{
-                  display: "inline-flex", alignItems: "center", borderRadius: 999,
-                  background: "#F7F5F1", border: "1px solid #E9E4DC",
-                  padding: "10px 13px", fontSize: 12, fontWeight: 900, color: "#514B53",
-                }}>{tag}</span>
-              ))}
+            <div className="aif-hero-actions">
+              <a className="aif-hero-btn" href="#videos">Explore latest updates →</a>
             </div>
-
-            <a className="aif-btn-primary" href="#videos" style={{
-              display: "inline-flex", alignItems: "center", justifyContent: "center",
-              padding: "13px 20px", borderRadius: 999, background: "#FFCE00",
-              color: "#221D23", border: "1px solid rgba(34,29,35,.10)",
-              fontWeight: 950, textDecoration: "none", fontSize: 14,
-            }}>Explore Know →</a>
           </div>
 
-          {/* Brief card */}
-          <div style={{ position: "relative", zIndex: 1 }}>
+          <div className="aif-hero-right">
             {brief ? (
-              <article className="aif-brief-card">
-                <div>
-                  <div className="aif-brief-header">
-                    <span className="aif-brief-badge">Nudgeable Brief</span>
-                    <span className="aif-brief-date">{formatDate(brief.published_date)}</span>
-                  </div>
-
-                  <h2 className="aif-brief-title">{brief.title}</h2>
-
-                  <ul className="aif-brief-list">
-                    {sortedItems.map((item, i) => (
-                      <li key={i}>{item.content}</li>
-                    ))}
-                  </ul>
-                </div>
-                <a href="#videos" className="aif-brief-link">Watch video updates →</a>
-              </article>
+              <BriefNewsCard items={brief.fluency_brief_items} />
             ) : (
-              <div style={{
-                minHeight: 420, borderRadius: 24, background: "#F7F2E9",
-                display: "grid", placeItems: "center", color: "#6B6670", fontSize: 14, fontWeight: 700,
-              }}>No brief available</div>
+              <BriefNewsCard items={[]} />
             )}
           </div>
         </section>
