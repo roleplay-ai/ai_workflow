@@ -1,9 +1,9 @@
 "use client";
 
 import { useRef } from "react";
-import FoundationModuleCard, { MODULE_CARD_COLORS, type FoundationModule } from "./FoundationModuleCard";
+import FoundationModuleCard, { type FoundationModule } from "./FoundationModuleCard";
 
-const SCROLL_STEP = 364; // ~2 cards (168px + 14px gap)
+const SCROLL_STEP = 442; // ~2 cards (205px + 16px gap)
 
 type Props = {
   modules: FoundationModule[];
@@ -32,7 +32,7 @@ export default function FoundationCardsCarousel({ modules, completedIds, loading
             <FoundationModuleCard
               key={mod.id}
               module={mod}
-              accentColor={MODULE_CARD_COLORS[i % MODULE_CARD_COLORS.length]}
+              themeIndex={i}
               done={completedIds.includes(mod.id)}
               disabled={mod.is_locked || loadingId === mod.id}
               onClick={() => onModuleClick(mod)}

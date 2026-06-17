@@ -178,7 +178,8 @@
   align-items: center;
   gap: 12px;
   overflow: visible;
-  padding-top: 4px;
+  padding-top: 8px;
+  padding-bottom: 8px;
 }
 
 .aif-carousel-rail .aif-slider {
@@ -759,7 +760,8 @@
 .aif-foundation-scroll {
   overflow-x: auto;
   overflow-y: visible;
-  padding-bottom: 4px;
+  padding: 12px 0 20px;
+  margin: -12px 0 -20px;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -771,39 +773,42 @@
 
 .aif-foundation-row {
   display: flex;
-  gap: 14px;
+  gap: 16px;
   width: max-content;
   align-items: flex-start;
 }
 
 .aif-foundation-card-slot {
   flex-shrink: 0;
-  padding: 6px 8px 10px 6px;
+  width: 205px;
+  padding-top: 4px;
+  padding-bottom: 8px;
 }
 
 .aif-foundation-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(205px, 1fr));
+  gap: 16px;
+  padding-top: 6px;
+  padding-bottom: 12px;
 }
 
 .aif-foundation-card {
-  width: 168px;
+  width: 100%;
+  min-height: 188px;
   border-radius: 16px;
-  border: 2.5px solid #221D23;
+  border: 1px solid #E8E0D1;
   background: #fff;
-  overflow: hidden;
-  box-shadow: 5px 5px 0 #221D23;
+  box-shadow: 0 10px 24px rgba(34, 29, 35, 0.06);
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
   text-decoration: none;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   flex-shrink: 0;
   margin: 0;
-  padding: 0;
+  padding: 18px;
   appearance: none;
   -webkit-appearance: none;
   font-family: inherit;
@@ -812,11 +817,13 @@
   line-height: normal;
   position: relative;
   z-index: 0;
+  color: #221D23;
 }
 
 .aif-foundation-card:hover:not(:disabled) {
-  transform: translate(-2px, -2px);
-  box-shadow: 7px 7px 0 #221D23;
+  transform: translateY(-2px);
+  border-color: rgba(34, 29, 35, 0.22);
+  box-shadow: 0 14px 28px rgba(34, 29, 35, 0.09);
   z-index: 1;
 }
 
@@ -825,62 +832,87 @@
   cursor: not-allowed;
 }
 
-.aif-foundation-card-top {
-  height: 84px;
+.aif-foundation-card-badge {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: var(--aif-foundation-soft, #F5F5F5);
+  margin-bottom: 16px;
   flex-shrink: 0;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 13px 13px 0 0;
 }
 
-.aif-foundation-card-emoji {
-  font-size: 40px;
+.aif-foundation-card-lock {
+  font-size: 24px;
   line-height: 1;
 }
 
-.aif-foundation-card-body {
-  padding: 14px 14px 16px;
-  border-top: 2.5px solid #221D23;
+.aif-foundation-card-icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+}
+
+.aif-foundation-card-icon svg {
+  width: 42px;
+  height: 42px;
+  overflow: visible;
+}
+
+.aif-foundation-icon-outline {
+  fill: #fff;
+  stroke: #221D23;
+  stroke-width: 3;
+}
+
+.aif-foundation-icon-accent {
+  fill: var(--aif-foundation-accent, #F68A29);
+  stroke: #221D23;
+  stroke-width: 3;
+}
+
+.aif-foundation-icon-accent-line {
+  fill: none;
+  stroke: var(--aif-foundation-accent, #F68A29);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.aif-foundation-icon-ink-line {
+  fill: none;
+  stroke: #221D23;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .aif-foundation-card-topic {
-  font-size: 13px;
-  font-weight: 800;
+  font-size: 16px;
+  font-weight: 900;
   color: #221D23;
-  margin: 0 0 4px;
-  line-height: 1.3;
-  min-height: calc(13px * 1.3 * 2);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  margin: 0 0 7px;
+  line-height: 1.18;
 }
 
 .aif-foundation-card-sub {
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 400;
   color: #6B6B6B;
-  line-height: 1.45;
-  margin: 0 0 12px;
-  min-height: calc(11px * 1.45 * 2);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  line-height: 1.42;
+  margin: 0 0 14px;
+  flex: 1;
 }
 
 .aif-foundation-card-cta {
   display: inline-flex;
+  width: fit-content;
   align-items: center;
-  gap: 4px;
   font-size: 10px;
-  font-weight: 800;
-  color: #221D23;
+  font-weight: 900;
+  color: var(--aif-foundation-accent, #F68A29);
   letter-spacing: 1px;
   text-transform: uppercase;
-  background: #FFCE00;
-  border-radius: 999px;
-  padding: 4px 10px;
 }
