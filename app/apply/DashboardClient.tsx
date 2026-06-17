@@ -171,14 +171,18 @@ function AllWorkflowsSection({
     selectedFunction ?? null,
     selectedTool ? formatToolLabel(selectedTool) : null,
   ].filter(Boolean) as string[];
-  const subtitle = `${filtered.length} workflow${filtered.length !== 1 ? "s" : ""}${activeFilters.length ? ` · ${activeFilters.join(" · ")}` : ""}`;
+
+  const description = activeFilters.length
+    ? `Showing ${filtered.length} workflow${filtered.length !== 1 ? "s" : ""} for ${activeFilters.join(" · ")}.`
+    : "Browse every guided workflow in the library. Filter by tool or function to find what fits your work.";
 
   if (filtered.length === 0) return (
     <section className="rail" id="all-workflows">
       <div className="rail-header">
         <div className="rail-title">
+          <span className="section-label">Full library</span>
           <h2>{title}</h2>
-          <p>No workflows found{activeFilters.length ? ` for "${activeFilters.join('" + "')}"` : ""}.</p>
+          <p>No workflows found{activeFilters.length ? ` for "${activeFilters.join('" + "')}"` : ""}. Try adjusting your filters above.</p>
         </div>
       </div>
     </section>
@@ -190,7 +194,7 @@ function AllWorkflowsSection({
         key={`${selectedFunction ?? "all"}-${selectedTool ?? "all"}`}
         label="Full library"
         title={title}
-        subtitle={""}
+        subtitle={description}
         activities={visibleItems}
         isLoggedIn={isLoggedIn}
         onSignUpRequired={onSignUpRequired}
