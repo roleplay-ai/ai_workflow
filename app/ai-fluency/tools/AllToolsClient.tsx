@@ -52,10 +52,7 @@ export default function AllToolsClient({ tools, userName, isAdmin }: Props) {
               color: "#fff", borderRadius: 999, marginBottom: 10,
               fontSize: 12, fontWeight: 800, letterSpacing: ".1em", textTransform: "uppercase",
             }}>Tools</span>
-            <h1 style={{
-              margin: "4px 0 0", fontSize: 34, lineHeight: 1.03,
-              fontWeight: 950, letterSpacing: "-.055em",
-            }}>Best AI Tools</h1>
+            <h1 className="aif-page-title">Best AI Tools</h1>
             <p style={{ margin: "8px 0 0", color: "#6B6670", fontSize: 14, fontWeight: 650, lineHeight: 1.45 }}>
               Vetted picks — with honest descriptions and who they're best for.
             </p>
