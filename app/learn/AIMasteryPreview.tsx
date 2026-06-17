@@ -140,7 +140,7 @@ function LaptopMockup() {
                     <div key={label} style={{ background: "#FAF8F4", border: "1px solid #E7E1D8", borderRadius: 14, padding: 10 }}>
                       <b style={{ display: "block", fontSize: 10, lineHeight: 1.15, marginBottom: 6 }}>{label}</b>
                       {[0, 1, 2].map(j => (
-                        <span key={j} style={{ display: "block", height: 6, borderRadius: 999, background: "#E1DCD5", marginTop: 5, width: ["92%","80%","70%"][j] }} />
+                        <span key={j} style={{ display: "block", height: 6, borderRadius: 999, background: "#E1DCD5", marginTop: 5, width: ["92%", "80%", "70%"][j] }} />
                       ))}
                     </div>
                   ))}
@@ -200,33 +200,33 @@ export default function AIMasteryPreview() {
         <AppNav activePage="learn" />
 
         <div className="aim-course-shell">
-        {/* Preview banner */}
-        <div className="aim-preview-bar">
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span className="aim-preview-badge">Preview</span>
-            <span className="aim-preview-text">
-              Sign in to access all chapters and track your progress.
-            </span>
+          {/* Preview banner */}
+          <div className="aim-preview-bar">
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span className="aim-preview-badge">Preview</span>
+              <span className="aim-preview-text">
+                Sign in to access all chapters and track your progress.
+              </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <a href={LOGIN_URL} className="aim-btn-primary" style={{ padding: "7px 16px", fontSize: 12 }}>
+                Sign in →
+              </a>
+              <button
+                onClick={() => setSelectedModuleId(null)}
+                className="aim-preview-back"
+              >← Course overview</button>
+            </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <a href={LOGIN_URL} className="aim-btn-primary" style={{ padding: "7px 16px", fontSize: 12 }}>
-              Sign in →
-            </a>
-            <button
-              onClick={() => setSelectedModuleId(null)}
-              className="aim-preview-back"
-            >← Course overview</button>
-          </div>
-        </div>
 
-        {/* Course iframe — sidebar + bottom-nav hidden, auto-jumped to this module */}
-        <iframe
-          key={selectedModuleId}
-          title="AI Mastery Chapter Preview"
-          src={`/api/ai-mastery/content?moduleId=${encodeURIComponent(selectedModuleId)}`}
-          style={{ flex: 1, width: "100%", border: 0, background: "#FEFCFA" }}
-          sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-        />
+          {/* Course iframe — sidebar + bottom-nav hidden, auto-jumped to this module */}
+          <iframe
+            key={selectedModuleId}
+            title="AI Mastery Chapter Preview"
+            src={`/api/ai-mastery/content?moduleId=${encodeURIComponent(selectedModuleId)}`}
+            style={{ flex: 1, width: "100%", border: 0, background: "#FEFCFA" }}
+            sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+          />
         </div>
       </>
     );
@@ -265,7 +265,7 @@ export default function AIMasteryPreview() {
 
             <ul className="aim-hero-list">
               {[
-                "Built from 40+ corporate workshops, not recycled theory.",
+
                 "30+ lessons, 8 hours, 6 months access.",
                 "Covers Prompt Engineering, Data, Writing, Agents, Vibe Coding, and AI Risks.",
                 "Updated regularly, no outdated content.",
@@ -364,51 +364,51 @@ export default function AIMasteryPreview() {
 
                     {/* Module rows */}
                     {isExpanded && (
-                    <div id={`aim-journey-modules-${part.number}`}>
-                      {part.modules.map((mod, modIdx) => {
-                        const isUnlocked = UNLOCKED_IDS.has(mod.id);
-                        return (
-                          <div
-                            key={mod.id}
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => { isUnlocked ? setSelectedModuleId(mod.id) : (window.location.href = LOGIN_URL); }}
-                            onKeyDown={e => { if (e.key === "Enter") { isUnlocked ? setSelectedModuleId(mod.id) : (window.location.href = LOGIN_URL); } }}
-                            style={{
-                              display: "grid", gridTemplateColumns: "1fr auto", gap: 16,
-                              alignItems: "center", padding: "15px 18px",
-                              borderBottom: modIdx < part.modules.length - 1 ? "1px solid #E9E4DC" : "none",
-                              cursor: "pointer",
-                              ...(isUnlocked ? {
-                                background: "linear-gradient(90deg,#FFF6CF 0%,#fff 64%)",
-                                boxShadow: "inset 6px 0 0 #FFCE00",
-                              } : {}),
-                            }}
-                          >
-                            <div style={{ minWidth: 0, opacity: isUnlocked ? 1 : 0.74 }}>
-                              <span className="aim-journey-module-code">
-                                {part.number === 0 ? "Start Here" : `Ch.${part.number} · M${modIdx + 1}`}
-                              </span>
-                              <strong className={`aim-journey-module-title ${isUnlocked ? "aim-journey-module-title--unlocked" : "aim-journey-module-title--locked"}`}>
-                                {mod.title}
-                              </strong>
+                      <div id={`aim-journey-modules-${part.number}`}>
+                        {part.modules.map((mod, modIdx) => {
+                          const isUnlocked = UNLOCKED_IDS.has(mod.id);
+                          return (
+                            <div
+                              key={mod.id}
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => { isUnlocked ? setSelectedModuleId(mod.id) : (window.location.href = LOGIN_URL); }}
+                              onKeyDown={e => { if (e.key === "Enter") { isUnlocked ? setSelectedModuleId(mod.id) : (window.location.href = LOGIN_URL); } }}
+                              style={{
+                                display: "grid", gridTemplateColumns: "1fr auto", gap: 16,
+                                alignItems: "center", padding: "15px 18px",
+                                borderBottom: modIdx < part.modules.length - 1 ? "1px solid #E9E4DC" : "none",
+                                cursor: "pointer",
+                                ...(isUnlocked ? {
+                                  background: "linear-gradient(90deg,#FFF6CF 0%,#fff 64%)",
+                                  boxShadow: "inset 6px 0 0 #FFCE00",
+                                } : {}),
+                              }}
+                            >
+                              <div style={{ minWidth: 0, opacity: isUnlocked ? 1 : 0.74 }}>
+                                <span className="aim-journey-module-code">
+                                  {part.number === 0 ? "Start Here" : `Ch.${part.number} · M${modIdx + 1}`}
+                                </span>
+                                <strong className={`aim-journey-module-title ${isUnlocked ? "aim-journey-module-title--unlocked" : "aim-journey-module-title--locked"}`}>
+                                  {mod.title}
+                                </strong>
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                                {isUnlocked ? (
+                                  <span className="aim-journey-preview-link">Preview →</span>
+                                ) : (
+                                  <>
+                                    <span className="aim-journey-locked-badge">
+                                      Locked
+                                    </span>
+                                    <span style={{ color: "#A49CA6", fontSize: 14 }}>🔒</span>
+                                  </>
+                                )}
+                              </div>
                             </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-                              {isUnlocked ? (
-                                <span className="aim-journey-preview-link">Preview →</span>
-                              ) : (
-                                <>
-                                  <span className="aim-journey-locked-badge">
-                                    Locked
-                                  </span>
-                                  <span style={{ color: "#A49CA6", fontSize: 14 }}>🔒</span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
                     )}
                   </div>
                 </article>

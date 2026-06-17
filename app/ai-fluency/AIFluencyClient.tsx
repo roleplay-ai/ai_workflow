@@ -359,10 +359,7 @@ export default function AIFluencyClient({
         {/* ── Hero ── */}
         <section className="aif-hero">
           <div className="aif-hero-left">
-            <div className="aif-hero-pill">
-              <span className="aif-hero-pill-dot" />
-              Updated every week
-            </div>
+            <div className="eyebrow"><span className="eyebrow-dot" /> Updated every week</div>
 
             <h1>Stay current with AI</h1>
 
