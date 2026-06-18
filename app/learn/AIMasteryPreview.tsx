@@ -43,14 +43,29 @@ function AccessRequestPopup({
   userName: string | null;
   userEmail: string | null;
 }) {
-  const [name,  setName]  = useState(userName  ?? "");
+  const [name, setName] = useState(userName ?? "");
   const [email, setEmail] = useState(userEmail ?? "");
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const subject = encodeURIComponent("AI Mastery Course – Access Request");
-  const body = encodeURIComponent(
-    `Hi Nudgeable team,\n\nI'd like to request full access to the AI Mastery course.\n\nName: ${name || "[your name]"}\nEmail: ${email || "[your email]"}\n\nPlease review and approve my access.\n\nThank you!`
-  );
-  const mailtoHref = `mailto:team@nudgeable.ai?subject=${subject}&body=${body}`;
+  async function handleSubmit() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/aimastery/request-access", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email }),
+      });
+      if (!res.ok) throw new Error("Something went wrong. Please try again.");
+      setSuccess(true);
+    } catch (e: any) {
+      setError(e.message ?? "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div
@@ -77,81 +92,103 @@ function AccessRequestPopup({
           aria-label="Close"
         >×</button>
 
-        <div style={{
-          width: 48, height: 48, borderRadius: "50%",
-          background: "#FFFAEB", border: "2px solid #FFCE00",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 22, marginBottom: 16,
-        }}>🔒</div>
-
-        <h2 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 900, letterSpacing: "-.03em" }}>
-          Request Full Access
-        </h2>
-        <p style={{ margin: "0 0 22px", fontSize: 13, color: "#6B6B6B" }}>
-          This course is by invitation only. Fill in your details and we'll open your email client with a pre-written message to our team.
-        </p>
-
-        <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 5, color: "#221D23" }}>
-          Your name
-        </label>
-        <input
-          value={name}
-          onChange={e => setName(e.target.value)}
-          placeholder="e.g. Jane Smith"
-          style={{
-            width: "100%", boxSizing: "border-box",
-            padding: "10px 12px", borderRadius: 8,
-            border: "1.5px solid #E8DFD2", fontSize: 14,
-            marginBottom: 14, outline: "none", fontFamily: "inherit",
-          }}
-        />
-
-        <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 5, color: "#221D23" }}>
-          Your email
-        </label>
-        <input
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          placeholder="e.g. jane@company.com"
-          type="email"
-          style={{
-            width: "100%", boxSizing: "border-box",
-            padding: "10px 12px", borderRadius: 8,
-            border: "1.5px solid #E8DFD2", fontSize: 14,
-            marginBottom: 6, outline: "none", fontFamily: "inherit",
-          }}
-        />
-
-        <p style={{ fontSize: 11, color: "#B0ABA5", margin: "0 0 22px" }}>
-          An email to <strong>team@nudgeable.ai</strong> will open in your mail client with these details pre-filled.
-        </p>
-
-        <div style={{ display: "flex", gap: 10 }}>
-          <button
-            onClick={onClose}
-            style={{
-              flex: 1, padding: "11px 0", borderRadius: 8,
-              border: "1.5px solid #E8DFD2", background: "#fff",
-              fontSize: 14, fontWeight: 700, cursor: "pointer", color: "#221D23",
-              fontFamily: "inherit",
-            }}
-          >
-            Cancel
-          </button>
-          <a
-            href={mailtoHref}
-            onClick={onClose}
-            style={{
-              flex: 2, padding: "11px 0", borderRadius: 8,
-              background: "#FFCE00", color: "#221D23", textDecoration: "none",
-              fontSize: 14, fontWeight: 800, cursor: "pointer",
+        {success ? (
+          <>
+            <div style={{
+              width: 52, height: 52, borderRadius: "50%",
+              background: "rgba(35,206,104,.12)", border: "2px solid #23CE6B",
               display: "flex", alignItems: "center", justifyContent: "center",
-              letterSpacing: "-.02em", fontFamily: "inherit",
-            }}
-          >
-            Send Request →
-          </a>
-        </div>
+              fontSize: 24, marginBottom: 16,
+            }}>✓</div>
+            <h2 style={{ margin: "0 0 8px", fontSize: 20, fontWeight: 900, letterSpacing: "-.03em" }}>
+              Request sent!
+            </h2>
+            <p style={{ margin: "0 0 24px", fontSize: 13, color: "#6B6B6B" }}>
+              Our team will review your request and approve your access shortly.
+            </p>
+            <button
+              onClick={onClose}
+              style={{
+                width: "100%", padding: "11px 0", borderRadius: 8,
+                background: "#221D23", color: "#fff", border: "none",
+                fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
+              }}
+            >Got it</button>
+          </>
+        ) : (
+          <>
+            <div style={{
+              width: 48, height: 48, borderRadius: "50%",
+              background: "#FFFAEB", border: "2px solid #FFCE00",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 22, marginBottom: 16,
+            }}>🔒</div>
+
+            <h2 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 900, letterSpacing: "-.03em" }}>
+              Request Full Access
+            </h2>
+            <p style={{ margin: "0 0 22px", fontSize: 13, color: "#6B6B6B" }}>
+              This course is by invitation only. Submit your details and our team will approve your access.
+            </p>
+
+            <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 5, color: "#221D23" }}>
+              Your name
+            </label>
+            <input
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="e.g. Jane Smith"
+              style={{
+                width: "100%", boxSizing: "border-box",
+                padding: "10px 12px", borderRadius: 8,
+                border: "1.5px solid #E8DFD2", fontSize: 14,
+                marginBottom: 14, outline: "none", fontFamily: "inherit",
+              }}
+            />
+
+            <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 5, color: "#221D23" }}>
+              Email
+            </label>
+            <div style={{
+              width: "100%", boxSizing: "border-box",
+              padding: "10px 12px", borderRadius: 8,
+              border: "1.5px solid #E8DFD2", fontSize: 14,
+              marginBottom: 22, color: "#6B6B6B", background: "#F8F8F6",
+              fontFamily: "inherit",
+            }}>
+              {email || "—"}
+            </div>
+
+            {error && (
+              <p style={{ fontSize: 12, color: "#C0392B", margin: "0 0 12px" }}>{error}</p>
+            )}
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={onClose}
+                disabled={loading}
+                style={{
+                  flex: 1, padding: "11px 0", borderRadius: 8,
+                  border: "1.5px solid #E8DFD2", background: "#fff",
+                  fontSize: 14, fontWeight: 700, cursor: "pointer", color: "#221D23",
+                  fontFamily: "inherit", opacity: loading ? 0.5 : 1,
+                }}
+              >Cancel</button>
+              <button
+                onClick={handleSubmit}
+                disabled={loading || !name.trim() || !email.trim()}
+                style={{
+                  flex: 2, padding: "11px 0", borderRadius: 8,
+                  background: "#FFCE00", color: "#221D23", border: "none",
+                  fontSize: 14, fontWeight: 800,
+                  cursor: loading || !name.trim() || !email.trim() ? "default" : "pointer",
+                  letterSpacing: "-.02em", fontFamily: "inherit",
+                  opacity: loading || !name.trim() || !email.trim() ? 0.6 : 1,
+                }}
+              >{loading ? "Sending…" : "Send Request →"}</button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -426,9 +463,47 @@ export default function AIMasteryPreview({ isLoggedIn = false, userName = null, 
             </p>
           </div>
 
-          {/* Laptop mockup */}
+          {/* Laptop mockup + pricing card */}
           <div style={{ position: "relative", zIndex: 1, display: "grid", alignContent: "center" }}>
             <LaptopMockup />
+
+            {/* Pricing card — top-right overlay */}
+            <div style={{
+              position: "absolute", top: -18, right: -18,
+              background: "#fff", borderRadius: 20,
+              border: "2px solid #221D23",
+              boxShadow: "0 16px 48px rgba(34,29,35,.16)",
+              padding: "20px 22px 18px",
+              width: 210, zIndex: 10,
+            }}>
+              <span style={{
+                display: "inline-block",
+                fontSize: 9.5, fontWeight: 800, letterSpacing: ".08em",
+                textTransform: "uppercase", color: "#221D23",
+                background: "#FFF6CF", border: "1px solid #EFD46F",
+                borderRadius: 999, padding: "4px 10px", marginBottom: 12,
+              }}>Course License Value</span>
+
+              <div style={{ display: "flex", alignItems: "baseline", gap: 3, marginBottom: 2 }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: "#221D23" }}>₹</span>
+                <span style={{ fontSize: 36, fontWeight: 900, letterSpacing: "-.05em", color: "#221D23", lineHeight: 1 }}>5,000</span>
+              </div>
+              <p style={{ margin: "0 0 14px", fontSize: 11.5, color: "#6B6B6B", fontWeight: 500 }}>
+                12 months access
+              </p>
+
+              <button
+                onClick={() => isLoggedIn ? setShowAccessPopup(true) : (window.location.href = LOGIN_URL)}
+                style={{
+                  display: "block", width: "100%", boxSizing: "border-box",
+                  textAlign: "center", padding: "10px 0",
+                  background: "#FFCE00", color: "#221D23",
+                  borderRadius: 10, border: "none",
+                  fontSize: 12, fontWeight: 800, letterSpacing: "-.01em",
+                  cursor: "pointer", fontFamily: "inherit",
+                }}
+              >Email for Discount Code</button>
+            </div>
           </div>
         </section>
 
@@ -454,7 +529,7 @@ export default function AIMasteryPreview({ isLoggedIn = false, userName = null, 
 
             {COURSE_PARTS.map((part, partIdx) => {
               const unlockedCount = part.modules.filter(m => UNLOCKED_IDS.has(m.id)).length;
-              const metaLabel = unlockedCount > 0 ? `${unlockedCount} unlocked` : "Need full access";
+              const metaLabel = unlockedCount > 0 ? `${unlockedCount} unlocked` : isLoggedIn ? "Need full access" : "Need login";
               const isExpanded = expandedParts.has(partIdx);
 
               return (

@@ -12,6 +12,7 @@ type UserRow = {
   full_name: string | null;
   role: string;
   aimastery_approved: boolean;
+  aimastery_requested: boolean;
   created_at: string;
 };
 
@@ -75,10 +76,10 @@ export default function AIMasteryAccessClient({ profile, users: initUsers }: Pro
               </Link>
             </div>
             <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, letterSpacing: "-.04em" }}>
-              AI Mastery Access
+              AI Mastery Access Requests
             </h1>
             <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6B6B6B" }}>
-              {approvedCount} approved · {pendingCount} pending
+              {users.length} request{users.length !== 1 ? "s" : ""} · {approvedCount} approved · {pendingCount} pending
             </p>
           </div>
         </div>
@@ -86,7 +87,7 @@ export default function AIMasteryAccessClient({ profile, users: initUsers }: Pro
         {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 24 }}>
           {[
-            { label: "Total users",  value: users.length,   color: "#221D23" },
+            { label: "Total requests", value: users.length,  color: "#221D23" },
             { label: "Approved",     value: approvedCount,  color: "#17A855" },
             { label: "Pending",      value: pendingCount,   color: "#B05000" },
           ].map(s => (

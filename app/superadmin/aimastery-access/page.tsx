@@ -19,7 +19,8 @@ export default async function AIMasteryAccessPage() {
 
   const { data: users } = await supabase
     .from("profiles")
-    .select("id, email, full_name, role, aimastery_approved, created_at")
+    .select("id, email, full_name, role, aimastery_approved, aimastery_requested, created_at")
+    .eq("aimastery_requested", true)
     .order("created_at", { ascending: false });
 
   return <AIMasteryAccessClient profile={profile as any} users={users ?? []} />;
