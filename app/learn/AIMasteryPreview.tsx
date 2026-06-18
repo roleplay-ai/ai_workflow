@@ -104,7 +104,7 @@ function AccessRequestPopup({
               Request sent!
             </h2>
             <p style={{ margin: "0 0 24px", fontSize: 13, color: "#6B6B6B" }}>
-              Our team will review your request and approve your access shortly.
+              Our team will reach out to you soon.
             </p>
             <button
               onClick={onClose}
