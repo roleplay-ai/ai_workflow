@@ -154,6 +154,8 @@ export type ActivityCardProps = {
   tagLogos: Record<string, string>;
   variant?: CardVariant;
   viewCount?: number;
+  /** When set, only this tool is shown in the chip (no rotation). */
+  selectedTool?: string | null;
   /** When "div", renders a static card (e.g. hero carousel inactive slide) */
   renderAs?: "link" | "div";
   onPress?: () => void;
@@ -168,11 +170,12 @@ export default function ActivityCard({
   tagLogos,
   variant = "default",
   viewCount = 0,
+  selectedTool = null,
   renderAs = "link",
   onPress,
 }: ActivityCardProps) {
   const theme = getTheme(activity.id);
-  const tools = normalizeActivityTools(activity.tools);
+  const tools = selectedTool ? [selectedTool] : normalizeActivityTools(activity.tools);
   const chip = timeLabel(activity);
   const isLocked = !isLoggedIn && !!activity.is_locked;
 

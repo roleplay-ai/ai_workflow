@@ -52,6 +52,25 @@ function fnColor(fn: string): string {
   return "#746F78";
 }
 
+function filterActivitiesBySelection(
+  activities: Activity[],
+  selectedFunction: string | null,
+  selectedTool: string | null,
+): Activity[] {
+  let result = activities;
+  if (selectedFunction) {
+    result = result.filter(a =>
+      (a.functions ?? []).some(f => f.toLowerCase() === selectedFunction.toLowerCase())
+    );
+  }
+  if (selectedTool) {
+    result = result.filter(a =>
+      normalizeActivityTools(a.tools).some(t => t.toLowerCase() === selectedTool.toLowerCase())
+    );
+  }
+  return result;
+}
+
 
 // ── SignUpCard modal ──────────────────────────────────────────────────────
 
@@ -143,20 +162,10 @@ function AllWorkflowsSection({
 
   useEffect(() => { setVisibleCount(PAGE_SIZE); }, [selectedFunction, selectedTool]);
 
-  const filtered = useMemo(() => {
-    let result = activities;
-    if (selectedFunction) {
-      result = result.filter(a =>
-        (a.functions ?? []).some(f => f.toLowerCase() === selectedFunction.toLowerCase())
-      );
-    }
-    if (selectedTool) {
-      result = result.filter(a =>
-        normalizeActivityTools(a.tools).some(t => t.toLowerCase() === selectedTool.toLowerCase())
-      );
-    }
-    return result;
-  }, [activities, selectedFunction, selectedTool]);
+  const filtered = useMemo(
+    () => filterActivitiesBySelection(activities, selectedFunction, selectedTool),
+    [activities, selectedFunction, selectedTool],
+  );
 
   const visibleItems = filtered.slice(0, visibleCount);
   const hasMore = visibleCount < filtered.length;
@@ -202,6 +211,7 @@ function AllWorkflowsSection({
         tagLogos={tagLogos}
         viewCounts={viewCounts}
         onLoadMore={hasMore ? () => setVisibleCount(c => Math.min(filtered.length, c + PAGE_SIZE)) : undefined}
+        selectedTool={selectedTool}
       />
     </div>
   );
@@ -332,7 +342,7 @@ function FunctionsCarousel({
 // ── HorizontalRail ────────────────────────────────────────────────────────
 
 function HorizontalRail({
-  title, subtitle, label, activities, isLoggedIn, onSignUpRequired, toolLogos, tagLogos, variant = "default", viewCounts = {}, onLoadMore,
+  title, subtitle, label, activities, isLoggedIn, onSignUpRequired, toolLogos, tagLogos, variant = "default", viewCounts = {}, onLoadMore, selectedTool = null,
 }: {
   title: string;
   subtitle: string;
@@ -345,6 +355,7 @@ function HorizontalRail({
   variant?: CardVariant;
   viewCounts?: Record<string, number>;
   onLoadMore?: () => void;
+  selectedTool?: string | null;
 }) {
   const rowRef = useRef<HTMLDivElement>(null);
   const [focusedIdx, setFocusedIdx] = useState(0);
@@ -457,7 +468,7 @@ function HorizontalRail({
                 className={`rail-card-slot${active ? " is-active" : ""}`}
                 onMouseEnter={() => { setHoveredIdx(i); isPausedRef.current = true; }}
               >
-                <ActivityCard activity={a} focusStyle={style} isLoggedIn={isLoggedIn} onSignUpRequired={onSignUpRequired} toolLogos={toolLogos} tagLogos={tagLogos} variant={variant} viewCount={viewCounts[a.id] ?? 0} />
+                <ActivityCard activity={a} focusStyle={style} isLoggedIn={isLoggedIn} onSignUpRequired={onSignUpRequired} toolLogos={toolLogos} tagLogos={tagLogos} variant={variant} viewCount={viewCounts[a.id] ?? 0} selectedTool={selectedTool} />
               </div>
             );
           })}
@@ -846,7 +857,10 @@ export default function DashboardClient({ profile, activities, progress, toolFil
   }, [activities]);
 
   // Section 1: New
-  const newActivities = useMemo(() => activities.filter(a => a.is_featured), [activities]);
+  const newActivities = useMemo(
+    () => filterActivitiesBySelection(activities.filter(a => a.is_featured), selectedFunction, selectedTool),
+    [activities, selectedFunction, selectedTool],
+  );
 
   // Section 1b: Continue where you left off (in_progress for logged-in user)
   const pendingActivities = useMemo(() => {
@@ -856,7 +870,10 @@ export default function DashboardClient({ profile, activities, progress, toolFil
   }, [activities, progress, isLoggedIn]);
 
   // Section 2: AI Tools Mastery
-  const masteryActivities = useMemo(() => activities.filter(a => a.is_mastery), [activities]);
+  const masteryActivities = useMemo(
+    () => filterActivitiesBySelection(activities.filter(a => a.is_mastery), selectedFunction, selectedTool),
+    [activities, selectedFunction, selectedTool],
+  );
 
   // Section last: Completed workflows (logged-in user)
   const completedActivities = useMemo(() => {
@@ -906,6 +923,7 @@ export default function DashboardClient({ profile, activities, progress, toolFil
           {/* Section 1: New — dark cards */}
           {newActivities.length > 0 && (
             <HorizontalRail
+              key={`new-${selectedFunction ?? "all"}-${selectedTool ?? "all"}`}
               label="New this week"
               title="Newly added workflows this week"
               subtitle="Fresh workflows added for this week's practice."
@@ -916,6 +934,7 @@ export default function DashboardClient({ profile, activities, progress, toolFil
               toolLogos={toolLogos}
               tagLogos={tagLogos}
               viewCounts={viewCounts}
+              selectedTool={selectedTool}
             />
           )}
 
@@ -931,12 +950,14 @@ export default function DashboardClient({ profile, activities, progress, toolFil
               toolLogos={toolLogos}
               tagLogos={tagLogos}
               viewCounts={viewCounts}
+              selectedTool={selectedTool}
             />
           )}
 
           {/* Section 2: AI Mastery — yellow cards */}
           {masteryActivities.length > 0 && (
             <HorizontalRail
+              key={`mastery-${selectedFunction ?? "all"}-${selectedTool ?? "all"}`}
               label="Core practice"
               title="Chatbot Essentials"
               subtitle="Core workflows for improving AI fluency and everyday practice."
@@ -947,6 +968,7 @@ export default function DashboardClient({ profile, activities, progress, toolFil
               toolLogos={toolLogos}
               tagLogos={tagLogos}
               viewCounts={viewCounts}
+              selectedTool={selectedTool}
             />
           )}
 
@@ -984,6 +1006,7 @@ export default function DashboardClient({ profile, activities, progress, toolFil
               toolLogos={toolLogos}
               tagLogos={tagLogos}
               viewCounts={viewCounts}
+              selectedTool={selectedTool}
             />
           )}
           {/* <AIMasteryCourseSection completedCount={masteryProgressCount} isLoggedIn={isLoggedIn} /> */}
