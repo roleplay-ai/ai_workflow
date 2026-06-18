@@ -50,6 +50,8 @@ export default function SiteFooter() {
           <a href="mailto:team@nudgeable.ai">team@nudgeable.ai</a>
           {" · "}
           <a href="https://www.nudgeable.ai" target="_blank" rel="noopener noreferrer">www.nudgeable.ai</a>
+          {" · "}
+          <Link href="/privacy">Privacy</Link>
         </span>
       </div>
     </footer>

@@ -84,9 +84,10 @@ type Props = {
   activePage: AppPage;
   userName?: string | null;
   isAdmin?: boolean;
+  isLoggedIn?: boolean;
 };
 
-export default function AppNav({ activePage, userName, isAdmin }: Props) {
+export default function AppNav({ activePage, userName, isAdmin, isLoggedIn }: Props) {
   const router = useRouter();
 
   async function handleSignOut() {
@@ -96,6 +97,8 @@ export default function AppNav({ activePage, userName, isAdmin }: Props) {
     router.refresh();
   }
 
+  const showSignedIn = isLoggedIn ?? !!userName;
+
   return (
     <header style={APP_NAV_HEADER_STYLE}>
       <AppNavBrand />
@@ -103,10 +106,10 @@ export default function AppNav({ activePage, userName, isAdmin }: Props) {
 
       {/* Actions */}
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        {userName ? (
+        {showSignedIn ? (
           <>
             <span style={{ fontSize: 14, fontWeight: 700, color: "#746F78" }}>
-              {userName.split(" ")[0]}
+              {userName?.split(" ")[0]}
             </span>
             {isAdmin && (
               <Link href="/admin" style={{
