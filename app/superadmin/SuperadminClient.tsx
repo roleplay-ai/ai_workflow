@@ -202,6 +202,7 @@ export default function SuperadminClient({ profile, companies, activities: initA
             <Link href="/superadmin/functions" style={{ ...btnGhost, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Manage functions</Link>
             <Link href="/superadmin/tool-logos" style={{ ...btnGhost, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Manage tools</Link>
             <Link href="/superadmin/ai-fluency" style={{ ...btnGhost, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Know</Link>
+            <Link href="/superadmin/aimastery-access" style={{ ...btnGhost, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>AI Mastery Access</Link>
             <button onClick={() => setShowForm(v => !v)} style={btnAmber}>+ New Activity</button>
           </div>
         </div>

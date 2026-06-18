@@ -32,6 +32,131 @@ const LOGIN_URL = "/login?redirect=/learn";
 
 const DEFAULT_EXPANDED_PARTS = GUEST_PREVIEW_PART_INDICES;
 
+// ── Access-request popup ───────────────────────────────────────────────────────
+
+function AccessRequestPopup({
+  onClose,
+  userName,
+  userEmail,
+}: {
+  onClose: () => void;
+  userName: string | null;
+  userEmail: string | null;
+}) {
+  const [name,  setName]  = useState(userName  ?? "");
+  const [email, setEmail] = useState(userEmail ?? "");
+
+  const subject = encodeURIComponent("AI Mastery Course – Access Request");
+  const body = encodeURIComponent(
+    `Hi Nudgeable team,\n\nI'd like to request full access to the AI Mastery course.\n\nName: ${name || "[your name]"}\nEmail: ${email || "[your email]"}\n\nPlease review and approve my access.\n\nThank you!`
+  );
+  const mailtoHref = `mailto:team@nudgeable.ai?subject=${subject}&body=${body}`;
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,.45)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        zIndex: 9999, padding: 20,
+      }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{
+        background: "#fff", borderRadius: 16, padding: "36px 32px",
+        maxWidth: 480, width: "100%", position: "relative",
+        boxShadow: "0 8px 40px rgba(0,0,0,.18)",
+        fontFamily: "Roboto, ui-sans-serif, system-ui, sans-serif",
+      }}>
+        <button
+          onClick={onClose}
+          style={{
+            position: "absolute", top: 16, right: 16,
+            background: "none", border: "none", fontSize: 20,
+            cursor: "pointer", color: "#6B6B6B", lineHeight: 1,
+          }}
+          aria-label="Close"
+        >×</button>
+
+        <div style={{
+          width: 48, height: 48, borderRadius: "50%",
+          background: "#FFFAEB", border: "2px solid #FFCE00",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 22, marginBottom: 16,
+        }}>🔒</div>
+
+        <h2 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 900, letterSpacing: "-.03em" }}>
+          Request Full Access
+        </h2>
+        <p style={{ margin: "0 0 22px", fontSize: 13, color: "#6B6B6B" }}>
+          This course is by invitation only. Fill in your details and we'll open your email client with a pre-written message to our team.
+        </p>
+
+        <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 5, color: "#221D23" }}>
+          Your name
+        </label>
+        <input
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="e.g. Jane Smith"
+          style={{
+            width: "100%", boxSizing: "border-box",
+            padding: "10px 12px", borderRadius: 8,
+            border: "1.5px solid #E8DFD2", fontSize: 14,
+            marginBottom: 14, outline: "none", fontFamily: "inherit",
+          }}
+        />
+
+        <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 5, color: "#221D23" }}>
+          Your email
+        </label>
+        <input
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          placeholder="e.g. jane@company.com"
+          type="email"
+          style={{
+            width: "100%", boxSizing: "border-box",
+            padding: "10px 12px", borderRadius: 8,
+            border: "1.5px solid #E8DFD2", fontSize: 14,
+            marginBottom: 6, outline: "none", fontFamily: "inherit",
+          }}
+        />
+
+        <p style={{ fontSize: 11, color: "#B0ABA5", margin: "0 0 22px" }}>
+          An email to <strong>team@nudgeable.ai</strong> will open in your mail client with these details pre-filled.
+        </p>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            onClick={onClose}
+            style={{
+              flex: 1, padding: "11px 0", borderRadius: 8,
+              border: "1.5px solid #E8DFD2", background: "#fff",
+              fontSize: 14, fontWeight: 700, cursor: "pointer", color: "#221D23",
+              fontFamily: "inherit",
+            }}
+          >
+            Cancel
+          </button>
+          <a
+            href={mailtoHref}
+            onClick={onClose}
+            style={{
+              flex: 2, padding: "11px 0", borderRadius: 8,
+              background: "#FFCE00", color: "#221D23", textDecoration: "none",
+              fontSize: 14, fontWeight: 800, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              letterSpacing: "-.02em", fontFamily: "inherit",
+            }}
+          >
+            Send Request →
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Laptop decorative mockup ───────────────────────────────────────────────────
 
 function LaptopMockup() {
@@ -180,9 +305,16 @@ function LaptopMockup() {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export default function AIMasteryPreview() {
+type AIMasteryPreviewProps = {
+  isLoggedIn?: boolean;
+  userName?: string | null;
+  userEmail?: string | null;
+};
+
+export default function AIMasteryPreview({ isLoggedIn = false, userName = null, userEmail = null }: AIMasteryPreviewProps) {
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
   const [expandedParts, setExpandedParts] = useState<Set<number>>(() => new Set(DEFAULT_EXPANDED_PARTS));
+  const [showAccessPopup, setShowAccessPopup] = useState(false);
 
   const togglePart = (partIdx: number) => {
     setExpandedParts(prev => {
@@ -197,7 +329,7 @@ export default function AIMasteryPreview() {
   if (selectedModuleId) {
     return (
       <>
-        <AppNav activePage="learn" />
+        <AppNav activePage="learn" isLoggedIn={isLoggedIn} userName={userName} />
 
         <div className="aim-course-shell">
           {/* Preview banner */}
@@ -234,7 +366,7 @@ export default function AIMasteryPreview() {
 
   return (
     <>
-      <AppNav activePage="learn" />
+      <AppNav activePage="learn" isLoggedIn={isLoggedIn} userName={userName} />
 
       <main style={{ width: PAGE_CONTENT_WIDTH, margin: "34px auto 0" }}>
 
@@ -279,7 +411,15 @@ export default function AIMasteryPreview() {
 
             <div className="aim-hero-actions">
               <a href="#journey" className="aim-btn-primary">Explore course →</a>
-              <a href={LOGIN_URL} className="aim-btn-secondary">Get full access</a>
+              {isLoggedIn ? (
+                <button
+                  onClick={() => setShowAccessPopup(true)}
+                  className="aim-btn-secondary"
+                  style={{ cursor: "pointer" }}
+                >Get full access</button>
+              ) : (
+                <a href={LOGIN_URL} className="aim-btn-secondary">Get full access</a>
+              )}
             </div>
             <p className="aim-hero-footnote">
               <b>Discount available.</b> Email us for access options.
@@ -314,7 +454,7 @@ export default function AIMasteryPreview() {
 
             {COURSE_PARTS.map((part, partIdx) => {
               const unlockedCount = part.modules.filter(m => UNLOCKED_IDS.has(m.id)).length;
-              const metaLabel = unlockedCount > 0 ? `${unlockedCount} unlocked` : "Need login";
+              const metaLabel = unlockedCount > 0 ? `${unlockedCount} unlocked` : "Need full access";
               const isExpanded = expandedParts.has(partIdx);
 
               return (
@@ -372,8 +512,18 @@ export default function AIMasteryPreview() {
                               key={mod.id}
                               role="button"
                               tabIndex={0}
-                              onClick={() => { isUnlocked ? setSelectedModuleId(mod.id) : (window.location.href = LOGIN_URL); }}
-                              onKeyDown={e => { if (e.key === "Enter") { isUnlocked ? setSelectedModuleId(mod.id) : (window.location.href = LOGIN_URL); } }}
+                              onClick={() => {
+                                if (isUnlocked) setSelectedModuleId(mod.id);
+                                else if (isLoggedIn) setShowAccessPopup(true);
+                                else window.location.href = LOGIN_URL;
+                              }}
+                              onKeyDown={e => {
+                                if (e.key === "Enter") {
+                                  if (isUnlocked) setSelectedModuleId(mod.id);
+                                  else if (isLoggedIn) setShowAccessPopup(true);
+                                  else window.location.href = LOGIN_URL;
+                                }
+                              }}
                               style={{
                                 display: "grid", gridTemplateColumns: "1fr auto", gap: 16,
                                 alignItems: "center", padding: "15px 18px",
@@ -428,9 +578,19 @@ export default function AIMasteryPreview() {
             <div className="aim-cta-kicker">Full access</div>
             <h2>Want the complete course?</h2>
             <p className="aim-cta-desc">
-              Sign in or create an account to unlock all 30+ lessons and track your progress.
+              {isLoggedIn
+                ? "Request access and our team will approve you shortly."
+                : "Sign in or create an account to unlock all 30+ lessons and track your progress."}
             </p>
-            <a href={LOGIN_URL} className="aim-btn-primary">Sign in to access →</a>
+            {isLoggedIn ? (
+              <button
+                onClick={() => setShowAccessPopup(true)}
+                className="aim-btn-primary"
+                style={{ cursor: "pointer" }}
+              >Request access →</button>
+            ) : (
+              <a href={LOGIN_URL} className="aim-btn-primary">Sign in to access →</a>
+            )}
           </div>
           <div style={{ display: "grid", placeItems: "center", padding: 28 }}>
             <div style={{ width: "min(100%,320px)", background: "#fff", color: "#221D23", borderRadius: 22, padding: 22, boxShadow: "0 20px 48px rgba(0,0,0,.20)" }}>
@@ -445,6 +605,14 @@ export default function AIMasteryPreview() {
       </main>
 
       <SiteFooter />
+
+      {showAccessPopup && (
+        <AccessRequestPopup
+          onClose={() => setShowAccessPopup(false)}
+          userName={userName}
+          userEmail={userEmail}
+        />
+      )}
     </>
   );
 }

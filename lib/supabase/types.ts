@@ -16,6 +16,7 @@ export type Profile = {
   company_id: string | null;
   role: Role;
   created_at: string;
+  aimastery_approved: boolean;
 };
 
 export type Activity = {
