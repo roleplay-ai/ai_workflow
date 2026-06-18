@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import Topbar from "@/components/Topbar";
@@ -7,7 +7,33 @@ import ToolDeepDivesManager from "@/components/ToolDeepDivesManager";
 import type { Profile, Company, Activity, ActivityTag, ToolDeepDive } from "@/lib/supabase/types";
 import { DEFAULT_TOOLS, formatToolLabel, normalizeActivityTools } from "@/lib/tools";
 
-type ActivityRow = Activity & { activity_content: { id: string } | null };
+type ActivityContentSummary = {
+  id: string;
+  video_url?: string | null;
+  slide_images?: { url: string; caption?: string }[] | null;
+};
+
+type ActivityRow = Activity & {
+  activity_content: ActivityContentSummary | null;
+  activity_steps?: { count: number }[];
+};
+
+function stepCount(act: ActivityRow): number {
+  return act.activity_steps?.[0]?.count ?? 0;
+}
+
+function slideCount(act: ActivityRow): number {
+  const slides = act.activity_content?.slide_images;
+  return Array.isArray(slides) ? slides.length : 0;
+}
+
+function hasVideo(act: ActivityRow): boolean {
+  return Boolean(act.activity_content?.video_url?.trim());
+}
+
+function hasThumbnail(act: ActivityRow): boolean {
+  return Boolean(act.thumbnail_url?.trim());
+}
 
 type Props = {
   profile: Profile & { companies: { name: string } | null };
@@ -52,7 +78,7 @@ export default function SuperadminClient({ profile, companies, activities: initA
       points, tools: [tool], category, published: false, position: nextPosition,
     }).select().single();
     if (!error && data) {
-      setActivities(prev => [...prev, { ...(data as any), activity_content: null }]);
+      setActivities(prev => [...prev, { ...(data as ActivityRow), activity_content: null, activity_steps: [{ count: 0 }] }]);
       setTitle(""); setDesc(""); setShowForm(false);
     }
     setCreating(false);
@@ -166,7 +192,7 @@ export default function SuperadminClient({ profile, companies, activities: initA
     <div style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: "Roboto, ui-sans-serif, system-ui, sans-serif" }}>
       <Topbar profile={profile} role="superadmin" onSignOut={handleSignOut} />
 
-      <main style={{ width: "min(1280px,calc(100% - 72px))", margin: "0 auto", padding: "28px 0 60px" }}>
+      <main style={{ width: "min(1680px,calc(100% - 40px))", margin: "0 auto", padding: "28px 0 60px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
           <div>
             <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, letterSpacing: "-.04em" }}>Activities</h1>
@@ -231,145 +257,221 @@ export default function SuperadminClient({ profile, companies, activities: initA
             No activities yet. Create your first one above.
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {[...activities].sort((a, b) => a.position - b.position).map((act, idx, sorted) => {
-              const expanded = expandedId === act.id;
-              const actAssignments = assignments.filter(a => a.activity_id === act.id);
-              const actTools = normalizeActivityTools(act.tools);
-              const cc = catColor(act.category);
-              return (
-                <div key={act.id} style={{ ...card, padding: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 16px", cursor: "pointer" }}
-                    onClick={() => setExpandedId(expanded ? null : act.id)}>
+          <div style={{ ...card, padding: 0 }}>
+            <div style={{ maxHeight: "calc(100vh - 200px)", overflow: "auto" }}>
+              <table style={activityTableStyle}>
+                <colgroup>
+                  <col style={{ width: 40 }} />
+                  <col style={{ width: 36 }} />
+                  <col style={{ width: 88 }} />
+                  <col style={{ width: 300 }} />
+                  <col style={{ width: 68 }} />
+                  <col style={{ width: 68 }} />
+                  <col style={{ width: 68 }} />
+                  <col style={{ width: 68 }} />
+                  <col style={{ width: 160 }} />
+                  <col style={{ width: 160 }} />
+                  <col style={{ width: 500 }} />
+                  <col style={{ width: 28 }} />
+                </colgroup>
+                <thead>
+                  <tr>
+                    {["", "#", "Cat.", "Activity", "Video", "Thumb", "Slides", "Steps", "Functions", "Tools", "Actions", ""].map((label, i) => (
+                      <th key={label || `col-${i}`} style={{
+                        ...activityThStyle,
+                        textAlign: i >= 4 && i <= 7 ? "center" : "left",
+                      }}>
+                        {label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+              {[...activities].sort((a, b) => a.position - b.position).map((act, idx, sorted) => {
+                const expanded = expandedId === act.id;
+                const actAssignments = assignments.filter(a => a.activity_id === act.id);
+                const actTools = normalizeActivityTools(act.tools);
+                const actFunctions = act.functions ?? [];
+                const cc = catColor(act.category);
+                const video = hasVideo(act);
+                const thumb = hasThumbnail(act);
+                const slides = slideCount(act);
+                const steps = stepCount(act);
+                return (
+                  <Fragment key={act.id}>
+                    <tr
+                      style={{
+                        cursor: "pointer",
+                        background: expanded ? "#FFFCF0" : "white",
+                        borderBottom: expanded ? "none" : "1px solid #F0EEE8",
+                      }}
+                      onClick={() => setExpandedId(expanded ? null : act.id)}
+                    >
+                      <td style={activityTdStyle} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                          <button onClick={() => moveActivity(act.id, "up")} disabled={idx === 0} style={{ ...posBtnStyle, opacity: idx === 0 ? .3 : 1 }} title="Move up">▲</button>
+                          <button onClick={() => moveActivity(act.id, "down")} disabled={idx === sorted.length - 1} style={{ ...posBtnStyle, opacity: idx === sorted.length - 1 ? .3 : 1 }} title="Move down">▼</button>
+                        </div>
+                      </td>
 
-                    <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                      <button onClick={() => moveActivity(act.id, "up")} disabled={idx === 0} style={{ ...posBtnStyle, opacity: idx === 0 ? .3 : 1 }} title="Move up">▲</button>
-                      <button onClick={() => moveActivity(act.id, "down")} disabled={idx === sorted.length - 1} style={{ ...posBtnStyle, opacity: idx === sorted.length - 1 ? .3 : 1 }} title="Move down">▼</button>
-                    </div>
+                      <td style={{ ...activityTdStyle, fontSize: 11, fontWeight: 900, color: "#9A9590" }}>{idx + 1}</td>
 
-                    <span style={{ width: 22, height: 22, borderRadius: "50%", background: "#F0EEE8", display: "grid", placeItems: "center", fontSize: 10, fontWeight: 900, color: "#6B6B6B", flexShrink: 0 }}>{idx + 1}</span>
+                      <td style={activityTdStyle}>
+                        <span style={{ display: "block", padding: "3px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700, background: cc.bg, color: cc.color, textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={act.category}>{act.category}</span>
+                      </td>
 
-                    <span style={{ padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, background: cc.bg, color: cc.color, flexShrink: 0 }}>{act.category}</span>
+                      <td style={activityTdStyle}>
+                        <div style={{ fontWeight: 700, fontSize: 13.5, lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={act.title}>{act.title}</div>
+                        <div style={{ fontSize: 11, color: "#6B6B6B", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {act.level} · {act.time_estimate_minutes}m · {act.points}pts
+                          {actAssignments.length > 0 && (
+                            <span style={{ marginLeft: 6, color: "#3696FC" }}>· {actAssignments.length} co.</span>
+                          )}
+                        </div>
+                      </td>
 
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 14 }}>{act.title}</div>
-                      <div style={{ fontSize: 11.5, color: "#6B6B6B", marginTop: 1 }}>
-                        {actTools.length > 0 && (
-                          <span style={{ fontWeight: 700, color: "#221D23" }}>
-                            {actTools.map(formatToolLabel).join(" · ")}
-                            <span style={{ margin: "0 6px", color: "#D4D0C8" }}>|</span>
-                          </span>
-                        )}
-                        {act.level} · {act.time_estimate_minutes}m · {act.points}pts
-                        <span style={{ marginLeft: 8, color: act.activity_content ? "#17A855" : "#F68A29", fontWeight: 700 }}>
-                          {act.activity_content ? "✓ content" : "⚠ no content"}
-                        </span>
-                        {actAssignments.length > 0 && (
-                          <span style={{ marginLeft: 8, color: "#3696FC" }}>· {actAssignments.length} co.</span>
-                        )}
-                      </div>
-                    </div>
+                      <td style={{ ...activityTdStyle, textAlign: "center" }}>
+                        <ContentBadge ok={video} label="Video" detail={video ? "Yes" : "—"} />
+                      </td>
+                      <td style={{ ...activityTdStyle, textAlign: "center" }}>
+                        <ContentBadge ok={thumb} label="Thumbnail" detail={thumb ? "Yes" : "—"} />
+                      </td>
+                      <td style={{ ...activityTdStyle, textAlign: "center" }}>
+                        <ContentBadge ok={slides > 0} label="Slides" detail={slides > 0 ? String(slides) : "—"} />
+                      </td>
+                      <td style={{ ...activityTdStyle, textAlign: "center" }}>
+                        <ContentBadge ok={steps > 0} label="Steps" detail={steps > 0 ? String(steps) : "—"} />
+                      </td>
 
-                    <div style={{ display: "flex", gap: 7, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                      <button onClick={() => toggleLock(act)} title={act.is_locked ? "Unlock (guests can open)" : "Lock (guests blocked)"} style={{
-                        padding: "5px 10px", borderRadius: 999, border: "1px solid",
-                        borderColor: act.is_locked ? "rgba(239,68,68,.3)" : "#E8E6DC",
-                        background: act.is_locked ? "rgba(239,68,68,.08)" : "#F0EEE8",
-                        color: act.is_locked ? "#DC2626" : "#6B6B6B",
-                        fontSize: 11.5, fontWeight: 700, cursor: "pointer",
-                      }}>{act.is_locked ? "🔒 Locked" : "🔓 Open"}</button>
+                      <td style={{ ...activityTdStyle, verticalAlign: "top" }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                          {actFunctions.length > 0 ? actFunctions.map(fn => (
+                            <span key={fn} style={chipStyle} title={fn}>{fn}</span>
+                          )) : (
+                            <span style={{ fontSize: 11, color: "#C4BFB8", fontStyle: "italic" }}>None</span>
+                          )}
+                        </div>
+                      </td>
 
-                      <button onClick={() => toggleFeatured(act)} title="Show in 'New this week'" style={{
-                        padding: "5px 10px", borderRadius: 999, border: "1px solid",
-                        borderColor: act.is_featured ? "rgba(255,206,0,.5)" : "#E8E6DC",
-                        background: act.is_featured ? "#FFF6CF" : "#F0EEE8",
-                        color: act.is_featured ? "#7A5F00" : "#6B6B6B",
-                        fontSize: 11.5, fontWeight: 700, cursor: "pointer",
-                      }}>★ {act.is_featured ? "New" : "+"}</button>
+                      <td style={{ ...activityTdStyle, verticalAlign: "top" }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                          {actTools.length > 0 ? actTools.map(t => (
+                            <span key={t} style={{ ...chipStyle, background: "rgba(54,150,252,.08)", color: "#1A6FC4" }} title={formatToolLabel(t)}>{formatToolLabel(t)}</span>
+                          )) : (
+                            <span style={{ fontSize: 11, color: "#C4BFB8", fontStyle: "italic" }}>None</span>
+                          )}
+                        </div>
+                      </td>
 
-                      <button onClick={() => toggleMastery(act)} title="Show in 'AI Tools Mastery'" style={{
-                        padding: "5px 10px", borderRadius: 999, border: "1px solid",
-                        borderColor: act.is_mastery ? "rgba(98,60,234,.35)" : "#E8E6DC",
-                        background: act.is_mastery ? "rgba(98,60,234,.08)" : "#F0EEE8",
-                        color: act.is_mastery ? "#623CEA" : "#6B6B6B",
-                        fontSize: 11.5, fontWeight: 700, cursor: "pointer",
-                      }}>⚡ {act.is_mastery ? "Mastery" : "+"}</button>
+                      <td style={activityTdStyle} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        <button onClick={() => toggleLock(act)} title={act.is_locked ? "Unlock (guests can open)" : "Lock (guests blocked)"} style={{
+                          padding: "4px 8px", borderRadius: 999, border: "1px solid",
+                          borderColor: act.is_locked ? "rgba(239,68,68,.3)" : "#E8E6DC",
+                          background: act.is_locked ? "rgba(239,68,68,.08)" : "#F0EEE8",
+                          color: act.is_locked ? "#DC2626" : "#6B6B6B",
+                          fontSize: 10.5, fontWeight: 700, cursor: "pointer",
+                        }}>{act.is_locked ? "🔒 Locked" : "🔓 Open"}</button>
 
-                      <select
-                        value={act.hero_position ?? ""}
-                        onChange={e => void setHeroSlot(act, e.target.value ? Number(e.target.value) : null)}
-                        title="Pin to hero banner slot (top 3 cards)"
-                        style={{
-                          padding: "5px 10px", borderRadius: 999, border: "1px solid",
-                          borderColor: act.hero_position ? "rgba(54,150,252,.4)" : "#E8E6DC",
-                          background: act.hero_position ? "rgba(54,150,252,.08)" : "#F0EEE8",
-                          color: act.hero_position ? "#1A6FC4" : "#6B6B6B",
-                          fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-                          appearance: "none", WebkitAppearance: "none",
-                        }}
-                      >
-                        <option value="">🎯 Hero</option>
-                        <option value="1">Slot 1</option>
-                        <option value="2">Slot 2</option>
-                        <option value="3">Slot 3</option>
-                      </select>
+                        <button onClick={() => toggleFeatured(act)} title="Show in 'New this week'" style={{
+                          padding: "4px 8px", borderRadius: 999, border: "1px solid",
+                          borderColor: act.is_featured ? "rgba(255,206,0,.5)" : "#E8E6DC",
+                          background: act.is_featured ? "#FFF6CF" : "#F0EEE8",
+                          color: act.is_featured ? "#7A5F00" : "#6B6B6B",
+                          fontSize: 10.5, fontWeight: 700, cursor: "pointer",
+                        }}>★ {act.is_featured ? "New" : "+"}</button>
 
-                      <button onClick={() => togglePublish(act)} style={{
-                        padding: "5px 10px", borderRadius: 999, border: "1px solid",
-                        borderColor: act.published ? "rgba(35,206,104,.3)" : "#E8E6DC",
-                        background: act.published ? "rgba(35,206,104,.08)" : "#F0EEE8",
-                        color: act.published ? "#17A855" : "#6B6B6B",
-                        fontSize: 11.5, fontWeight: 700, cursor: "pointer",
-                      }}>{act.published ? "Live" : "Draft"}</button>
+                        <button onClick={() => toggleMastery(act)} title="Show in 'AI Tools Mastery'" style={{
+                          padding: "4px 8px", borderRadius: 999, border: "1px solid",
+                          borderColor: act.is_mastery ? "rgba(98,60,234,.35)" : "#E8E6DC",
+                          background: act.is_mastery ? "rgba(98,60,234,.08)" : "#F0EEE8",
+                          color: act.is_mastery ? "#623CEA" : "#6B6B6B",
+                          fontSize: 10.5, fontWeight: 700, cursor: "pointer",
+                        }}>⚡ {act.is_mastery ? "Mastery" : "+"}</button>
 
-                      <Link href={`/superadmin/activity/${act.id}`} style={{
-                        padding: "5px 10px", borderRadius: 999, border: "1px solid #E8E6DC",
-                        background: "white", color: "#221D23", fontSize: 11.5, fontWeight: 700,
-                        textDecoration: "none",
-                      }}>Edit</Link>
+                        <select
+                          value={act.hero_position ?? ""}
+                          onChange={e => void setHeroSlot(act, e.target.value ? Number(e.target.value) : null)}
+                          title="Pin to hero banner slot (top 3 cards)"
+                          style={{
+                            padding: "4px 8px", borderRadius: 999, border: "1px solid",
+                            borderColor: act.hero_position ? "rgba(54,150,252,.4)" : "#E8E6DC",
+                            background: act.hero_position ? "rgba(54,150,252,.08)" : "#F0EEE8",
+                            color: act.hero_position ? "#1A6FC4" : "#6B6B6B",
+                            fontSize: 10.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                            appearance: "none", WebkitAppearance: "none",
+                          }}
+                        >
+                          <option value="">🎯 Hero</option>
+                          <option value="1">Slot 1</option>
+                          <option value="2">Slot 2</option>
+                          <option value="3">Slot 3</option>
+                        </select>
 
-                      <button onClick={() => deleteActivity(act.id)} style={{
-                        border: 0, background: "none", color: "#EF4444", cursor: "pointer", fontSize: 16, lineHeight: 1,
-                      }}>×</button>
-                    </div>
+                        <button onClick={() => togglePublish(act)} style={{
+                          padding: "4px 8px", borderRadius: 999, border: "1px solid",
+                          borderColor: act.published ? "rgba(35,206,104,.3)" : "#E8E6DC",
+                          background: act.published ? "rgba(35,206,104,.08)" : "#F0EEE8",
+                          color: act.published ? "#17A855" : "#6B6B6B",
+                          fontSize: 10.5, fontWeight: 700, cursor: "pointer",
+                        }}>{act.published ? "Live" : "Draft"}</button>
 
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#B0ABA5" strokeWidth="2.5"
-                      strokeLinecap="round" strokeLinejoin="round"
-                      style={{ transform: expanded ? "rotate(180deg)" : "rotate(0)", transition: ".15s", flexShrink: 0 }}>
-                      <polyline points="6 9 12 15 18 9"/>
-                    </svg>
-                  </div>
+                        <Link href={`/superadmin/activity/${act.id}`} style={{
+                          padding: "4px 8px", borderRadius: 999, border: "1px solid #E8E6DC",
+                          background: "white", color: "#221D23", fontSize: 10.5, fontWeight: 700,
+                          textDecoration: "none",
+                        }}>Edit</Link>
 
-                  {expanded && (
-                    <div style={{ padding: "0 16px 14px", borderTop: "1px solid #F0EEE8" }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "#6B6B6B", margin: "10px 0 7px" }}>
-                        Assign to companies
-                        {actAssignments.length === 0 && <span style={{ fontWeight: 400, marginLeft: 6 }}>· no assignments = visible to everyone</span>}
-                      </div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-                        {companies.map(co => {
-                          const assigned = assignments.some(a => a.activity_id === act.id && a.company_id === co.id);
-                          return (
-                            <button key={co.id} onClick={() => toggleAssignment(act.id, co.id)} style={{
-                              display: "flex", alignItems: "center", gap: 7,
-                              padding: "6px 12px", borderRadius: 999, cursor: "pointer",
-                              border: "1.5px solid",
-                              borderColor: assigned ? "#FFCE00" : "#E8E6DC",
-                              background: assigned ? "#FFF6CF" : "white",
-                              fontWeight: 700, fontSize: 12, transition: ".12s",
-                            }}>
-                              <span style={{ width: 14, height: 14, borderRadius: "50%", background: assigned ? "#FFCE00" : "#F0EEE8", display: "grid", placeItems: "center", fontSize: 9, fontWeight: 900, color: assigned ? "#221D23" : "transparent" }}>✓</span>
-                              {co.name}
-                              {co.domain && <span style={{ fontSize: 10, color: "#B0ABA5", fontWeight: 400 }}>{co.domain}</span>}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                        <button onClick={() => deleteActivity(act.id)} style={{
+                          border: 0, background: "none", color: "#EF4444", cursor: "pointer", fontSize: 15, lineHeight: 1, padding: "2px 4px",
+                        }}>×</button>
+                        </div>
+                      </td>
+
+                      <td style={{ ...activityTdStyle, textAlign: "center" }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#B0ABA5" strokeWidth="2.5"
+                          strokeLinecap="round" strokeLinejoin="round"
+                          style={{ transform: expanded ? "rotate(180deg)" : "rotate(0)", transition: ".15s", display: "inline-block" }}>
+                          <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                      </td>
+                    </tr>
+
+                    {expanded && (
+                      <tr style={{ background: "#FFFCF0", borderBottom: "1px solid #F0EEE8" }}>
+                        <td colSpan={12} style={{ padding: "0 16px 14px", borderTop: "1px solid #F0EEE8" }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "#6B6B6B", margin: "10px 0 7px" }}>
+                            Assign to companies
+                            {actAssignments.length === 0 && <span style={{ fontWeight: 400, marginLeft: 6 }}>· no assignments = visible to everyone</span>}
+                          </div>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                            {companies.map(co => {
+                              const assigned = assignments.some(a => a.activity_id === act.id && a.company_id === co.id);
+                              return (
+                                <button key={co.id} onClick={() => toggleAssignment(act.id, co.id)} style={{
+                                  display: "flex", alignItems: "center", gap: 7,
+                                  padding: "6px 12px", borderRadius: 999, cursor: "pointer",
+                                  border: "1.5px solid",
+                                  borderColor: assigned ? "#FFCE00" : "#E8E6DC",
+                                  background: assigned ? "#FFF6CF" : "white",
+                                  fontWeight: 700, fontSize: 12, transition: ".12s",
+                                }}>
+                                  <span style={{ width: 14, height: 14, borderRadius: "50%", background: assigned ? "#FFCE00" : "#F0EEE8", display: "grid", placeItems: "center", fontSize: 9, fontWeight: 900, color: assigned ? "#221D23" : "transparent" }}>✓</span>
+                                  {co.name}
+                                  {co.domain && <span style={{ fontSize: 10, color: "#B0ABA5", fontWeight: 400 }}>{co.domain}</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
@@ -378,6 +480,38 @@ export default function SuperadminClient({ profile, companies, activities: initA
     </div>
   );
 }
+
+const ACTIVITY_TABLE_MIN_WIDTH = 1636;
+
+const activityTableStyle: React.CSSProperties = {
+  width: "100%",
+  minWidth: ACTIVITY_TABLE_MIN_WIDTH,
+  tableLayout: "fixed",
+  borderCollapse: "collapse",
+  fontFamily: "inherit",
+};
+
+const activityThStyle: React.CSSProperties = {
+  position: "sticky",
+  top: 0,
+  zIndex: 2,
+  padding: "10px 8px",
+  background: "#FAFAF8",
+  borderBottom: "1px solid #E8E6DC",
+  boxShadow: "0 2px 6px rgba(34,29,35,.06)",
+  fontSize: 10.5,
+  fontWeight: 800,
+  color: "#9A9590",
+  textTransform: "uppercase",
+  letterSpacing: ".04em",
+  verticalAlign: "middle",
+  whiteSpace: "nowrap",
+};
+
+const activityTdStyle: React.CSSProperties = {
+  padding: "10px 8px",
+  verticalAlign: "middle",
+};
 
 const card: React.CSSProperties = {
   background: "white", border: "1px solid #E8E6DC", borderRadius: 18,
@@ -392,3 +526,26 @@ const lbl: React.CSSProperties = { display: "block", fontSize: 11.5, fontWeight:
 const btnAmber: React.CSSProperties = { padding: "9px 18px", borderRadius: 999, border: 0, background: "#FFCE00", color: "#221D23", fontWeight: 800, fontSize: 13, cursor: "pointer" };
 const btnGhost: React.CSSProperties = { padding: "9px 18px", borderRadius: 999, border: "1.5px solid #E8E6DC", background: "white", color: "#6B6B6B", fontWeight: 700, fontSize: 13, cursor: "pointer" };
 const posBtnStyle: React.CSSProperties = { width: 18, height: 14, border: "1px solid #E8E6DC", borderRadius: 4, background: "#F8F8F6", color: "#6B6B6B", fontSize: 8, cursor: "pointer", display: "grid", placeItems: "center", padding: 0 };
+
+const chipStyle: React.CSSProperties = {
+  padding: "2px 7px", borderRadius: 999, fontSize: 10, fontWeight: 700,
+  background: "rgba(98,60,234,.08)", color: "#5030C0",
+  whiteSpace: "normal", wordBreak: "break-word",
+};
+
+function ContentBadge({ ok, label, detail }: { ok: boolean; label: string; detail: string }) {
+  return (
+    <span
+      title={`${label}: ${ok ? "present" : "missing"}${detail !== "—" && detail !== "Yes" ? ` (${detail})` : ""}`}
+      style={{
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+        minWidth: 36, padding: "3px 6px", borderRadius: 6, fontSize: 10.5, fontWeight: 800,
+        background: ok ? "rgba(35,206,104,.1)" : "rgba(246,138,41,.08)",
+        color: ok ? "#17A855" : "#C47A20",
+        border: `1px solid ${ok ? "rgba(35,206,104,.25)" : "rgba(246,138,41,.2)"}`,
+      }}
+    >
+      {detail}
+    </span>
+  );
+}
