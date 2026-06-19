@@ -198,61 +198,73 @@ export type Database = {
         Row: Company;
         Insert: { name: string; domain?: string | null; created_by?: string | null };
         Update: { name?: string; domain?: string | null };
+        Relationships: [];
       };
       profiles: {
         Row: Profile;
         Insert: { id: string; email?: string | null; full_name?: string | null; avatar_url?: string | null; company_id?: string | null; role?: Role; aimastery_approved?: boolean; aimastery_requested?: boolean };
         Update: { email?: string | null; full_name?: string | null; avatar_url?: string | null; company_id?: string | null; role?: Role; aimastery_approved?: boolean; aimastery_requested?: boolean };
+        Relationships: [];
       };
       activities: {
         Row: Activity;
         Insert: { title: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; tags?: string[]; functions?: string[]; position?: number; published?: boolean; is_featured?: boolean; is_locked?: boolean; category?: string };
         Update: { title?: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; tags?: string[]; functions?: string[]; position?: number; published?: boolean; is_featured?: boolean; is_locked?: boolean; category?: string };
+        Relationships: [];
       };
       activity_companies: {
         Row: ActivityCompany;
         Insert: { activity_id: string; company_id: string };
-        Update: never;
+        Update: Record<string, never>;
+        Relationships: [];
       };
       tool_logos: {
         Row: ToolLogo;
         Insert: { tool: string; logo_url: string; updated_at?: string };
         Update: { logo_url?: string; updated_at?: string };
+        Relationships: [];
       };
       activity_content: {
         Row: ActivityContent;
         Insert: Omit<ActivityContent, "id">;
         Update: Partial<Omit<ActivityContent, "id" | "activity_id">>;
+        Relationships: [];
       };
       activity_steps: {
         Row: ActivityStep;
         Insert: Omit<ActivityStep, "id" | "created_at">;
         Update: Partial<Omit<ActivityStep, "id" | "activity_id" | "created_at">>;
+        Relationships: [];
       };
       user_progress: {
         Row: UserProgress;
         Insert: { user_id: string; activity_id: string; status?: UserProgress["status"]; completed_steps?: number[]; quiz_score?: number | null; completed_at?: string | null; updated_at?: string };
         Update: { status?: UserProgress["status"]; completed_steps?: number[]; quiz_score?: number | null; completed_at?: string | null; updated_at?: string; video_watched?: boolean };
+        Relationships: [];
       };
       chat_logs: {
         Row: ChatLog;
         Insert: Omit<ChatLog, "id" | "created_at">;
-        Update: never;
+        Update: Record<string, never>;
+        Relationships: [];
       };
       activity_views: {
         Row: ActivityView;
         Insert: { activity_id: string; user_id?: string | null; session_id?: string | null };
-        Update: never;
+        Update: Record<string, never>;
+        Relationships: [];
       };
       fluency_views: {
         Row: FluencyView;
         Insert: { entity_type: FluencyEntityType; entity_id: string; user_id?: string | null; session_id?: string | null };
-        Update: never;
+        Update: Record<string, never>;
+        Relationships: [];
       };
       tool_deep_dives: {
         Row: ToolDeepDive;
         Insert: { title: string; url?: string | null; link_type?: ToolDeepDiveLinkType; html_path?: string | null; description?: string | null; tool?: string | null; position?: number; published?: boolean };
         Update: { title?: string; url?: string | null; link_type?: ToolDeepDiveLinkType; html_path?: string | null; description?: string | null; tool?: string | null; position?: number; published?: boolean };
+        Relationships: [];
       };
     };
     Views: Record<string, never>;
