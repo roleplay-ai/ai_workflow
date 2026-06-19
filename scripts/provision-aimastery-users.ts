@@ -13,12 +13,15 @@
  *   --dry-run        Print actions without writing to Supabase
  */
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { mkdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
+import type { Database } from "../lib/supabase/types";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
+
+type AdminClient = SupabaseClient<Database>;
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
@@ -72,7 +75,7 @@ function escapeCsv(value: string): string {
 }
 
 async function findProfileByEmail(
-  admin: ReturnType<typeof createClient>,
+  admin: AdminClient,
   email: string,
 ): Promise<{ id: string } | null> {
   const { data, error } = await admin
@@ -86,7 +89,7 @@ async function findProfileByEmail(
 }
 
 async function provisionUser(
-  admin: ReturnType<typeof createClient>,
+  admin: AdminClient,
   user: UserRow,
   password: string,
 ): Promise<"created" | "updated"> {
@@ -167,7 +170,7 @@ async function main() {
     return;
   }
 
-  const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+  const admin = createClient<Database>(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
