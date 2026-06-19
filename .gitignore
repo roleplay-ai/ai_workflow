@@ -26,6 +26,7 @@ public/uploads/
 *.png
 !app/icon.png
 !public/Nudgeable-black.png
+!public/og-banner.png
 *.jpg
 *.jpeg
 *.gif

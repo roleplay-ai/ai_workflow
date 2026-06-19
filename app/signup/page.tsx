@@ -66,7 +66,7 @@ export default function SignupPage() {
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 28 }}>
           <img src="/icon.png" alt="" width={36} height={36}
             style={{ width: 36, height: 36, borderRadius: 10, display: "block", flexShrink: 0 }} />
-          <span style={{ fontWeight: 800, fontSize: 17, letterSpacing: "-.03em" }}>Nudgeable AI Work Studio</span>
+          <span style={{ fontWeight: 800, fontSize: 17, letterSpacing: "-.03em" }}>Nudgeable AI Practice Lab</span>
         </div>
 
         <h1 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 800, letterSpacing: "-.04em" }}>Create account</h1>
