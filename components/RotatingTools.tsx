@@ -21,7 +21,7 @@ type Props = {
 };
 
 export default function RotatingTools({
-  tools,
+  tools: rawTools,
   toolLogos,
   variant = "chip",
   iconSize = 16,
@@ -32,9 +32,15 @@ export default function RotatingTools({
   labelColor,
   labelSize,
 }: Props) {
+  const tools = useMemo(() => rawTools.filter(Boolean), [rawTools]);
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<"in" | "out">("in");
   const count = tools.length;
+
+  useEffect(() => {
+    setIndex(0);
+    setPhase("in");
+  }, [tools]);
 
   useEffect(() => {
     if (count <= 1) return;
@@ -59,7 +65,8 @@ export default function RotatingTools({
 
   if (!count) return null;
 
-  const tool = tools[index];
+  const tool = tools[index % count];
+  if (!tool) return null;
   const animClass = count > 1 ? (phase === "in" ? styles.fadeIn : styles.fadeOut) : undefined;
 
   if (variant === "icon") {
