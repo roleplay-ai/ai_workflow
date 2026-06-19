@@ -7,7 +7,7 @@ import { deepDiveHref, deepDiveLabel } from "@/lib/deepDives";
 import { formatToolLabel } from "@/lib/tools";
 import { resolveToolLogoUrl, type ToolLogoMap } from "@/lib/toolLogos";
 import ViewCountBadge from "@/components/ViewCountBadge";
-import { recordFluencyView } from "@/lib/fluencyViews";
+import { recordFluencyView, PAGE_IDS } from "@/lib/fluencyViews";
 import type { ToolDeepDive } from "@/lib/supabase/types";
 import ModulePlayer, { type ModuleData } from "./ModulePlayer";
 import ModuleHtmlModal from "./ModuleHtmlModal";
@@ -313,6 +313,10 @@ export default function AIFluencyClient({
   const [htmlModule, setHtmlModule] = useState<FoundationModule | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [selectedTool, setSelectedTool] = useState<FluencyTool | null>(null);
+
+  useEffect(() => {
+    recordFluencyView("page", PAGE_IDS.AI_FLUENCY);
+  }, []);
 
   function openToolDetails(tool: FluencyTool) {
     recordFluencyView("tool", tool.id);

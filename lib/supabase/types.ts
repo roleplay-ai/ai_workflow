@@ -94,10 +94,11 @@ export type ActivityView = {
   activity_id: string;
   user_id: string | null;
   session_id: string | null;
+  ip_address: string | null;
   created_at: string;
 };
 
-export type FluencyEntityType = "video" | "tool" | "tool_guide" | "deep_dive" | "module";
+export type FluencyEntityType = "video" | "tool" | "tool_guide" | "deep_dive" | "module" | "page";
 
 export type FluencyView = {
   id: string;
@@ -105,6 +106,7 @@ export type FluencyView = {
   entity_id: string;
   user_id: string | null;
   session_id: string | null;
+  ip_address: string | null;
   created_at: string;
 };
 

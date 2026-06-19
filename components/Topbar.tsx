@@ -52,6 +52,11 @@ export default function Topbar({ profile, role, activePage, onSignOut }: Props) 
               background: "transparent", border: "1px solid #E9E4DC",
               color: "#221D23", textDecoration: "none",
             }}>Superadmin</Link>
+            <Link href="/superadmin/analytics" style={{
+              borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 900,
+              background: "rgba(255,206,0,.1)", border: "1px solid #FFCE00",
+              color: "#221D23", textDecoration: "none",
+            }}>Analytics</Link>
             <Link href="/superadmin/tool-logos" style={{
               borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 900,
               background: "transparent", border: "1px solid #E9E4DC",
