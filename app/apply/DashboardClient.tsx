@@ -191,7 +191,7 @@ function AllWorkflowsSection({
         <div className="rail-title">
           <span className="section-label">Full library</span>
           <h2>{title}</h2>
-          <p>No workflows found{activeFilters.length ? ` for "${activeFilters.join('" + "')}"` : ""}. Try adjusting your filters above.</p>
+          <p>Oops no workflow found, try using some other filter</p>
         </div>
       </div>
     </section>
@@ -305,8 +305,8 @@ function FunctionsCarousel({
     <section className="rail functions-rail">
       <div className="rail-header">
         <div className="rail-title">
-          <span className="section-label">Filter by role</span>
-          <h2>Browse by function</h2>
+          <span className="section-label">Workflow types</span>
+          <h2>Browse by Outcome</h2>
           <p>Select a function to filter All Workflows above.</p>
         </div>
         {selectedFunction && (

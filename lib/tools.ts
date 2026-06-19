@@ -27,6 +27,7 @@ export function normalizeToolSlug(name: string): string {
 }
 
 export function formatToolLabel(tool: string): string {
+  if (!tool) return "";
   const key = tool.toLowerCase() as DefaultToolId;
   if (TOOL_LABELS[key]) return TOOL_LABELS[key];
   return key

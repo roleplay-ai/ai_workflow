@@ -17,6 +17,7 @@ export type Profile = {
   role: Role;
   created_at: string;
   aimastery_approved: boolean;
+  aimastery_requested: boolean;
 };
 
 export type Activity = {
@@ -200,8 +201,8 @@ export type Database = {
       };
       profiles: {
         Row: Profile;
-        Insert: { id: string; email?: string | null; full_name?: string | null; avatar_url?: string | null; company_id?: string | null; role?: Role };
-        Update: { email?: string | null; full_name?: string | null; avatar_url?: string | null; company_id?: string | null; role?: Role };
+        Insert: { id: string; email?: string | null; full_name?: string | null; avatar_url?: string | null; company_id?: string | null; role?: Role; aimastery_approved?: boolean; aimastery_requested?: boolean };
+        Update: { email?: string | null; full_name?: string | null; avatar_url?: string | null; company_id?: string | null; role?: Role; aimastery_approved?: boolean; aimastery_requested?: boolean };
       };
       activities: {
         Row: Activity;

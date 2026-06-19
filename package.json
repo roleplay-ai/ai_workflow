@@ -10,7 +10,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "load-test:chat": "npx tsx scripts/load-test-chat.ts"
+    "load-test:chat": "npx tsx scripts/load-test-chat.ts",
+    "provision:aimastery": "npx tsx --env-file=.env.local scripts/provision-aimastery-users.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.100.1",
