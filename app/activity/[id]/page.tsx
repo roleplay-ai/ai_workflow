@@ -17,7 +17,7 @@ export async function generateMetadata({
 
   const { data: activity } = await supabase
     .from("activities")
-    .select("title, description, level, time_estimate_minutes, category, thumbnail_url")
+    .select("title, description, level, banner_url")
     .eq("id", id)
     .single();
 
@@ -28,6 +28,10 @@ export async function generateMetadata({
     activity.description ??
     `${activity.level ?? ""} AI workflow activity on ${SITE_NAME}`.trim();
 
+  const ogImage = activity.banner_url
+    ? { url: activity.banner_url, width: 1200, height: 630, alt: title }
+    : { url: `/api/og/${id}`, width: 1200, height: 630, alt: title };
+
   return {
     title,
     description,
@@ -35,11 +39,13 @@ export async function generateMetadata({
       title,
       description,
       type: "article",
+      images: [ogImage],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
+      images: [ogImage],
     },
   };
 }

@@ -3,9 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-export const alt = "Activity preview";
-export const size = { width: 1200, height: 630 };
-export const contentType = "image/png";
+export const dynamic = "force-dynamic";
+
+const size = { width: 1200, height: 630 };
 
 const levelColors: Record<string, string> = {
   Beginner: "#4ade80",
@@ -13,17 +13,16 @@ const levelColors: Record<string, string> = {
   Advanced: "#f87171",
 };
 
-export default async function Image({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const { id } = await params;
   const supabase = await createClient();
 
   const { data: activity } = await supabase
     .from("activities")
-    .select("title, description, level, time_estimate_minutes, category, tools, banner_url")
+    .select("title, level, time_estimate_minutes, category, tools")
     .eq("id", id)
     .single();
 
@@ -49,28 +48,6 @@ export default async function Image({
     );
   }
 
-  // If a custom banner was uploaded, use it directly
-  if (activity.banner_url) {
-    return new ImageResponse(
-      (
-        <div
-          style={{
-            width: "100%",
-            height: "100%",
-            display: "flex",
-          }}
-        >
-          <img
-            src={activity.banner_url}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
-        </div>
-      ),
-      { ...size }
-    );
-  }
-
-  // Otherwise generate a branded banner dynamically
   const logoData = await readFile(
     join(process.cwd(), "public", "Nudgeable-black.png"),
     "base64"
@@ -171,7 +148,6 @@ export default async function Image({
             gap: "16px",
           }}
         >
-          {/* Level badge */}
           {activity.level && (
             <div
               style={{
@@ -189,7 +165,6 @@ export default async function Image({
             </div>
           )}
 
-          {/* Time estimate */}
           {activity.time_estimate_minutes && (
             <div
               style={{
@@ -206,7 +181,6 @@ export default async function Image({
             </div>
           )}
 
-          {/* Tool pills */}
           {tools.map((tool: string) => (
             <div
               key={tool}
@@ -225,7 +199,7 @@ export default async function Image({
           ))}
         </div>
 
-        {/* Subtle branding bottom-right */}
+        {/* Branding */}
         <div
           style={{
             position: "absolute",
