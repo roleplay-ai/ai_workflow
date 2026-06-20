@@ -21,6 +21,13 @@
   --danger: #EF4444;
 }
 
+@media (max-width: 768px) {
+  :root {
+    --page-gutter: 16px;
+    --page-content-width: min(1600px, calc(100% - 32px));
+  }
+}
+
 * { box-sizing: border-box; }
 
 body {

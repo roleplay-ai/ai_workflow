@@ -88,6 +88,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
   const [progress, setProgress] = useState(initProgress);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [slideOpen, setSlideOpen] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
   const initDone = useRef(false);
 
@@ -373,7 +374,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: "Roboto, ui-sans-serif, system-ui, sans-serif" }}>
       {/* Topbar */}
-      <header style={{
+      <header className={panelStyles.activityHeader} style={{
         height: 68, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "0 24px", background: "rgba(255,255,255,.82)", borderBottom: "1px solid #E2E8F0",
         backdropFilter: "blur(18px)", zIndex: 10,
@@ -394,8 +395,8 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0 }}>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 17, fontWeight: 900, letterSpacing: "-.03em" }}>{activity.title}</div>
-              <div style={{ fontSize: 11.5, color: "#64748B", fontWeight: 600 }}>{activity.level} · {activity.time_estimate_minutes}m</div>
+              <div className={panelStyles.headerTitle} style={{ fontSize: 17, fontWeight: 900, letterSpacing: "-.03em" }}>{activity.title}</div>
+              <div className={panelStyles.headerSubtitle} style={{ fontSize: 11.5, color: "#64748B", fontWeight: 600 }}>{activity.level} · {activity.time_estimate_minutes}m</div>
             </div>
             <a href="/apply" style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, height: 32, padding: "0 12px", borderRadius: 8, fontSize: 13, fontWeight: 700, color: "#221D23", background: "#facc15", border: "1px solid #d97706", textDecoration: "none", transition: "background .15s" }}
               onMouseEnter={e => { e.currentTarget.style.background = "#fbbf24"; }}
@@ -407,7 +408,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
 
         {/* Step dots */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div className={panelStyles.stepDots} style={{ display: "flex", alignItems: "center", gap: 6 }}>
             {steps.map((_, i) => {
               const done = i < current;
               const active = i === current;
@@ -425,10 +426,16 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
         </div>
       </header>
 
-      {/* Main layout */}
-      <div style={{ flex: 1, minHeight: 0, display: "grid", gap: 16, padding: 16, gridTemplateColumns: "420px 1fr" }}>
+      {/* Mobile progress bar */}
+      <div className={panelStyles.mobileProgressBar}>
+        <div className={panelStyles.mobileProgressFill} style={{ width: `${pct}%` }} />
+      </div>
 
-        {/* ── LEFT: AI Coach chat ──────────────────────────────────────────── */}
+      {/* Main layout */}
+      <div className={panelStyles.mainLayout}>
+
+        {/* ── AI Coach chat ──────────────────────────────────────────── */}
+        <div className={`${panelStyles.panelWrap} ${panelStyles.chatWrap}`}>
         <div style={{ display: "flex", flexDirection: "column", borderRadius: 24, overflow: "hidden", border: "1px solid #E2E8F0", background: "rgba(255,255,255,.92)", boxShadow: "0 18px 45px rgba(15,23,42,.10)", minHeight: 0 }}>
           {/* Chat header */}
           <div style={{ flexShrink: 0, borderBottom: "1px solid #E2E8F0", background: "linear-gradient(180deg,rgba(255,255,255,.94),rgba(248,250,252,.94))" }}>
@@ -437,9 +444,18 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
                 <span style={{ fontWeight: 900 }}>Nudgie</span>
                 <span style={{ fontWeight: 500 }}> — your AI coach</span>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, fontSize: 11, fontWeight: 900, color: "#1D4ED8", background: "#DBEAFE" }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#2563EB" }} />
-                Active
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, fontSize: 11, fontWeight: 900, color: "#1D4ED8", background: "#DBEAFE" }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#2563EB" }} />
+                  Active
+                </div>
+                <button
+                  className={panelStyles.detailsBtn}
+                  onClick={() => setShowDetails(true)}
+                  aria-label="Activity details"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                </button>
               </div>
             </div>
           </div>
@@ -521,10 +537,10 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
             </div>
           </div>
         </div>
+        </div>
 
-        {/* ── RIGHT: Slide + step card ─────────────────────────────────────── */}
-        <div style={{ flex: 1, minHeight: 0, display: "grid", gap: 16, gridTemplateColumns: "1fr 320px" }}>
-
+        {/* ── Slide ──────────────────────────────────────────────────── */}
+        <div className={`${panelStyles.panelWrap} ${panelStyles.slideWrap}`}>
           {/* Slide frame */}
           <div style={{ display: "flex", flexDirection: "column", borderRadius: 20, overflow: "hidden", border: "1px solid #E2E8F0", background: "white", boxShadow: "0 10px 28px rgba(15,23,42,.08)", minHeight: 0 }}>
             <div style={{ flexShrink: 0, height: 36, display: "flex", alignItems: "center", gap: 8, padding: "0 12px", borderBottom: "1px solid #E2E8F0", background: "#F8FAFC", fontSize: 11.5, fontWeight: 700, color: "#94A3B8" }}>
@@ -564,7 +580,10 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
             </div>
           </div>
 
-          {/* Right panel */}
+        </div>
+
+          {/* ── Details panel ──────────────────────────────────────────── */}
+          <div className={`${panelStyles.panelWrap} ${panelStyles.detailsWrap}`} data-details-open={showDetails ? "true" : undefined}>
           <div style={{ borderRadius: 20, border: "1px solid #E2E8F0", background: "rgba(255,255,255,.97)", boxShadow: "0 10px 28px rgba(15,23,42,.07)", display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0, height: "100%" }}>
             <div className={panelStyles.sidebarScroll}>
 
@@ -804,6 +823,20 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
           </div>
         </div>
       </div>
+
+      {/* Mobile: details overlay backdrop + close bar */}
+      {showDetails && (
+        <>
+          <div className={panelStyles.detailsOverlay} onClick={() => setShowDetails(false)} />
+          <div className={panelStyles.detailsCloseBar}>
+            <span className={panelStyles.detailsCloseTitle}>Activity Details</span>
+            <button className={panelStyles.detailsCloseBtn} onClick={() => setShowDetails(false)}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              Close
+            </button>
+          </div>
+        </>
+      )}
 
       {/* Quiz modal */}
       {showQuiz && pendingQuiz && (

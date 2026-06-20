@@ -61,3 +61,267 @@
 .sidebarScroll::-webkit-scrollbar-thumb:hover {
   background: #64748b;
 }
+
+/* ── Activity page layout ─────────────────────────────────── */
+
+.mainLayout {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  grid-template-columns: 420px 1fr 320px;
+}
+
+.panelWrap {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.panelWrap > * {
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Activity header ──────────────────────────────────────── */
+
+.activityHeader {
+  /* desktop defaults set inline; module handles mobile */
+}
+
+.stepDots {
+  /* visible on desktop */
+}
+
+.headerTitle {
+  min-width: 0;
+}
+
+.headerSubtitle {
+  /* visible on desktop */
+}
+
+/* ── Mobile progress bar ──────────────────────────────────── */
+
+.mobileProgressBar {
+  display: none;
+  height: 3px;
+  background: #E2E8F0;
+  flex-shrink: 0;
+}
+
+.mobileProgressFill {
+  height: 100%;
+  background: #2563EB;
+  transition: width 0.3s ease;
+  border-radius: 0 999px 999px 0;
+}
+
+/* ── Mobile details "i" button (in header) ────────────────── */
+
+.detailsBtn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1.5px solid #E2E8F0;
+  background: white;
+  color: #64748B;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.detailsBtn:active {
+  background: #F1F5F9;
+  color: #2563EB;
+}
+
+/* ── Mobile details overlay ───────────────────────────────── */
+
+.detailsOverlay {
+  display: none;
+}
+
+/* ── Mobile breakpoint ────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .mainLayout {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    gap: 0;
+  }
+
+  /* Slide: compact strip at top */
+  .slideWrap {
+    order: -1;
+    flex: 0 0 auto;
+    max-height: 32vh;
+    min-height: 140px;
+    border-radius: 0;
+    overflow: hidden;
+  }
+
+  .slideWrap > * {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    border-left: none !important;
+    border-right: none !important;
+  }
+
+  /* Chat: fills remaining space below slide */
+  .chatWrap {
+    flex: 1;
+    min-height: 0;
+    order: 0;
+  }
+
+  .chatWrap > * {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-bottom: none !important;
+  }
+
+  /* Details: hidden, shown as overlay */
+  .detailsWrap {
+    display: none;
+  }
+
+  .detailsWrap[data-details-open="true"] {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    top: 0;
+    z-index: 60;
+    background: white;
+    animation: detailsSlideUp 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .detailsWrap[data-details-open="true"] > * {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    height: 100% !important;
+  }
+
+  .activityHeader {
+    height: 52px !important;
+    padding: 0 12px !important;
+  }
+
+  .stepDots {
+    display: none !important;
+  }
+
+  .headerTitle {
+    font-size: 14px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 42vw;
+  }
+
+  .headerSubtitle {
+    display: none !important;
+  }
+
+  .mobileProgressBar {
+    display: block;
+  }
+
+  .chatScroll {
+    padding: 14px;
+    gap: 10px;
+  }
+
+  /* Show "i" icon in header */
+  .detailsBtn {
+    display: flex;
+  }
+
+  /* Chat panel: ensure input bar with prev/next stays visible */
+  .chatWrap > * {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Overlay backdrop + close bar */
+  .detailsOverlay {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    background: rgba(0, 0, 0, 0.3);
+    animation: detailsFadeIn 0.2s ease;
+  }
+
+  .detailsCloseBar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 65;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    background: white;
+    border-bottom: 1px solid #E2E8F0;
+  }
+
+  .detailsCloseBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: none;
+    background: none;
+    font-size: 14px;
+    font-weight: 700;
+    color: #64748B;
+    cursor: pointer;
+    padding: 8px 0;
+    font-family: inherit;
+  }
+
+  .detailsCloseTitle {
+    font-size: 15px;
+    font-weight: 800;
+    color: #0F172A;
+    letter-spacing: -0.02em;
+  }
+}
+
+@keyframes detailsSlideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes detailsFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ── Tablet adjustments ───────────────────────────────────── */
+
+@media (min-width: 901px) and (max-width: 1200px) {
+  .mainLayout {
+    grid-template-columns: 340px 1fr 280px;
+  }
+}
