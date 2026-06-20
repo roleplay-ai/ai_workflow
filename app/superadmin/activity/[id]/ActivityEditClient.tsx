@@ -61,6 +61,11 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
   const [thumbnailFile,      setThumbnailFile]      = useState<File | null>(null);
   const [thumbnailUploading, setThumbnailUploading] = useState(false);
 
+  // Banner (OG share image)
+  const [bannerUrl,       setBannerUrl]       = useState<string | null>(activity.banner_url ?? null);
+  const [bannerFile,      setBannerFile]      = useState<File | null>(null);
+  const [bannerUploading, setBannerUploading] = useState(false);
+
   // Info — multi-select state (arrays)
   const [infoToolsArr,  setInfoToolsArr]  = useState<string[]>(normalizeToolList(activity.tools ?? []));
   const [infoTagsArr,       setInfoTagsArr]       = useState<string[]>(activity.tags ?? []);
@@ -189,6 +194,22 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
     return supabase.storage.from("activity-thumbnails").getPublicUrl(storagePath).data.publicUrl;
   }
 
+  async function uploadBanner(file: File): Promise<string | null> {
+    const safe = file.name.replace(/[^\w.\-]/g, "_");
+    const storagePath = `${activity.id}/${Date.now()}_${safe}`;
+    setBannerUploading(true);
+    const { error } = await supabase.storage
+      .from("activity-banners")
+      .upload(storagePath, file, { upsert: true, contentType: file.type });
+    setBannerUploading(false);
+    if (error) {
+      setInfoMsg(`Banner upload failed: ${error.message}`);
+      setTimeout(() => setInfoMsg(""), 6000);
+      return null;
+    }
+    return supabase.storage.from("activity-banners").getPublicUrl(storagePath).data.publicUrl;
+  }
+
   async function saveInfo() {
     setSavingInfo(true); setInfoMsg("");
 
@@ -197,6 +218,13 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
     if (thumbnailFile) {
       const url = await uploadThumbnail(thumbnailFile);
       if (url) { finalThumbnailUrl = url; setThumbnailUrl(url); setThumbnailFile(null); }
+    }
+
+    // Upload banner (if a new file was picked)
+    let finalBannerUrl = bannerUrl;
+    if (bannerFile) {
+      const url = await uploadBanner(bannerFile);
+      if (url) { finalBannerUrl = url; setBannerUrl(url); setBannerFile(null); }
     }
 
     const { error } = await supabase.from("activities").update({
@@ -213,10 +241,15 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
       position:               infoPosition,
     }).eq("id", activity.id);
 
-    // Thumbnail is saved separately — best-effort, silent if column doesn't exist yet
-    if (finalThumbnailUrl !== thumbnailUrl || thumbnailFile) {
+    // Thumbnail & banner saved separately — best-effort, silent if columns don't exist yet
+    if (finalThumbnailUrl !== activity.thumbnail_url) {
       await supabase.from("activities")
         .update({ thumbnail_url: finalThumbnailUrl } as any)
+        .eq("id", activity.id);
+    }
+    if (finalBannerUrl !== activity.banner_url) {
+      await supabase.from("activities")
+        .update({ banner_url: finalBannerUrl })
         .eq("id", activity.id);
     }
 
@@ -650,6 +683,38 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
                     style={{ fontSize: 13 }}
                   />
                   {thumbnailUploading && <span style={{ fontSize: 12, color: "#9E9897" }}>Uploading…</span>}
+                </div>
+              </div>
+
+              {/* Share Banner (OG image) */}
+              <div>
+                <label style={lbl}>Share Banner (OG Preview Image)</label>
+                <p style={{ margin: "3px 0 10px", fontSize: 12, color: "#9E9897", lineHeight: 1.4 }}>
+                  Shown when sharing activity links on social media / messaging apps. Recommended: 1200×630, JPG/PNG/WEBP.
+                </p>
+                {(bannerUrl || bannerFile) && (
+                  <div style={{ position: "relative", display: "inline-block", marginBottom: 10 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={bannerFile ? URL.createObjectURL(bannerFile) : bannerUrl!}
+                      alt="Banner preview"
+                      style={{ width: 320, height: 168, objectFit: "cover", borderRadius: 10, border: "1px solid #E8E6DC", display: "block" }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { setBannerFile(null); setBannerUrl(null); }}
+                      style={{ position: "absolute", top: 6, right: 6, background: "rgba(0,0,0,0.62)", border: 0, color: "white", borderRadius: "50%", width: 22, height: 22, cursor: "pointer", fontSize: 14, lineHeight: 1, display: "grid", placeItems: "center" }}
+                    >×</button>
+                  </div>
+                )}
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    onChange={e => { setBannerFile(e.target.files?.[0] ?? null); }}
+                    style={{ fontSize: 13 }}
+                  />
+                  {bannerUploading && <span style={{ fontSize: 12, color: "#9E9897" }}>Uploading…</span>}
                 </div>
               </div>
 

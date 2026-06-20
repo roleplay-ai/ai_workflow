@@ -1,9 +1,48 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import ActivityViewClient from "./ActivityViewClient";
 import { rowsToToolLogoMap } from "@/lib/toolLogos";
+import { SITE_NAME } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+
+  const { data: activity } = await supabase
+    .from("activities")
+    .select("title, description, level, time_estimate_minutes, category, thumbnail_url")
+    .eq("id", id)
+    .single();
+
+  if (!activity) return {};
+
+  const title = activity.title;
+  const description =
+    activity.description ??
+    `${activity.level ?? ""} AI workflow activity on ${SITE_NAME}`.trim();
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "article",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
+  };
+}
 
 export default async function ActivityPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
