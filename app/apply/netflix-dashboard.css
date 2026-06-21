@@ -2495,6 +2495,28 @@
     margin: 0;
   }
 
+  .ndb-root .brief-news-card-link .brief-news-top {
+    min-height: auto;
+    padding: 14px 16px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .ndb-root .brief-news-card-link .brief-news-top h2 {
+    flex: 1;
+    min-width: 0;
+    font-size: 18px;
+    line-height: 1.2;
+  }
+
+  .ndb-root .brief-news-card-link .brief-news-date-pill {
+    flex-shrink: 0;
+    padding: 7px 12px;
+    font-size: 12px;
+  }
+
   .ndb-root .cards-row {
     grid-auto-columns: minmax(260px, 78vw);
     gap: 14px;
