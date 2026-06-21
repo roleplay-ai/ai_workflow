@@ -2460,10 +2460,12 @@
   }
 
   .ndb-root .hero-showcase {
-    padding: 16px 0;
+    padding: 12px 0;
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: none;
+    scroll-snap-type: x mandatory;
+    gap: 10px;
   }
 
   .ndb-root .hero-showcase::-webkit-scrollbar {
@@ -2471,7 +2473,10 @@
   }
 
   .ndb-root .hero-card-slot {
-    flex-basis: 78% !important;
+    flex-basis: 82% !important;
+    opacity: 1 !important;
+    transform: scale(1) !important;
+    scroll-snap-align: center;
   }
 
   .ndb-root .filter-panel {
@@ -2490,11 +2495,34 @@
     margin: 0;
   }
 
+  .ndb-root .brief-news-card-link .brief-news-top {
+    min-height: auto;
+    padding: 14px 16px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .ndb-root .brief-news-card-link .brief-news-top h2 {
+    flex: 1;
+    min-width: 0;
+    font-size: 18px;
+    line-height: 1.2;
+  }
+
+  .ndb-root .brief-news-card-link .brief-news-date-pill {
+    flex-shrink: 0;
+    padding: 7px 12px;
+    font-size: 12px;
+  }
+
   .ndb-root .cards-row {
-    grid-auto-columns: minmax(260px, 82vw);
+    grid-auto-columns: minmax(260px, 78vw);
     gap: 14px;
-    padding-inline: 16px;
+    padding: 16px;
     scroll-padding-inline: 16px;
+    scroll-snap-type: x mandatory;
     -webkit-mask-image: none;
     mask-image: none;
   }
@@ -2503,12 +2531,36 @@
     display: none;
   }
 
+  .ndb-root .rail-card-slot {
+    scroll-snap-align: center;
+  }
+
+  .ndb-root .rail-card-slot:not(.is-active) {
+    transform: none;
+    opacity: 1;
+  }
+
+  .ndb-root .rail-card-slot.is-active,
+  .ndb-root .rail-card-slot:hover {
+    transform: none;
+  }
+
+  .ndb-root .rail-card-slot.is-active .workflow-card,
+  .ndb-root .rail-card-slot:hover .workflow-card {
+    box-shadow: 0 8px 24px rgba(34, 29, 35, 0.12);
+  }
+
+  .ndb-root .cards-row:has(.rail-card-slot:hover) .rail-card-slot.is-active:not(:hover) {
+    transform: none;
+    opacity: 1;
+  }
+
   .ndb-root .workflow-card {
     height: auto;
   }
 
   .ndb-root .card-poster:not(.has-thumbnail) {
-    height: 170px;
+    height: 160px;
   }
 
   .ndb-root .tool-grid {
@@ -2542,5 +2594,46 @@
 
   .ndb-root .footer-links {
     flex-wrap: wrap;
+  }
+
+  .ndb-root .fn-activity-card {
+    width: 220px;
+  }
+
+  .ndb-root .fn-arrow-btn {
+    display: none;
+  }
+
+  .ndb-root .rail-title h2 {
+    font-size: 20px;
+  }
+
+  .ndb-root .mastery-course-card {
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: 5px 5px 0 #221D23;
+  }
+
+  .ndb-root .mastery-course-title {
+    font-size: 20px;
+  }
+
+  .ndb-root .brief-card-section {
+    margin: 32px 0 16px;
+  }
+
+  .ndb-root .question-orbit .orbit-chip {
+    font-size: 10px;
+    padding: 6px 8px;
+  }
+
+  .ndb-root .center-note {
+    width: 96px;
+    height: 96px;
+    border-radius: 24px;
+  }
+
+  .ndb-root .center-note strong {
+    font-size: 28px;
   }
 }

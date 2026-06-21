@@ -809,6 +809,28 @@
     font-size: 15px;
   }
 
+  .aif-hero-right .brief-news-top {
+    min-height: auto;
+    padding: 14px 16px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .aif-hero-right .brief-news-top h2 {
+    flex: 1;
+    min-width: 0;
+    font-size: 18px;
+    line-height: 1.2;
+  }
+
+  .aif-hero-right .brief-news-date-pill {
+    flex-shrink: 0;
+    padding: 7px 12px;
+    font-size: 12px;
+  }
+
   .aif-tool-grid,
   .aif-tool-guide-grid {
     grid-template-columns: 1fr !important;
