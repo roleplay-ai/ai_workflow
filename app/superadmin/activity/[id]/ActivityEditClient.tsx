@@ -4,7 +4,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import Topbar from "@/components/Topbar";
 import MultiSelect, { type SelectOption } from "@/components/MultiSelect";
-import type { Profile, Activity, ActivityContent, ActivityStep, PromptTemplate, DownloadFile } from "@/lib/supabase/types";
+import type { Profile, Activity, ActivityContent, ActivityStep, PromptTemplate, DownloadFile, WhatYouGetItem } from "@/lib/supabase/types";
 import { formatToolLabel, normalizeToolList, normalizeToolSlug, sortToolSlugs } from "@/lib/tools";
 import { mergeToolSelectOptions, rowsToToolLogoMap, type ToolLogoMap } from "@/lib/toolLogos";
 
@@ -24,6 +24,7 @@ type EditableStep = Omit<ActivityStep, "created_at"> & {
   isDirty: boolean;
   isSaving: boolean;
   what_to_do_text: string;
+  try_asking_text: string;
 };
 
 type Tab = "info" | "slides" | "steps" | "quiz" | "goals" | "prompts" | "downloads" | "video";
@@ -266,8 +267,9 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
   const [savedSlides,   setSavedSlides]   = useState<ActivityContent["slide_images"]>(content?.slide_images ?? []);
 
   // Steps (structured JSON)
-  const [parsedSteps,   setParsedSteps]   = useState<any[]>([]);
-  const [stepsMsg,      setStepsMsg]      = useState("");
+  const [parsedSteps,      setParsedSteps]      = useState<any[]>([]);
+  const [whatYouGetItems,  setWhatYouGetItems]  = useState<WhatYouGetItem[]>(content?.what_you_will_get ?? []);
+  const [stepsMsg,         setStepsMsg]         = useState("");
   const [savingSteps,   setSavingSteps]   = useState(false);
 
   // Quiz
@@ -366,7 +368,14 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
 
   // Steps inline edit
   const [editSteps, setEditSteps] = useState<EditableStep[]>(() =>
-    initSteps.map(s => ({ ...s, isNew: false, isDirty: false, isSaving: false, what_to_do_text: s.what_to_do.join("\n") }))
+    initSteps.map(s => ({
+      ...s,
+      isNew: false,
+      isDirty: false,
+      isSaving: false,
+      what_to_do_text: s.what_to_do.join("\n"),
+      try_asking_text: (s.try_asking ?? []).join("\n"),
+    }))
   );
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [stepSaveMsg, setStepSaveMsg] = useState<Record<string, string>>({});
@@ -385,7 +394,7 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
     const blank: EditableStep = {
       id: tempId, activity_id: activity.id, step_number: maxNum + 1, slide_number: maxNum + 1,
       title: "", what_learner_sees: "", what_this_means: "", what_to_do: [], what_to_do_text: "",
-      if_stuck: "", callout: "", coach_next: "", isNew: true, isDirty: true, isSaving: false,
+      if_stuck: "", callout: "", coach_next: "", try_asking: [], try_asking_text: "", isNew: true, isDirty: true, isSaving: false,
     };
     setEditSteps(prev => [...prev, blank]);
     setExpandedIds(prev => new Set([...prev, tempId]));
@@ -396,6 +405,7 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
     if (!step) return;
     setEditSteps(prev => prev.map(s => s.id === stepId ? { ...s, isSaving: true } : s));
     const what_to_do = step.what_to_do_text.split("\n").map(l => l.trim()).filter(Boolean);
+    const try_asking = step.try_asking_text.split("\n").map(l => l.trim()).filter(Boolean);
     const payload = {
       activity_id: activity.id,
       step_number: step.step_number,
@@ -407,11 +417,12 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
       if_stuck: step.if_stuck,
       callout: step.callout,
       coach_next: step.coach_next,
+      try_asking,
     };
     if (step.isNew) {
       const { data, error } = await supabase.from("activity_steps").insert(payload).select().single();
       if (!error && data) {
-        setEditSteps(prev => prev.map(s => s.id === stepId ? { ...s, id: data.id, what_to_do, isNew: false, isDirty: false, isSaving: false } : s));
+        setEditSteps(prev => prev.map(s => s.id === stepId ? { ...s, id: data.id, what_to_do, try_asking, isNew: false, isDirty: false, isSaving: false } : s));
         setExpandedIds(prev => { const next = new Set(prev); next.delete(stepId); next.add(data.id); return next; });
         setStepSaveMsg(m => ({ ...m, [data.id]: "✓ Saved" }));
         setTimeout(() => setStepSaveMsg(m => { const n = { ...m }; delete n[data.id]; return n; }), 2500);
@@ -419,7 +430,7 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
     } else {
       const { error } = await supabase.from("activity_steps").update(payload).eq("id", stepId);
       if (!error) {
-        setEditSteps(prev => prev.map(s => s.id === stepId ? { ...s, what_to_do, isDirty: false, isSaving: false } : s));
+        setEditSteps(prev => prev.map(s => s.id === stepId ? { ...s, what_to_do, try_asking, isDirty: false, isSaving: false } : s));
         setStepSaveMsg(m => ({ ...m, [stepId]: "✓ Saved" }));
         setTimeout(() => setStepSaveMsg(m => { const n = { ...m }; delete n[stepId]; return n; }), 2500);
       }
@@ -476,6 +487,7 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
   }
 
   // ── Steps JSON upload ────────────────────────────────────────────────────
+  // JSON shape: { steps: [...], what_you_will_get?: [...] }
   async function handleStepsJsonUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -485,10 +497,18 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
       const steps = json.steps ?? [];
       if (!Array.isArray(steps) || steps.length === 0) {
         setStepsMsg("Error: No 'steps' array found in JSON.");
+        setParsedSteps([]);
         return;
       }
+      const whatYouGet = Array.isArray(json.what_you_will_get) ? json.what_you_will_get : [];
+      if (whatYouGet.length) setWhatYouGetItems(whatYouGet);
       setParsedSteps(steps);
-      setStepsMsg(`Loaded ${steps.length} step(s) from "${file.name}" — click Save Steps to apply.`);
+      const tryAskingCount = steps.reduce((n: number, s: any) => n + (Array.isArray(s.try_asking) ? s.try_asking.length : 0), 0);
+      const extras = [
+        whatYouGet.length ? `${whatYouGet.length} "what you'll get" items` : "",
+        tryAskingCount ? `${tryAskingCount} try-asking prompt(s)` : "",
+      ].filter(Boolean).join(" + ");
+      setStepsMsg(`Loaded ${steps.length} step(s)${extras ? ` + ${extras}` : ""} from "${file.name}" — click Save Steps to apply.`);
     } catch {
       setStepsMsg("Error: Invalid JSON file.");
       setParsedSteps([]);
@@ -512,14 +532,28 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
         if_stuck:          s.if_stuck          ?? "Not specified in this slide.",
         callout:           s.callout           ?? "",
         coach_next:        s.coach_next        ?? "",
+        try_asking:        Array.isArray(s.try_asking) ? s.try_asking : [],
       }));
       const { error } = await supabase.from("activity_steps").insert(rows);
       if (error) throw error;
-      setStepsMsg(`✓ ${rows.length} steps saved`);
+
+      // Save what_you_will_get to activity_content if present
+      if (whatYouGetItems.length > 0) {
+        await supabase.from("activity_content").update({ what_you_will_get: whatYouGetItems }).eq("activity_id", activity.id);
+      }
+
+      setStepsMsg(`✓ ${rows.length} steps saved${whatYouGetItems.length ? ` + ${whatYouGetItems.length} overview items` : ""}`);
       setParsedSteps([]);
       // Reload editable steps from DB after JSON import
       const { data: fresh } = await supabase.from("activity_steps").select("*").eq("activity_id", activity.id).order("step_number", { ascending: true });
-      setEditSteps((fresh ?? []).map(s => ({ ...s, isNew: false, isDirty: false, isSaving: false, what_to_do_text: s.what_to_do.join("\n") })));
+      setEditSteps((fresh ?? []).map(s => ({
+        ...s,
+        isNew: false,
+        isDirty: false,
+        isSaving: false,
+        what_to_do_text: s.what_to_do.join("\n"),
+        try_asking_text: (s.try_asking ?? []).join("\n"),
+      })));
     } catch (e: any) {
       setStepsMsg(`Error: ${e?.message}`);
     } finally {
@@ -578,6 +612,7 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
       prompts,
       downloads,
       video_url:     videoUrl || null,
+      what_you_will_get: whatYouGetItems,
       updated_at:    new Date().toISOString(),
     };
 
@@ -590,6 +625,18 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
     setSaveMsg("✓ Saved");
     setSaving(false);
     setTimeout(() => setSaveMsg(""), 3000);
+  }
+
+  function updateWhatYouGetItem(index: number, field: keyof WhatYouGetItem, value: string) {
+    setWhatYouGetItems(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
+  }
+
+  function addWhatYouGetItem() {
+    setWhatYouGetItems(prev => [...prev, { icon: "✨", title: "", description: "" }]);
+  }
+
+  function removeWhatYouGetItem(index: number) {
+    setWhatYouGetItems(prev => prev.filter((_, i) => i !== index));
   }
 
   return (
@@ -887,6 +934,36 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
           {tab === "steps" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
+              {/* What you'll walk away with — permanent */}
+              <div style={sectionBox}>
+                <div style={{ ...sectionHead, justifyContent: "space-between" }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 8 }}><span>✨</span><b>What you&apos;ll walk away with</b></span>
+                  <button type="button" onClick={addWhatYouGetItem} style={{ ...btnAmber, padding: "5px 12px", fontSize: 12 }}>+ Add item</button>
+                </div>
+                <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+                  {whatYouGetItems.length === 0 ? (
+                    <div style={{ fontSize: 12.5, color: "#94A3B8", fontStyle: "italic" }}>No overview items yet — add one or import from JSON.</div>
+                  ) : (
+                    whatYouGetItems.map((item, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, border: "1px solid #E8E6DC", borderRadius: 11, padding: 12, background: "#FAFAF8" }}>
+                        <input value={item.icon} onChange={e => updateWhatYouGetItem(i, "icon", e.target.value)}
+                          placeholder="✨" style={{ ...inp, width: 52, textAlign: "center", fontSize: 18, padding: "8px 4px" }} />
+                        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+                          <input value={item.title} onChange={e => updateWhatYouGetItem(i, "title", e.target.value)}
+                            placeholder="Title shown on overview…" style={inp} />
+                          <textarea value={item.description} onChange={e => updateWhatYouGetItem(i, "description", e.target.value)}
+                            placeholder="Short description…" rows={2} style={{ ...inp, resize: "vertical" }} />
+                        </div>
+                        <button type="button" onClick={() => removeWhatYouGetItem(i)}
+                          style={{ border: "1px solid #FCA5A5", background: "white", color: "#EF4444", borderRadius: 8, padding: "6px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>
+                          Remove
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
               {/* Header row */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#6B6B6B" }}>
@@ -896,11 +973,38 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
               </div>
 
               {/* Existing steps */}
-              {editSteps.length === 0 && (
+              {editSteps.length === 0 && parsedSteps.length === 0 && (
                 <div style={emptyState}>No steps yet — add one above or import JSON below.</div>
               )}
 
-              {editSteps.map(step => {
+              {parsedSteps.length > 0 && (
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#B45309", padding: "8px 12px", borderRadius: 10, background: "#FFFBEB", border: "1px solid #FDE68A" }}>
+                  Showing {parsedSteps.length} pending step(s) from JSON — click Replace All Steps to apply.
+                </div>
+              )}
+
+              {parsedSteps.length > 0 ? parsedSteps.map((step: any, i: number) => {
+                const prompts = Array.isArray(step.try_asking) ? step.try_asking.filter(Boolean) : [];
+                return (
+                  <div key={`pending-${i}`} style={{ border: "1.5px solid #FBBF24", borderRadius: 12, overflow: "hidden", background: "#FFFBEB" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "#FEF9C3" }}>
+                      <div style={{ width: 26, height: 26, borderRadius: "50%", flexShrink: 0, display: "grid", placeItems: "center", fontSize: 11, fontWeight: 800, background: "#F59E0B", color: "white" }}>
+                        {step.step_number ?? i + 1}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "#221D23", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {step.title || <span style={{ color: "#B0ABA5" }}>Untitled step</span>}
+                        </div>
+                        <div style={{ fontSize: 11, color: "#92400E", marginTop: 1 }}>Pending import</div>
+                      </div>
+                    </div>
+                    <div style={{ padding: "10px 14px 12px", borderTop: "1px solid #FDE68A", background: "#FFFBEB" }}>
+                      <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: ".06em", color: "#94A3B8", marginBottom: 6 }}>TRY ASKING</div>
+                      <TryAskingChips prompts={prompts} />
+                    </div>
+                  </div>
+                );
+              }) : editSteps.map(step => {
                 const expanded = expandedIds.has(step.id);
                 return (
                   <div key={step.id} style={{ border: `1.5px solid ${step.isDirty ? "#FBBF24" : "#E8E6DC"}`, borderRadius: 12, overflow: "hidden", transition: "border-color .15s" }}>
@@ -928,6 +1032,11 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
                         <span style={{ fontSize: 11, fontWeight: 700, color: "#F59E0B", flexShrink: 0 }}>unsaved</span>
                       )}
                       <span style={{ fontSize: 13, color: "#B0ABA5", flexShrink: 0 }}>{expanded ? "▲" : "▼"}</span>
+                    </div>
+
+                    <div style={{ padding: "10px 14px 12px", borderTop: "1px solid #E8E6DC", background: "#FAFAF8" }}>
+                      <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: ".06em", color: "#94A3B8", marginBottom: 6 }}>TRY ASKING</div>
+                      <TryAskingChips prompts={step.try_asking_text.split("\n").map(l => l.trim()).filter(Boolean)} />
                     </div>
 
                     {/* Expanded edit form */}
@@ -993,6 +1102,14 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
                           <label style={lbl}>Coach next message</label>
                           <input value={step.coach_next} onChange={e => updateStepField(step.id, "coach_next", e.target.value)}
                             placeholder="What the AI says when learner proceeds…" style={{ ...inp, marginTop: 4 }} />
+                        </div>
+
+                        <div>
+                          <label style={lbl}>Try asking <span style={{ fontWeight: 400, color: "#B0ABA5" }}>(one prompt per line)</span></label>
+                          <textarea value={step.try_asking_text} rows={3}
+                            onChange={e => updateStepField(step.id, "try_asking_text", e.target.value)}
+                            placeholder={"What's a Creation?\nWhich format for onboarding?"}
+                            style={{ ...inp, marginTop: 4, resize: "vertical", fontFamily: "monospace", fontSize: 12 }} />
                         </div>
 
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
@@ -1240,6 +1357,21 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
           )}
         </div>
       </main>
+    </div>
+  );
+}
+
+function TryAskingChips({ prompts }: { prompts: string[] }) {
+  if (!prompts.length) {
+    return <div style={{ fontSize: 12, color: "#94A3B8", fontStyle: "italic" }}>No try-asking prompts for this step.</div>;
+  }
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {prompts.map((prompt, i) => (
+        <div key={i} style={{ display: "inline-flex", alignItems: "center", padding: "7px 12px", borderRadius: 999, border: "1px solid #E2E8F0", background: "white", color: "#2563EB", fontSize: 12.5, fontWeight: 600, lineHeight: 1.35 }}>
+          {prompt}
+        </div>
+      ))}
     </div>
   );
 }

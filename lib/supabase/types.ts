@@ -133,6 +133,7 @@ export type ActivityStep = {
   if_stuck: string;
   callout: string;
   coach_next: string;
+  try_asking: string[];
   created_at: string;
 };
 
@@ -145,6 +146,12 @@ export type DownloadFile = {
   label: string;
   url: string;
   type: "pdf" | "ppt" | "xlsx" | "doc" | "other";
+};
+
+export type WhatYouGetItem = {
+  icon: string;
+  title: string;
+  description: string;
 };
 
 export type ActivityContent = {
@@ -165,6 +172,8 @@ export type ActivityContent = {
   downloads: DownloadFile[];
   // Video tab — optional activity walkthrough video
   video_url?: string | null;
+  // Overview — "What you'll walk away with" items
+  what_you_will_get: WhatYouGetItem[];
   updated_at: string;
 };
 
@@ -235,7 +244,7 @@ export type Database = {
       };
       activity_steps: {
         Row: ActivityStep;
-        Insert: Omit<ActivityStep, "id" | "created_at">;
+        Insert: Omit<ActivityStep, "id" | "created_at"> & { try_asking?: string[] };
         Update: Partial<Omit<ActivityStep, "id" | "activity_id" | "created_at">>;
         Relationships: [];
       };

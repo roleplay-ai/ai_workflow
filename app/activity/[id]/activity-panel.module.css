@@ -31,6 +31,34 @@
   background: #64748b;
 }
 
+.stepsScroll {
+  overflow-y: auto;
+  min-height: 0;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 #f1f5f9;
+}
+
+.stepsScroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.stepsScroll::-webkit-scrollbar-track {
+  margin: 10px 0;
+  background: #f1f5f9;
+  border-radius: 999px;
+}
+
+.stepsScroll::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 999px;
+  border: 2px solid #f1f5f9;
+}
+
+.stepsScroll::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
 .sidebarScroll {
   flex: 1;
   min-height: 0;
@@ -59,6 +87,34 @@
 }
 
 .sidebarScroll::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* ── Center panel scroll ──────────────────────────────────── */
+
+.centerScroll {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 #f1f5f9;
+}
+
+.centerScroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.centerScroll::-webkit-scrollbar-track {
+  margin: 10px 0;
+  background: #f1f5f9;
+  border-radius: 999px;
+}
+
+.centerScroll::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 999px;
+  border: 2px solid #f1f5f9;
+}
+
+.centerScroll::-webkit-scrollbar-thumb:hover {
   background: #64748b;
 }
 
@@ -158,12 +214,11 @@
     gap: 0;
   }
 
-  /* Slide: compact strip at top */
+  /* Center: scrollable, sits between chat and details */
   .slideWrap {
     order: -1;
-    flex: 0 0 auto;
-    max-height: 32vh;
-    min-height: 140px;
+    flex: 1;
+    min-height: 0;
     border-radius: 0;
     overflow: hidden;
   }
@@ -316,6 +371,26 @@
   to {
     opacity: 1;
   }
+}
+
+@keyframes skeletonShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeletonBlock {
+  background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.2s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+.skeletonCircle {
+  background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.2s ease-in-out infinite;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 /* ── Tablet adjustments ───────────────────────────────────── */
