@@ -56,6 +56,7 @@ function filterActivitiesBySelection(
   activities: Activity[],
   selectedFunction: string | null,
   selectedTool: string | null,
+  searchQuery = "",
 ): Activity[] {
   let result = activities;
   if (selectedFunction) {
@@ -67,6 +68,16 @@ function filterActivitiesBySelection(
     result = result.filter(a =>
       normalizeActivityTools(a.tools).some(t => t.toLowerCase() === selectedTool.toLowerCase())
     );
+  }
+  const q = searchQuery.trim().toLowerCase();
+  if (q) {
+    result = result.filter(a => {
+      const title = a.title.toLowerCase();
+      const desc = (a.description ?? "").toLowerCase();
+      const tools = normalizeActivityTools(a.tools).map(t => formatToolLabel(t).toLowerCase()).join(" ");
+      const fns = (a.functions ?? []).join(" ").toLowerCase();
+      return title.includes(q) || desc.includes(q) || tools.includes(q) || fns.includes(q);
+    });
   }
   return result;
 }
@@ -147,11 +158,12 @@ function SignUpCard({ onClose }: { onClose: () => void }) {
 const PAGE_SIZE = 10;
 
 function AllWorkflowsSection({
-  activities, selectedFunction, selectedTool, isLoggedIn, onSignUpRequired, toolLogos, tagLogos, viewCounts,
+  activities, selectedFunction, selectedTool, searchQuery, isLoggedIn, onSignUpRequired, toolLogos, tagLogos, viewCounts,
 }: {
   activities: Activity[];
   selectedFunction: string | null;
   selectedTool: string | null;
+  searchQuery: string;
   isLoggedIn: boolean;
   onSignUpRequired: () => void;
   toolLogos: ToolLogoMap;
@@ -160,11 +172,11 @@ function AllWorkflowsSection({
 }) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [selectedFunction, selectedTool]);
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [selectedFunction, selectedTool, searchQuery]);
 
   const filtered = useMemo(
-    () => filterActivitiesBySelection(activities, selectedFunction, selectedTool),
-    [activities, selectedFunction, selectedTool],
+    () => filterActivitiesBySelection(activities, selectedFunction, selectedTool, searchQuery),
+    [activities, selectedFunction, selectedTool, searchQuery],
   );
 
   const visibleItems = filtered.slice(0, visibleCount);
@@ -177,6 +189,7 @@ function AllWorkflowsSection({
   const title = titleParts.join(" ");
 
   const activeFilters = [
+    searchQuery ? `"${searchQuery}"` : null,
     selectedFunction ?? null,
     selectedTool ? formatToolLabel(selectedTool) : null,
   ].filter(Boolean) as string[];
@@ -200,7 +213,7 @@ function AllWorkflowsSection({
   return (
     <div id="all-workflows">
       <HorizontalRail
-        key={`${selectedFunction ?? "all"}-${selectedTool ?? "all"}`}
+        key={`${selectedFunction ?? "all"}-${selectedTool ?? "all"}-${searchQuery}`}
         label="Full library"
         title={title}
         subtitle={description}
@@ -307,7 +320,7 @@ function FunctionsCarousel({
         <div className="rail-title">
           <span className="section-label">Workflow types</span>
           <h2>Browse by Outcome</h2>
-          <p>Select a function to filter All Workflows above.</p>
+          <p>Or browse by outcome below.</p>
         </div>
         {selectedFunction && (
           <button className="see-all" onClick={() => onSelect(null)}>Clear filter ✕</button>
@@ -479,127 +492,30 @@ function HorizontalRail({
   );
 }
 
-// ── HeroSelect ────────────────────────────────────────────────────────────
+// ── Hero filter chip ──────────────────────────────────────────────────────
 
-type HeroSelectOption = {
-  value: string;
-  label: string;
-  icon?: React.ReactNode;
-};
-
-function HeroSelect({
-  placeholder,
-  value,
-  options,
-  isOpen,
-  onOpenChange,
-  onChange,
+function HeroExpandChip({
+  label,
+  icon,
+  selected,
+  onClick,
 }: {
-  placeholder: string;
-  value: string;
-  options: HeroSelectOption[];
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-  onChange: (value: string) => void;
+  label: string;
+  icon: React.ReactNode;
+  selected: boolean;
+  onClick: () => void;
 }) {
-  const rootRef = useRef<HTMLDivElement>(null);
-  const selected = options.find(o => o.value === value);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onOpenChange(false);
-    }
-    function onClick(e: MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) onOpenChange(false);
-    }
-    document.addEventListener("keydown", onKey);
-    document.addEventListener("mousedown", onClick);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.removeEventListener("mousedown", onClick);
-    };
-  }, [isOpen, onOpenChange]);
-
   return (
-    <div
-      ref={rootRef}
-      className={`hero-select${isOpen ? " is-open" : ""}${!value ? " is-placeholder" : ""}`}
+    <button
+      type="button"
+      className={`hero-filter-chip${selected ? " is-active" : ""}`}
+      onClick={onClick}
+      aria-pressed={selected}
+      title={label}
     >
-      <button
-        type="button"
-        className="hero-select-trigger"
-        onClick={() => onOpenChange(!isOpen)}
-        aria-haspopup="listbox"
-        aria-expanded={isOpen}
-        aria-label={selected ? selected.label : placeholder}
-      >
-        <span className="hero-select-value">
-          {selected ? (
-            <>
-              {selected.icon && <span className="hero-select-leading">{selected.icon}</span>}
-              <span className="hero-select-label">{selected.label}</span>
-            </>
-          ) : (
-            <span className="hero-select-label">{placeholder}</span>
-          )}
-        </span>
-        <svg
-          className="hero-select-chevron"
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </button>
-
-      {isOpen && (
-        <div className="hero-select-menu" role="listbox">
-          {options.map(opt => {
-            const isSelected = value === opt.value;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                role="option"
-                aria-selected={isSelected}
-                className={`hero-select-option${isSelected ? " is-selected" : ""}`}
-                onClick={() => {
-                  onChange(opt.value);
-                  onOpenChange(false);
-                }}
-              >
-                {opt.icon && <span className="hero-select-leading">{opt.icon}</span>}
-                <span className="hero-select-option-label">{opt.label}</span>
-                {isSelected && (
-                  <svg
-                    className="hero-select-check"
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
+      <span className="hero-filter-chip-icon">{icon}</span>
+      <span className="hero-filter-chip-label">{label}</span>
+    </button>
   );
 }
 
@@ -609,7 +525,12 @@ function HeroSection({
   heroActivities,
   allFunctions,
   heroToolOptions,
-  onShowWorkflows,
+  selectedTool,
+  selectedFunction,
+  searchQuery,
+  onToolChange,
+  onFunctionChange,
+  onSearch,
   toolLogos,
   functionLogos,
   tagLogos,
@@ -620,7 +541,12 @@ function HeroSection({
   heroActivities: Activity[];
   allFunctions: string[];
   heroToolOptions: string[];
-  onShowWorkflows: (tool: string, fn: string) => void;
+  selectedTool: string | null;
+  selectedFunction: string | null;
+  searchQuery: string;
+  onToolChange: (tool: string | null) => void;
+  onFunctionChange: (fn: string | null) => void;
+  onSearch: (query: string) => void;
   toolLogos: ToolLogoMap;
   functionLogos: Record<string, string>;
   tagLogos: Record<string, string>;
@@ -629,39 +555,17 @@ function HeroSection({
   viewCounts: Record<string, number>;
 }) {
   const [activeIdx, setActiveIdx] = useState(0);
-  const [heroTool, setHeroTool] = useState("");
-  const [heroFunction, setHeroFunction] = useState("");
-  const [openSelect, setOpenSelect] = useState<"tool" | "function" | null>(null);
+  const [searchInput, setSearchInput] = useState(searchQuery);
   const showcaseRef = useRef<HTMLDivElement>(null);
 
-  const toolOptions = useMemo<HeroSelectOption[]>(() =>
-    heroToolOptions.map(t => ({
-      value: t,
-      label: t === "all" ? "All" : formatToolLabel(t),
-      icon: t === "all" ? undefined : (
-        <ToolIcon tool={t} size={20} logos={toolLogos} insetScale={0.88} />
-      ),
-    })),
-    [heroToolOptions, toolLogos]);
+  const toolOptions = useMemo(
+    () => heroToolOptions.filter(t => t !== "all"),
+    [heroToolOptions],
+  );
 
-  const functionOptions = useMemo<HeroSelectOption[]>(() => [
-    { value: "all", label: "All" },
-    ...allFunctions.map(fn => {
-      const logo = functionLogos[fn.toLowerCase()];
-      return {
-        value: fn,
-        label: fn,
-        icon: logo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={logo} alt="" className="hero-select-fn-icon" />
-        ) : (
-          <span className="hero-select-fn-fallback" style={{ background: fnColor(fn) }}>
-            {fn.slice(0, 1).toUpperCase()}
-          </span>
-        ),
-      };
-    }),
-  ], [allFunctions, functionLogos]);
+  useEffect(() => {
+    setSearchInput(searchQuery);
+  }, [searchQuery]);
 
   useEffect(() => {
     if (heroActivities.length === 0) return;
@@ -677,6 +581,10 @@ function HeroSection({
     if (active) sc.scrollTo({ left: Math.max(0, active.offsetLeft - sc.offsetWidth * 0.08), behavior: "smooth" });
   }, [activeIdx]);
 
+  function submitSearch() {
+    onSearch(searchInput.trim());
+  }
+
   return (
     <header className="hero-shell">
       <section className="hero">
@@ -686,29 +594,66 @@ function HeroSection({
           <h1>Practical AI workflows for your daily work</h1>
           <p>Discover and run guided AI automations tailored to your tool stack and job function.</p>
 
-          <div className="selector-row">
-            <HeroSelect
-              placeholder="Choose tool"
-              value={heroTool}
-              options={toolOptions}
-              isOpen={openSelect === "tool"}
-              onOpenChange={open => setOpenSelect(open ? "tool" : null)}
-              onChange={setHeroTool}
+          <div className="hero-search-row">
+            <input
+              type="search"
+              className="hero-search-input"
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") submitSearch(); }}
+              placeholder="Search workflows…"
+              aria-label="Search workflows"
             />
-            <HeroSelect
-              placeholder="Choose function"
-              value={heroFunction}
-              options={functionOptions}
-              isOpen={openSelect === "function"}
-              onOpenChange={open => setOpenSelect(open ? "function" : null)}
-              onChange={setHeroFunction}
-            />
-            <button className="btn btn-dark" onClick={() => onShowWorkflows(heroTool, heroFunction)}>
-              Show me workflows
+            <button type="button" className="btn btn-dark hero-search-btn" onClick={submitSearch}>
+              Search
             </button>
           </div>
 
-          <div className="trust-line">Browse selected workflows. Use filters below to explore more.</div>
+          {toolOptions.length > 0 && (
+            <div className="hero-filter-block">
+              <span className="hero-filter-label">Tools</span>
+              <div className="hero-filter-chips">
+                {toolOptions.map(tool => (
+                  <HeroExpandChip
+                    key={tool}
+                    label={formatToolLabel(tool)}
+                    selected={selectedTool === tool}
+                    onClick={() => onToolChange(selectedTool === tool ? null : tool)}
+                    icon={<ToolIcon tool={tool} size={28} logos={toolLogos} insetScale={0.88} />}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {allFunctions.length > 0 && (
+            <div className="hero-filter-block">
+              <span className="hero-filter-label">Functions</span>
+              <div className="hero-filter-chips">
+                {allFunctions.map(fn => {
+                  const logo = functionLogos[fn.toLowerCase()];
+                  return (
+                    <HeroExpandChip
+                      key={fn}
+                      label={fn}
+                      selected={selectedFunction === fn}
+                      onClick={() => onFunctionChange(selectedFunction === fn ? null : fn)}
+                      icon={logo ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={logo} alt="" className="hero-filter-fn-img" />
+                      ) : (
+                        <span className="hero-filter-fn-fallback" style={{ background: fnColor(fn) }}>
+                          {fn.slice(0, 1).toUpperCase()}
+                        </span>
+                      )}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="trust-line">Tap a tool or function to filter instantly. Search to narrow the library below.</div>
 
           <div className="hero-progress" aria-hidden="true">
             {heroActivities.map((_, i) => (
@@ -827,6 +772,7 @@ function AIMasteryCourseSection({ completedCount, isLoggedIn }: { completedCount
 export default function DashboardClient({ profile, activities, progress, toolFilters, toolLogos, tagLogos, functionLogos, functionThumbnails, functionDescriptions, isLoggedIn, masteryProgressCount, brief, viewCounts }: Props) {
   const [selectedFunction, setSelectedFunction] = useState<string | null>(null);
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [showSignUp, setShowSignUp] = useState(false);
 
   // Unique functions (for HeroSection dropdowns)
@@ -882,10 +828,11 @@ export default function DashboardClient({ profile, activities, progress, toolFil
     return activities.filter(a => ids.has(a.id));
   }, [activities, progress, isLoggedIn]);
 
-  function handleShowWorkflows(tool: string, fn: string) {
-    setSelectedTool(tool && tool !== "all" ? tool : null);
-    setSelectedFunction(fn && fn !== "all" ? fn : null);
-    document.getElementById("all-workflows")?.scrollIntoView({ behavior: "smooth" });
+  function handleSearch(query: string) {
+    setSearchQuery(query);
+    if (query) {
+      document.getElementById("all-workflows")?.scrollIntoView({ behavior: "smooth" });
+    }
   }
 
   const heroToolOptions = toolFilters;
@@ -908,7 +855,12 @@ export default function DashboardClient({ profile, activities, progress, toolFil
           heroActivities={heroActivities}
           allFunctions={allFunctions}
           heroToolOptions={heroToolOptions}
-          onShowWorkflows={handleShowWorkflows}
+          selectedTool={selectedTool}
+          selectedFunction={selectedFunction}
+          searchQuery={searchQuery}
+          onToolChange={setSelectedTool}
+          onFunctionChange={setSelectedFunction}
+          onSearch={handleSearch}
           toolLogos={toolLogos}
           functionLogos={functionLogos}
           tagLogos={tagLogos}
@@ -977,6 +929,7 @@ export default function DashboardClient({ profile, activities, progress, toolFil
             activities={activities}
             selectedFunction={selectedFunction}
             selectedTool={selectedTool}
+            searchQuery={searchQuery}
             isLoggedIn={isLoggedIn}
             onSignUpRequired={() => setShowSignUp(true)}
             toolLogos={toolLogos}
