@@ -42,37 +42,39 @@ function StatCard({ label, value, sub, color }: { label: string; value: string |
   );
 }
 
-function BarChart({ items, maxCount }: { items: { label: string; count: number; color?: string }[]; maxCount: number }) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {items.map(item => (
-        <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 160, fontSize: 12.5, fontWeight: 600, color: "#221D23", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flexShrink: 0 }}>
-            {item.label}
-          </div>
-          <div style={{ flex: 1, background: "#F0EEE8", borderRadius: 999, height: 8, overflow: "hidden" }}>
-            <div style={{
-              width: `${maxCount > 0 ? Math.round((item.count / maxCount) * 100) : 0}%`,
-              height: "100%", background: item.color ?? "#FFCE00", borderRadius: 999,
-              transition: "width .3s",
-            }} />
-          </div>
-          <div style={{ width: 40, textAlign: "right", fontSize: 12.5, fontWeight: 700, color: "#6B6B6B", flexShrink: 0 }}>{item.count}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
+function DailyTrafficBarChart({ data, color = "#FFCE00" }: { data: { date: string; count: number }[]; color?: string }) {
+  const max = Math.max(...data.map(d => d.count), 1);
+  const BAR_H = 180;
+  const labelEvery = Math.max(1, Math.ceil(data.length / 8));
 
-function SparkLine({ data, color = "#FFCE00" }: { data: number[]; color?: string }) {
-  if (data.length < 2) return null;
-  const max = Math.max(...data, 1);
-  const W = 300; const H = 60;
-  const pts = data.map((v, i) => `${Math.round((i / (data.length - 1)) * W)},${Math.round(H - (v / max) * (H - 8) - 4)}`).join(" ");
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: H, display: "block" }}>
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: BAR_H + 52, paddingTop: 8 }}>
+      {data.map((d, i) => {
+        const barH = Math.round((d.count / max) * BAR_H);
+        const showDate = i === 0 || i === data.length - 1 || i % labelEvery === 0;
+        return (
+          <div key={d.date} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", minWidth: 0 }}>
+            <div style={{ fontSize: 10.5, fontWeight: 800, color: d.count > 0 ? "#221D23" : "transparent", marginBottom: 4, lineHeight: 1 }}>
+              {d.count > 0 ? d.count : "·"}
+            </div>
+            <div style={{ width: "100%", maxWidth: 28, height: BAR_H, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+              <div style={{
+                width: "75%", height: Math.max(barH, d.count > 0 ? 4 : 0),
+                background: d.count > 0 ? color : "#E8E6DC",
+                borderRadius: "5px 5px 0 0",
+                transition: "height .3s",
+              }} />
+            </div>
+            <div style={{
+              fontSize: 9, color: "#B0ABA5", marginTop: 8, fontWeight: 600,
+              visibility: showDate ? "visible" : "hidden", whiteSpace: "nowrap",
+            }}>
+              {d.date.slice(5)}
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -85,10 +87,30 @@ function visitorKey(v: ViewRow): string {
   return v.user_id ?? v.ip_address ?? v.session_id ?? v.id;
 }
 
+const CHART_DAY_OPTIONS = [
+  { label: "7 days", value: 7 },
+  { label: "15 days", value: 15 },
+  { label: "1 month", value: 30 },
+] as const;
+
+type ChartDays = (typeof CHART_DAY_OPTIONS)[number]["value"];
+
+function buildDayRange(dayCount: number): string[] {
+  const days: string[] = [];
+  const now = new Date();
+  for (let i = dayCount - 1; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    days.push(d.toISOString().slice(0, 10));
+  }
+  return days;
+}
+
 export default function ApplyAnalyticsClient({ profile }: Props) {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [realOnly, setRealOnly] = useState(true);
+  const [chartDays, setChartDays] = useState<ChartDays>(30);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<{
     activities: ActivityRow[];
@@ -149,34 +171,17 @@ export default function ApplyAnalyticsClient({ profile }: Props) {
   const quizScores = progress.filter(p => p.quiz_score != null).map(p => p.quiz_score as number);
   const avgQuiz = quizScores.length ? Math.round(quizScores.reduce((a, b) => a + b, 0) / quizScores.length) : 0;
 
-  const topActivities = useMemo(() => {
-    return [...activities]
-      .map(a => ({
-        id: a.id, title: a.title, category: a.category,
-        views: viewsByActivity[a.id] ?? 0,
-        inProgress: inProgressByActivity[a.id] ?? 0,
-        completions: completionsByActivity[a.id] ?? 0,
-      }))
-      .sort((a, b) => b.views - a.views)
-      .slice(0, 15);
-  }, [activities, viewsByActivity, inProgressByActivity, completionsByActivity]);
+  const usersByDay = useMemo(() => {
+    const m: Record<string, Set<string>> = {};
+    views.forEach(v => {
+      const day = v.created_at.slice(0, 10);
+      if (!m[day]) m[day] = new Set();
+      m[day].add(visitorKey(v));
+    });
+    return buildDayRange(chartDays).map(d => ({ date: d, count: m[d]?.size ?? 0 }));
+  }, [views, chartDays]);
 
-  const maxViews = topActivities[0]?.views ?? 1;
-
-  const viewsByDay = useMemo(() => {
-    const m: Record<string, number> = {};
-    views.forEach(v => { const day = v.created_at.slice(0, 10); m[day] = (m[day] ?? 0) + 1; });
-    const days: string[] = [];
-    const now = new Date();
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(now); d.setDate(d.getDate() - i);
-      days.push(d.toISOString().slice(0, 10));
-    }
-    return days.map(d => ({ date: d, count: m[d] ?? 0 }));
-  }, [views]);
-
-  const sparkData = viewsByDay.map(d => d.count);
-  const peakDay = viewsByDay.reduce((best, d) => d.count > best.count ? d : best, { date: "", count: 0 });
+  const peakDay = usersByDay.reduce((best, d) => d.count > best.count ? d : best, { date: "", count: 0 });
 
   // Per-user view counts (logged-in users only for the breakdown table)
   const userViews = useMemo(() => {
@@ -266,27 +271,42 @@ export default function ApplyAnalyticsClient({ profile }: Props) {
           <StatCard label="Avg Quiz Score" value={avgQuiz ? `${avgQuiz}%` : "—"} sub={`from ${quizScores.length} quizzes`} color="#5030C0" />
         </div>
 
-        {/* Charts row */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
-          <div style={card}>
-            <h2 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 900, letterSpacing: "-.03em" }}>Top Activities by Views</h2>
-            {topActivities.length === 0
-              ? <p style={{ color: "#B0ABA5", fontSize: 13 }}>No data in selected range.</p>
-              : <BarChart maxCount={maxViews} items={topActivities.map(a => ({ label: a.title, count: a.views, color: CAT_COLORS[a.category] ?? "#FFCE00" }))} />
-            }
-          </div>
-
-          <div style={card}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-              <h2 style={{ margin: 0, fontSize: 15, fontWeight: 900, letterSpacing: "-.03em" }}>Views — Last 30 Days</h2>
-              {peakDay.count > 0 && <span style={{ fontSize: 11.5, color: "#6B6B6B", fontWeight: 600 }}>Peak: {peakDay.count} on {peakDay.date}</span>}
+        {/* Daily traffic chart */}
+        <div style={{ ...card, marginBottom: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12, gap: 16, flexWrap: "wrap" }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: 15, fontWeight: 900, letterSpacing: "-.03em" }}>Daily Traffic</h2>
+              <p style={{ margin: "4px 0 0", fontSize: 12, color: "#9B9490" }}>Unique visitors per day</p>
             </div>
-            <SparkLine data={sparkData} color="#FFCE00" />
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#B0ABA5", marginTop: 4 }}>
-              <span>{viewsByDay[0]?.date}</span>
-              <span>{viewsByDay[viewsByDay.length - 1]?.date}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: 6 }}>
+                {CHART_DAY_OPTIONS.map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setChartDays(opt.value)}
+                    style={{
+                      padding: "5px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: "pointer",
+                      border: chartDays === opt.value ? "1.5px solid #FFCE00" : "1.5px solid #E8E6DC",
+                      background: chartDays === opt.value ? "rgba(255,206,0,.15)" : "white",
+                      color: "#221D23",
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              {peakDay.count > 0 && (
+                <span style={{ fontSize: 11.5, color: "#6B6B6B", fontWeight: 600 }}>
+                  Peak: {peakDay.count} users on {peakDay.date}
+                </span>
+              )}
             </div>
           </div>
+          {usersByDay.every(d => d.count === 0)
+            ? <p style={{ color: "#B0ABA5", fontSize: 13 }}>No data in selected range.</p>
+            : <DailyTrafficBarChart data={usersByDay} color="#FFCE00" />
+          }
         </div>
 
         {/* Activity table */}
