@@ -54,11 +54,14 @@ ${stepContext}
 
 ## Navigation:
 If your answer is about content that lives in a specific step (even if the learner didn't ask to go there), output GOTO_STEP:N on the very first line (N = step number from the reference list), then your answer.
-Always navigate when your explanation references a particular step's content.`;
+Always navigate when your explanation references a particular step's content.
+
+## Suggestions:
+At the very end of your response, output exactly 3 follow-up question suggestions the learner might want to ask next, one per line, prefixed with SUGGEST: (e.g. "SUGGEST: How do I share my project?"). These should be specific to the current step context and naturally follow from your answer.`;
 
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 512,
+    max_tokens: 600,
     system: systemPrompt,
     messages: [{ role: "user", content: message }],
   });
@@ -67,13 +70,26 @@ Always navigate when your explanation references a particular step's content.`;
 
   const gotoMatch = raw.match(/^GOTO_STEP:(\d+)\n?/);
   let goToStep: number | null = null;
-  let reply = raw;
+  let cleaned = raw;
 
   if (gotoMatch) {
     const n = parseInt(gotoMatch[1], 10) - 1;
     if (n >= 0 && n < steps.length) goToStep = n;
-    reply = raw.slice(gotoMatch[0].length).trim();
+    cleaned = raw.slice(gotoMatch[0].length).trim();
   }
 
-  return NextResponse.json({ reply, goToStep });
+  const suggestions: string[] = [];
+  const lines = cleaned.split("\n");
+  const replyLines: string[] = [];
+  for (const line of lines) {
+    const suggestMatch = line.match(/^SUGGEST:\s*(.+)/);
+    if (suggestMatch) {
+      suggestions.push(suggestMatch[1].trim());
+    } else {
+      replyLines.push(line);
+    }
+  }
+  const reply = replyLines.join("\n").trim();
+
+  return NextResponse.json({ reply, goToStep, suggestions: suggestions.slice(0, 3) });
 }

@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import Link from "next/link";
 import type { Activity } from "@/lib/supabase/types";
 import { normalizeActivityTools } from "@/lib/tools";
@@ -178,17 +179,17 @@ export default function ActivityCard({
   const tools = selectedTool ? [selectedTool] : normalizeActivityTools(activity.tools);
   const chip = timeLabel(activity);
   const isLocked = !isLoggedIn && !!activity.is_locked;
+  const [navigating, setNavigating] = useState(false);
 
-  const cardClass = `workflow-card${variant === "dark" ? " dark-card" : variant === "yellow" ? " yellow-card" : ""}`;
+  const cardClass = `workflow-card${variant === "dark" ? " dark-card" : variant === "yellow" ? " yellow-card" : ""}${navigating ? " is-navigating" : ""}`;
   const chipBorderColor = variant === "dark" ? "rgba(255,255,255,0.22)" : "#E5E0D8";
   const chipLabelColor = "#221D23"; // RotatingTools always has white bg
 
   const inner = (
     <>
-      {activity.is_featured && <span className="new-badge">New</span>}
-
       {/* ── Poster ── */}
       <div className={`card-poster ${theme.posterColor}${activity.thumbnail_url ? " has-thumbnail" : ""}`}>
+        {activity.is_featured && <span className="new-badge">New</span>}
         {activity.thumbnail_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -262,9 +263,15 @@ export default function ActivityCard({
           )}
         </div>
         <h3 className="card-title">{activity.title}</h3>
+        {activity.description && <p className="card-desc">{activity.description}</p>}
         <TagLogosRow tags={activity.tags ?? []} tagLogos={tagLogos} variant={variant} />
-        {/* <p className="card-desc">{activity.description}</p> */}
       </div>
+
+      {navigating && (
+        <div className="card-nav-loading" aria-hidden="true">
+          <span className="card-nav-spinner" />
+        </div>
+      )}
     </>
   );
 
@@ -299,7 +306,13 @@ export default function ActivityCard({
   }
 
   return (
-    <Link href={`/activity/${activity.id}`} className={cardClass} style={focusStyle}>
+    <Link
+      href={`/activity/${activity.id}`}
+      className={cardClass}
+      style={focusStyle}
+      onClick={() => setNavigating(true)}
+      aria-busy={navigating}
+    >
       {inner}
     </Link>
   );

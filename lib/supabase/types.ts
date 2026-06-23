@@ -40,6 +40,7 @@ export type Activity = {
   created_at: string;
   thumbnail_url: string | null;
   banner_url: string | null;
+  try_link: string | null;
 };
 
 export type ActivityTag = {
@@ -133,6 +134,7 @@ export type ActivityStep = {
   if_stuck: string;
   callout: string;
   coach_next: string;
+  try_asking: string[];
   created_at: string;
 };
 
@@ -145,6 +147,12 @@ export type DownloadFile = {
   label: string;
   url: string;
   type: "pdf" | "ppt" | "xlsx" | "doc" | "other";
+};
+
+export type WhatYouGetItem = {
+  icon: string;
+  title: string;
+  description: string;
 };
 
 export type ActivityContent = {
@@ -165,6 +173,8 @@ export type ActivityContent = {
   downloads: DownloadFile[];
   // Video tab — optional activity walkthrough video
   video_url?: string | null;
+  // Overview — "What you'll walk away with" items
+  what_you_will_get: WhatYouGetItem[];
   updated_at: string;
 };
 
@@ -211,8 +221,8 @@ export type Database = {
       };
       activities: {
         Row: Activity;
-        Insert: { title: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; tags?: string[]; functions?: string[]; position?: number; published?: boolean; is_featured?: boolean; is_locked?: boolean; category?: string; banner_url?: string | null };
-        Update: { title?: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; tags?: string[]; functions?: string[]; position?: number; published?: boolean; is_featured?: boolean; is_locked?: boolean; category?: string; banner_url?: string | null };
+        Insert: { title: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; tags?: string[]; functions?: string[]; position?: number; published?: boolean; is_featured?: boolean; is_locked?: boolean; category?: string; banner_url?: string | null; try_link?: string | null };
+        Update: { title?: string; description?: string | null; level?: Activity["level"]; time_estimate_minutes?: number | null; points?: number; tools?: string[]; tags?: string[]; functions?: string[]; position?: number; published?: boolean; is_featured?: boolean; is_locked?: boolean; category?: string; banner_url?: string | null; try_link?: string | null };
         Relationships: [];
       };
       activity_companies: {
@@ -235,7 +245,7 @@ export type Database = {
       };
       activity_steps: {
         Row: ActivityStep;
-        Insert: Omit<ActivityStep, "id" | "created_at">;
+        Insert: Omit<ActivityStep, "id" | "created_at"> & { try_asking?: string[] };
         Update: Partial<Omit<ActivityStep, "id" | "activity_id" | "created_at">>;
         Relationships: [];
       };

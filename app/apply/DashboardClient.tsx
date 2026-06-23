@@ -56,6 +56,7 @@ function filterActivitiesBySelection(
   activities: Activity[],
   selectedFunction: string | null,
   selectedTool: string | null,
+  searchQuery = "",
 ): Activity[] {
   let result = activities;
   if (selectedFunction) {
@@ -68,9 +69,115 @@ function filterActivitiesBySelection(
       normalizeActivityTools(a.tools).some(t => t.toLowerCase() === selectedTool.toLowerCase())
     );
   }
+  const q = searchQuery.trim().toLowerCase();
+  if (q) {
+    result = result.filter(a => {
+      const title = a.title.toLowerCase();
+      const desc = (a.description ?? "").toLowerCase();
+      const tools = normalizeActivityTools(a.tools).map(t => formatToolLabel(t).toLowerCase()).join(" ");
+      const fns = (a.functions ?? []).join(" ").toLowerCase();
+      return title.includes(q) || desc.includes(q) || tools.includes(q) || fns.includes(q);
+    });
+  }
   return result;
 }
 
+
+// ── ToolFilterDropdown ───────────────────────────────────────────────────
+
+function ToolFilterDropdown({
+  tools,
+  selected,
+  onChange,
+  toolLogos,
+}: {
+  tools: string[];
+  selected: string | null;
+  onChange: (tool: string | null) => void;
+  toolLogos: ToolLogoMap;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function close(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+
+  const displayLabel = selected ? formatToolLabel(selected) : "All Tools";
+
+  return (
+    <div className="tool-dropdown" ref={ref}>
+      <button
+        type="button"
+        className={`tool-dropdown-trigger${open ? " is-open" : ""}`}
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+      >
+        {selected ? (
+          <ToolIcon tool={selected} size={20} logos={toolLogos} insetScale={0.88} />
+        ) : (
+          <span className="tool-dropdown-all-icon">⚙</span>
+        )}
+        <span>{displayLabel}</span>
+        <span className={`tool-dropdown-chevron${open ? " flipped" : ""}`}>
+          <svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        </span>
+      </button>
+      {open && (
+        <div className="tool-dropdown-menu" role="listbox">
+          <button
+            className={`tool-dropdown-item${!selected ? " is-selected" : ""}`}
+            onClick={() => { onChange(null); setOpen(false); }}
+            role="option"
+            aria-selected={!selected}
+          >
+            <span className="tool-dropdown-item-icon">⚙</span>
+            <span>All Tools</span>
+            {!selected && <span className="tool-dropdown-check">✓</span>}
+          </button>
+          {tools.filter(t => t !== "all").map(t => {
+            const isActive = selected === t;
+            return (
+              <button
+                key={t}
+                className={`tool-dropdown-item${isActive ? " is-selected" : ""}`}
+                onClick={() => { onChange(isActive ? null : t); setOpen(false); }}
+                role="option"
+                aria-selected={isActive}
+              >
+                <ToolIcon tool={t} size={22} logos={toolLogos} insetScale={0.88} />
+                <span>{formatToolLabel(t)}</span>
+                {isActive && <span className="tool-dropdown-check">✓</span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Grid column count hook ────────────────────────────────────────────────
+
+function useGridColumns(): number {
+  const [cols, setCols] = useState(4);
+  useEffect(() => {
+    function update() {
+      const w = window.innerWidth;
+      setCols(w <= 680 ? 2 : w <= 900 ? 2 : w <= 1120 ? 3 : w < 1680 ? 4 : 5);
+    }
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+  return cols;
+}
 
 // ── SignUpCard modal ──────────────────────────────────────────────────────
 
@@ -144,29 +251,30 @@ function SignUpCard({ onClose }: { onClose: () => void }) {
 
 // ── AllWorkflowsSection ───────────────────────────────────────────────────
 
-const PAGE_SIZE = 10;
-
 function AllWorkflowsSection({
-  activities, selectedFunction, selectedTool, isLoggedIn, onSignUpRequired, toolLogos, tagLogos, viewCounts,
+  activities, selectedFunction, selectedTool, searchQuery, isLoggedIn, onSignUpRequired, toolLogos, tagLogos, viewCounts,
 }: {
   activities: Activity[];
   selectedFunction: string | null;
   selectedTool: string | null;
+  searchQuery: string;
   isLoggedIn: boolean;
   onSignUpRequired: () => void;
   toolLogos: ToolLogoMap;
   tagLogos: Record<string, string>;
   viewCounts: Record<string, number>;
 }) {
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const cols = useGridColumns();
+  const [extraRows, setExtraRows] = useState(0);
 
-  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [selectedFunction, selectedTool]);
+  useEffect(() => { setExtraRows(0); }, [selectedFunction, selectedTool, searchQuery]);
 
   const filtered = useMemo(
-    () => filterActivitiesBySelection(activities, selectedFunction, selectedTool),
-    [activities, selectedFunction, selectedTool],
+    () => filterActivitiesBySelection(activities, selectedFunction, selectedTool, searchQuery),
+    [activities, selectedFunction, selectedTool, searchQuery],
   );
 
+  const visibleCount = cols * (2 + extraRows);
   const visibleItems = filtered.slice(0, visibleCount);
   const hasMore = visibleCount < filtered.length;
 
@@ -177,6 +285,7 @@ function AllWorkflowsSection({
   const title = titleParts.join(" ");
 
   const activeFilters = [
+    searchQuery ? `"${searchQuery}"` : null,
     selectedFunction ?? null,
     selectedTool ? formatToolLabel(selectedTool) : null,
   ].filter(Boolean) as string[];
@@ -198,22 +307,37 @@ function AllWorkflowsSection({
   );
 
   return (
-    <div id="all-workflows">
-      <HorizontalRail
-        key={`${selectedFunction ?? "all"}-${selectedTool ?? "all"}`}
-        label="Full library"
-        title={title}
-        subtitle={description}
-        activities={visibleItems}
-        isLoggedIn={isLoggedIn}
-        onSignUpRequired={onSignUpRequired}
-        toolLogos={toolLogos}
-        tagLogos={tagLogos}
-        viewCounts={viewCounts}
-        onLoadMore={hasMore ? () => setVisibleCount(c => Math.min(filtered.length, c + PAGE_SIZE)) : undefined}
-        selectedTool={selectedTool}
-      />
-    </div>
+    <section className="rail" id="all-workflows">
+      <div className="rail-header">
+        <div className="rail-title">
+          <span className="section-label">Full library</span>
+          <h2>{title}</h2>
+          <p>{description}</p>
+        </div>
+      </div>
+      <div className="static-grid">
+        {visibleItems.map(a => (
+          <div key={a.id} className="static-grid-slot">
+            <ActivityCard
+              activity={a}
+              isLoggedIn={isLoggedIn}
+              onSignUpRequired={onSignUpRequired}
+              toolLogos={toolLogos}
+              tagLogos={tagLogos}
+              viewCount={viewCounts[a.id] ?? 0}
+              selectedTool={selectedTool}
+            />
+          </div>
+        ))}
+      </div>
+      {hasMore && (
+        <div className="static-grid-more">
+          <button className="view-more-link" onClick={() => setExtraRows(r => r + 1)}>
+            View more
+          </button>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -307,7 +431,7 @@ function FunctionsCarousel({
         <div className="rail-title">
           <span className="section-label">Workflow types</span>
           <h2>Browse by Outcome</h2>
-          <p>Select a function to filter All Workflows above.</p>
+          <p>Or browse by outcome below.</p>
         </div>
         {selectedFunction && (
           <button className="see-all" onClick={() => onSelect(null)}>Clear filter ✕</button>
@@ -479,127 +603,91 @@ function HorizontalRail({
   );
 }
 
-// ── HeroSelect ────────────────────────────────────────────────────────────
+// ── StaticGrid (replaces HorizontalRail for static card grid) ────────────
 
-type HeroSelectOption = {
-  value: string;
-  label: string;
-  icon?: React.ReactNode;
-};
-
-function HeroSelect({
-  placeholder,
-  value,
-  options,
-  isOpen,
-  onOpenChange,
-  onChange,
+function StaticGrid({
+  title, subtitle, label, activities, isLoggedIn, onSignUpRequired, toolLogos, tagLogos, variant = "default", viewCounts = {}, selectedTool = null,
 }: {
-  placeholder: string;
-  value: string;
-  options: HeroSelectOption[];
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-  onChange: (value: string) => void;
+  title: string;
+  subtitle: string;
+  label?: string;
+  activities: Activity[];
+  isLoggedIn: boolean;
+  onSignUpRequired: () => void;
+  toolLogos: ToolLogoMap;
+  tagLogos: Record<string, string>;
+  variant?: CardVariant;
+  viewCounts?: Record<string, number>;
+  selectedTool?: string | null;
 }) {
-  const rootRef = useRef<HTMLDivElement>(null);
-  const selected = options.find(o => o.value === value);
+  const cols = useGridColumns();
+  const [extraRows, setExtraRows] = useState(0);
+  const visibleCount = cols * (2 + extraRows);
+  const visibleItems = activities.slice(0, visibleCount);
+  const hasMore = visibleCount < activities.length;
 
-  useEffect(() => {
-    if (!isOpen) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onOpenChange(false);
-    }
-    function onClick(e: MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) onOpenChange(false);
-    }
-    document.addEventListener("keydown", onKey);
-    document.addEventListener("mousedown", onClick);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.removeEventListener("mousedown", onClick);
-    };
-  }, [isOpen, onOpenChange]);
+  if (activities.length === 0) return null;
 
   return (
-    <div
-      ref={rootRef}
-      className={`hero-select${isOpen ? " is-open" : ""}${!value ? " is-placeholder" : ""}`}
-    >
-      <button
-        type="button"
-        className="hero-select-trigger"
-        onClick={() => onOpenChange(!isOpen)}
-        aria-haspopup="listbox"
-        aria-expanded={isOpen}
-        aria-label={selected ? selected.label : placeholder}
-      >
-        <span className="hero-select-value">
-          {selected ? (
-            <>
-              {selected.icon && <span className="hero-select-leading">{selected.icon}</span>}
-              <span className="hero-select-label">{selected.label}</span>
-            </>
-          ) : (
-            <span className="hero-select-label">{placeholder}</span>
-          )}
-        </span>
-        <svg
-          className="hero-select-chevron"
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </button>
-
-      {isOpen && (
-        <div className="hero-select-menu" role="listbox">
-          {options.map(opt => {
-            const isSelected = value === opt.value;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                role="option"
-                aria-selected={isSelected}
-                className={`hero-select-option${isSelected ? " is-selected" : ""}`}
-                onClick={() => {
-                  onChange(opt.value);
-                  onOpenChange(false);
-                }}
-              >
-                {opt.icon && <span className="hero-select-leading">{opt.icon}</span>}
-                <span className="hero-select-option-label">{opt.label}</span>
-                {isSelected && (
-                  <svg
-                    className="hero-select-check"
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                )}
-              </button>
-            );
-          })}
+    <section className="rail">
+      <div className="rail-header">
+        <div className="rail-title">
+          {label && <span className={`section-label${variant === "yellow" ? " section-label--yellow" : ""}`}>{label}</span>}
+          <h2>{title}</h2>
+          <p>{subtitle}</p>
+        </div>
+      </div>
+      <div className="static-grid">
+        {visibleItems.map(a => (
+          <div key={a.id} className="static-grid-slot">
+            <ActivityCard
+              activity={a}
+              isLoggedIn={isLoggedIn}
+              onSignUpRequired={onSignUpRequired}
+              toolLogos={toolLogos}
+              tagLogos={tagLogos}
+              variant={variant}
+              viewCount={viewCounts[a.id] ?? 0}
+              selectedTool={selectedTool}
+            />
+          </div>
+        ))}
+      </div>
+      {hasMore && (
+        <div className="static-grid-more">
+          <button className="view-more-link" onClick={() => setExtraRows(r => r + 1)}>
+            View more
+          </button>
         </div>
       )}
-    </div>
+    </section>
+  );
+}
+
+// ── Hero filter chip ──────────────────────────────────────────────────────
+
+function HeroExpandChip({
+  label,
+  icon,
+  selected,
+  onClick,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={`hero-filter-chip${selected ? " is-active" : ""}`}
+      onClick={onClick}
+      aria-pressed={selected}
+      title={label}
+    >
+      <span className="hero-filter-chip-icon">{icon}</span>
+      <span className="hero-filter-chip-label">{label}</span>
+    </button>
   );
 }
 
@@ -609,7 +697,12 @@ function HeroSection({
   heroActivities,
   allFunctions,
   heroToolOptions,
-  onShowWorkflows,
+  selectedTool,
+  selectedFunction,
+  searchQuery,
+  onToolChange,
+  onFunctionChange,
+  onSearch,
   toolLogos,
   functionLogos,
   tagLogos,
@@ -620,7 +713,12 @@ function HeroSection({
   heroActivities: Activity[];
   allFunctions: string[];
   heroToolOptions: string[];
-  onShowWorkflows: (tool: string, fn: string) => void;
+  selectedTool: string | null;
+  selectedFunction: string | null;
+  searchQuery: string;
+  onToolChange: (tool: string | null) => void;
+  onFunctionChange: (fn: string | null) => void;
+  onSearch: (query: string) => void;
   toolLogos: ToolLogoMap;
   functionLogos: Record<string, string>;
   tagLogos: Record<string, string>;
@@ -629,39 +727,17 @@ function HeroSection({
   viewCounts: Record<string, number>;
 }) {
   const [activeIdx, setActiveIdx] = useState(0);
-  const [heroTool, setHeroTool] = useState("");
-  const [heroFunction, setHeroFunction] = useState("");
-  const [openSelect, setOpenSelect] = useState<"tool" | "function" | null>(null);
+  const [searchInput, setSearchInput] = useState(searchQuery);
   const showcaseRef = useRef<HTMLDivElement>(null);
 
-  const toolOptions = useMemo<HeroSelectOption[]>(() =>
-    heroToolOptions.map(t => ({
-      value: t,
-      label: t === "all" ? "All" : formatToolLabel(t),
-      icon: t === "all" ? undefined : (
-        <ToolIcon tool={t} size={20} logos={toolLogos} insetScale={0.88} />
-      ),
-    })),
-    [heroToolOptions, toolLogos]);
+  const toolOptions = useMemo(
+    () => heroToolOptions.filter(t => t !== "all"),
+    [heroToolOptions],
+  );
 
-  const functionOptions = useMemo<HeroSelectOption[]>(() => [
-    { value: "all", label: "All" },
-    ...allFunctions.map(fn => {
-      const logo = functionLogos[fn.toLowerCase()];
-      return {
-        value: fn,
-        label: fn,
-        icon: logo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={logo} alt="" className="hero-select-fn-icon" />
-        ) : (
-          <span className="hero-select-fn-fallback" style={{ background: fnColor(fn) }}>
-            {fn.slice(0, 1).toUpperCase()}
-          </span>
-        ),
-      };
-    }),
-  ], [allFunctions, functionLogos]);
+  useEffect(() => {
+    setSearchInput(searchQuery);
+  }, [searchQuery]);
 
   useEffect(() => {
     if (heroActivities.length === 0) return;
@@ -677,6 +753,10 @@ function HeroSection({
     if (active) sc.scrollTo({ left: Math.max(0, active.offsetLeft - sc.offsetWidth * 0.08), behavior: "smooth" });
   }, [activeIdx]);
 
+  function submitSearch() {
+    onSearch(searchInput.trim());
+  }
+
   return (
     <header className="hero-shell">
       <section className="hero">
@@ -686,29 +766,66 @@ function HeroSection({
           <h1>Practical AI workflows for your daily work</h1>
           <p>Discover and run guided AI automations tailored to your tool stack and job function.</p>
 
-          <div className="selector-row">
-            <HeroSelect
-              placeholder="Choose tool"
-              value={heroTool}
-              options={toolOptions}
-              isOpen={openSelect === "tool"}
-              onOpenChange={open => setOpenSelect(open ? "tool" : null)}
-              onChange={setHeroTool}
+          <div className="hero-search-row">
+            <input
+              type="search"
+              className="hero-search-input"
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") submitSearch(); }}
+              placeholder="Search workflows…"
+              aria-label="Search workflows"
             />
-            <HeroSelect
-              placeholder="Choose function"
-              value={heroFunction}
-              options={functionOptions}
-              isOpen={openSelect === "function"}
-              onOpenChange={open => setOpenSelect(open ? "function" : null)}
-              onChange={setHeroFunction}
-            />
-            <button className="btn btn-dark" onClick={() => onShowWorkflows(heroTool, heroFunction)}>
-              Show me workflows
+            <button type="button" className="btn btn-dark hero-search-btn" onClick={submitSearch}>
+              Search
             </button>
           </div>
 
-          <div className="trust-line">Browse selected workflows. Use filters below to explore more.</div>
+          {toolOptions.length > 0 && (
+            <div className="hero-filter-block">
+              <span className="hero-filter-label">Tools</span>
+              <div className="hero-filter-chips">
+                {toolOptions.map(tool => (
+                  <HeroExpandChip
+                    key={tool}
+                    label={formatToolLabel(tool)}
+                    selected={selectedTool === tool}
+                    onClick={() => onToolChange(selectedTool === tool ? null : tool)}
+                    icon={<ToolIcon tool={tool} size={28} logos={toolLogos} insetScale={0.88} />}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* {allFunctions.length > 0 && (
+            <div className="hero-filter-block">
+              <span className="hero-filter-label">Functions</span>
+              <div className="hero-filter-chips">
+                {allFunctions.map(fn => {
+                  const logo = functionLogos[fn.toLowerCase()];
+                  return (
+                    <HeroExpandChip
+                      key={fn}
+                      label={fn}
+                      selected={selectedFunction === fn}
+                      onClick={() => onFunctionChange(selectedFunction === fn ? null : fn)}
+                      icon={logo ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={logo} alt="" className="hero-filter-fn-img" />
+                      ) : (
+                        <span className="hero-filter-fn-fallback" style={{ background: fnColor(fn) }}>
+                          {fn.slice(0, 1).toUpperCase()}
+                        </span>
+                      )}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          )} */}
+
+          <div className="trust-line">Tap a tool to filter instantly. Search to narrow the library below.</div>
 
           <div className="hero-progress" aria-hidden="true">
             {heroActivities.map((_, i) => (
@@ -825,11 +942,13 @@ function AIMasteryCourseSection({ completedCount, isLoggedIn }: { completedCount
 // ── DashboardClient ──────────────────────────────────────────────────────
 
 export default function DashboardClient({ profile, activities, progress, toolFilters, toolLogos, tagLogos, functionLogos, functionThumbnails, functionDescriptions, isLoggedIn, masteryProgressCount, brief, viewCounts }: Props) {
-  const [selectedFunction, setSelectedFunction] = useState<string | null>(null);
+  const [selectedTab, setSelectedTab] = useState("all");
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [showSignUp, setShowSignUp] = useState(false);
 
-  // Unique functions (for HeroSection dropdowns)
+  const selectedFunction = selectedTab.startsWith("fn-") ? selectedTab.slice(3) : null;
+
   const allFunctions = useMemo(() => {
     const map = new Map<string, number>();
     activities.forEach(a => (a.functions ?? []).forEach(fn => {
@@ -839,15 +958,12 @@ export default function DashboardClient({ profile, activities, progress, toolFil
     return [...map.entries()].sort((a, b) => b[1] - a[1]).map(([n]) => n);
   }, [activities]);
 
-  // Hero carousel: superadmin-pinned slots first, fallback to is_featured then newest
   const heroActivities = useMemo(() => {
-    // Prefer activities with explicit hero_position slots (1, 2, 3)
     const slotted = activities
       .filter(a => a.hero_position != null)
       .sort((a, b) => (a.hero_position ?? 99) - (b.hero_position ?? 99))
       .slice(0, 3);
     if (slotted.length > 0) return slotted;
-    // Fallback: is_featured first, then newest
     const featured = activities.filter(a => a.is_featured);
     if (featured.length >= 3) return featured.slice(0, 3);
     const rest = activities
@@ -856,36 +972,90 @@ export default function DashboardClient({ profile, activities, progress, toolFil
     return [...featured, ...rest].slice(0, 3);
   }, [activities]);
 
-  // Section 1: New
-  const newActivities = useMemo(
-    () => filterActivitiesBySelection(activities.filter(a => a.is_featured), selectedFunction, selectedTool),
-    [activities, selectedFunction, selectedTool],
-  );
-
-  // Section 1b: Continue where you left off (in_progress for logged-in user)
   const pendingActivities = useMemo(() => {
     if (!isLoggedIn || progress.length === 0) return [];
     const ids = new Set(progress.filter(p => p.status === "in_progress").map(p => p.activity_id));
     return activities.filter(a => ids.has(a.id));
   }, [activities, progress, isLoggedIn]);
 
-  // Section 2: AI Tools Mastery
-  const masteryActivities = useMemo(
-    () => filterActivitiesBySelection(activities.filter(a => a.is_mastery), selectedFunction, selectedTool),
-    [activities, selectedFunction, selectedTool],
-  );
+  type TabDef = { id: string; label: string; icon: string; logo?: string; variant: CardVariant; sectionLabel: string; title: string; subtitle: string };
 
-  // Section last: Completed workflows (logged-in user)
-  const completedActivities = useMemo(() => {
-    if (!isLoggedIn || progress.length === 0) return [];
-    const ids = new Set(progress.filter(p => p.status === "completed").map(p => p.activity_id));
-    return activities.filter(a => ids.has(a.id));
-  }, [activities, progress, isLoggedIn]);
+  const tabs = useMemo<TabDef[]>(() => {
+    const t: TabDef[] = [];
+    t.push({
+      id: "all", label: "All Workflows", icon: "📋", variant: "default",
+      sectionLabel: "Practice Path",
+      title: "All Workflows",
+      subtitle: "Browse every guided workflow in the library. Use filters to narrow results.",
+    });
+    t.push({
+      id: "new", label: "New", icon: "🔥", variant: "default",
+      sectionLabel: "Practice Path",
+      title: "Newly added workflows this week",
+      subtitle: "Fresh workflows added for this week's practice.",
+    });
 
-  function handleShowWorkflows(tool: string, fn: string) {
-    setSelectedTool(tool && tool !== "all" ? tool : null);
-    setSelectedFunction(fn && fn !== "all" ? fn : null);
-    document.getElementById("all-workflows")?.scrollIntoView({ behavior: "smooth" });
+    t.push({
+      id: "essentials", label: "Start Here", icon: "🤖", variant: "default",
+      sectionLabel: "Practice Path",
+      title: "Chatbot Essentials",
+      subtitle: "Core workflows for improving AI fluency and everyday practice.",
+    });
+    allFunctions.forEach(fn => {
+      const count = activities.filter(a => (a.functions ?? []).some(f => f.toLowerCase() === fn.toLowerCase())).length;
+      const logo = functionLogos[fn.toLowerCase()];
+      t.push({
+        id: `fn-${fn}`, label: fn, icon: "⚡", logo, variant: "default",
+        sectionLabel: "Practice Path",
+        title: `${fn} workflows`,
+        subtitle: `${count} workflow${count !== 1 ? "s" : ""} for ${fn}.`,
+      });
+    });
+    if (isLoggedIn && pendingActivities.length > 0) {
+      t.push({
+        id: "continue", label: "Continue", icon: "⏩", variant: "default",
+        sectionLabel: "Practice Path",
+        title: "Continue where you left off",
+        subtitle: `You have ${pendingActivities.length} workflow${pendingActivities.length !== 1 ? "s" : ""} in progress.`,
+      });
+    }
+    return t;
+  }, [activities, allFunctions, isLoggedIn, pendingActivities, functionLogos]);
+
+  const activeTab = tabs.find(t => t.id === selectedTab) ?? tabs[0];
+
+  const tabActivities = useMemo(() => {
+    let base: Activity[];
+    const id = activeTab?.id ?? "new";
+    if (id === "new") {
+      base = activities.filter(a => a.is_featured);
+    } else if (id === "continue") {
+      base = pendingActivities;
+    } else if (id === "essentials") {
+      base = activities.filter(a => a.is_mastery);
+    } else if (id.startsWith("fn-")) {
+      const fn = id.slice(3);
+      base = activities.filter(a => (a.functions ?? []).some(f => f.toLowerCase() === fn.toLowerCase()));
+    } else {
+      base = activities;
+    }
+    return filterActivitiesBySelection(base, null, selectedTool, searchQuery);
+  }, [activeTab, activities, pendingActivities, selectedTool, searchQuery]);
+
+  const cols = useGridColumns();
+  const [extraRows, setExtraRows] = useState(0);
+  useEffect(() => { setExtraRows(0); }, [selectedTab, selectedTool, searchQuery]);
+
+  const visibleCount = cols * (2 + extraRows);
+  const visibleItems = tabActivities.slice(0, visibleCount);
+  const hasMore = visibleCount < tabActivities.length;
+
+  function handleSearch(query: string) {
+    setSearchQuery(query);
+  }
+
+  function handleFunctionChange(fn: string | null) {
+    setSelectedTab(fn ? `fn-${fn}` : "all");
   }
 
   const heroToolOptions = toolFilters;
@@ -908,7 +1078,12 @@ export default function DashboardClient({ profile, activities, progress, toolFil
           heroActivities={heroActivities}
           allFunctions={allFunctions}
           heroToolOptions={heroToolOptions}
-          onShowWorkflows={handleShowWorkflows}
+          selectedTool={selectedTool}
+          selectedFunction={selectedFunction}
+          searchQuery={searchQuery}
+          onToolChange={setSelectedTool}
+          onFunctionChange={handleFunctionChange}
+          onSearch={handleSearch}
           toolLogos={toolLogos}
           functionLogos={functionLogos}
           tagLogos={tagLogos}
@@ -917,103 +1092,80 @@ export default function DashboardClient({ profile, activities, progress, toolFil
           viewCounts={viewCounts}
         />
 
-        {/* ── Content ── */}
+        {/* ── Tabbed Content ── */}
         <main className="content">
+          <section className="rail" id="workflows-tabs">
+            <div className="rail-header">
+              <div className="rail-title">
+                {activeTab && (
+                  <span className={`section-label${activeTab.variant === "yellow" ? " section-label--yellow" : ""}`}>
+                    {activeTab.sectionLabel}
+                  </span>
+                )}
+                <h2>{activeTab?.title}</h2>
+                <p>{activeTab?.subtitle}</p>
+              </div>
+              <div className="rail-filter-right">
+                <ToolFilterDropdown
+                  tools={toolFilters}
+                  selected={selectedTool}
+                  onChange={setSelectedTool}
+                  toolLogos={toolLogos}
+                />
+              </div>
+            </div>
 
-          {/* Section 1: New — dark cards */}
-          {newActivities.length > 0 && (
-            <HorizontalRail
-              key={`new-${selectedFunction ?? "all"}-${selectedTool ?? "all"}`}
-              label="New this week"
-              title="Newly added workflows this week"
-              subtitle="Fresh workflows added for this week's practice."
-              activities={newActivities}
-              variant="dark"
-              isLoggedIn={isLoggedIn}
-              onSignUpRequired={() => setShowSignUp(true)}
-              toolLogos={toolLogos}
-              tagLogos={tagLogos}
-              viewCounts={viewCounts}
-              selectedTool={selectedTool}
-            />
-          )}
+            <div className="tab-bar">
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  className={`tab-chip${selectedTab === tab.id ? " active" : ""}`}
+                  onClick={() => setSelectedTab(tab.id)}
+                >
+                  <span className="tab-chip-icon">
+                    {tab.logo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={tab.logo} alt="" className="tab-chip-logo" />
+                    ) : tab.icon}
+                  </span>
+                  {tab.label}
+                </button>
+              ))}
+            </div>
 
-          {/* Section 1b: Continue where you left off (in_progress, logged-in only) */}
-          {isLoggedIn && pendingActivities.length > 0 && (
-            <HorizontalRail
-              label="In progress"
-              title="Continue where you left off"
-              subtitle={`You have ${pendingActivities.length} workflow${pendingActivities.length !== 1 ? "s" : ""} in progress.`}
-              activities={pendingActivities}
-              isLoggedIn={isLoggedIn}
-              onSignUpRequired={() => setShowSignUp(true)}
-              toolLogos={toolLogos}
-              tagLogos={tagLogos}
-              viewCounts={viewCounts}
-              selectedTool={selectedTool}
-            />
-          )}
+            {tabActivities.length > 0 ? (
+              <div className="static-grid">
+                {visibleItems.map(a => (
+                  <div key={a.id} className="static-grid-slot">
+                    <ActivityCard
+                      activity={a}
+                      isLoggedIn={isLoggedIn}
+                      onSignUpRequired={() => setShowSignUp(true)}
+                      toolLogos={toolLogos}
+                      tagLogos={tagLogos}
+                      variant={activeTab?.variant}
+                      viewCount={viewCounts[a.id] ?? 0}
+                      selectedTool={selectedTool}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="static-grid-empty">
+                No workflows found. Try another tab, tool, or search term.
+              </div>
+            )}
 
-          {/* Section 2: AI Mastery — yellow cards */}
-          {masteryActivities.length > 0 && (
-            <HorizontalRail
-              key={`mastery-${selectedFunction ?? "all"}-${selectedTool ?? "all"}`}
-              label="Core practice"
-              title="Chatbot Essentials"
-              subtitle="Core workflows for improving AI fluency and everyday practice."
-              activities={masteryActivities}
-              variant="yellow"
-              isLoggedIn={isLoggedIn}
-              onSignUpRequired={() => setShowSignUp(true)}
-              toolLogos={toolLogos}
-              tagLogos={tagLogos}
-              viewCounts={viewCounts}
-              selectedTool={selectedTool}
-            />
-          )}
+            {hasMore && (
+              <div className="static-grid-more">
+                <button className="view-more-link" onClick={() => setExtraRows(r => r + 1)}>
+                  View more
+                </button>
+              </div>
+            )}
+          </section>
 
-          {/* Section 3: All Workflows (paginated, filtered by function + tool) */}
-          <AllWorkflowsSection
-            activities={activities}
-            selectedFunction={selectedFunction}
-            selectedTool={selectedTool}
-            isLoggedIn={isLoggedIn}
-            onSignUpRequired={() => setShowSignUp(true)}
-            toolLogos={toolLogos}
-            tagLogos={tagLogos}
-            viewCounts={viewCounts}
-          />
-
-          {/* Section 4: Functions carousel (filters section 3) */}
-          <FunctionsCarousel
-            activities={activities}
-            selectedFunction={selectedFunction}
-            onSelect={fn => setSelectedFunction(fn)}
-            functionLogos={functionLogos}
-            functionThumbnails={functionThumbnails}
-            functionDescriptions={functionDescriptions}
-          />
-
-          {/* Section last: Completed Workflows (logged-in only) */}
-          {isLoggedIn && completedActivities.length > 0 && (
-            <HorizontalRail
-              label="Done"
-              title="Completed Workflows"
-              subtitle={`${completedActivities.length} workflow${completedActivities.length !== 1 ? "s" : ""} you've finished — revisit anytime.`}
-              activities={completedActivities}
-              isLoggedIn={isLoggedIn}
-              onSignUpRequired={() => setShowSignUp(true)}
-              toolLogos={toolLogos}
-              tagLogos={tagLogos}
-              viewCounts={viewCounts}
-              selectedTool={selectedTool}
-            />
-          )}
-          {/* <AIMasteryCourseSection completedCount={masteryProgressCount} isLoggedIn={isLoggedIn} /> */}
           {brief && <NewsBriefCard brief={brief} />}
-
-
-
         </main>
 
         <SiteFooter />

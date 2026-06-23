@@ -18,6 +18,7 @@ export interface WorkflowStep {
   if_stuck: string;
   callout: string;
   coach_next: string;
+  try_asking: string[];
   slideUrl?: string;
   quiz?: Quiz;
 }
@@ -56,4 +57,10 @@ export function buildCoachMessage(step: Pick<WorkflowStep,
   }
 
   return lines.join("\n").trim() || `Follow the instructions on the slide for **${step.title}**.`;
+}
+
+/** Short coach bubble when step content is shown in the center panel. */
+export function buildCoachChatMessage(step: Pick<WorkflowStep, "title" | "coach_next"> | null | undefined): string {
+  if (!step) return "Follow along with the activity when you're ready.";
+  return step.coach_next?.trim() || `Follow the instructions on the slide for **${step.title}**.`;
 }

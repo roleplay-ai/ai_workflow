@@ -51,6 +51,7 @@ export function parseMarkdownWorkflow(markdown: string): {
       if_stuck: "Not specified in this slide.",
       callout: get("Callout") || "",
       coach_next: "",
+      try_asking: [],
     };
   });
 

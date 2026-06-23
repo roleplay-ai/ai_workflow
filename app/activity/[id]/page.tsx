@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import ActivityViewClient from "./ActivityViewClient";
 import { rowsToToolLogoMap } from "@/lib/toolLogos";
+import { buildToolTryUrlMap } from "@/lib/tools";
 import { SITE_NAME } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -101,7 +102,12 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
     .eq("activity_id", id)
     .order("step_number", { ascending: true });
 
-  const { data: toolLogoRows } = await supabase.from("tool_logos").select("tool, logo_url");
+  const [{ data: toolLogoRows }, { data: fluencyToolRows }] = await Promise.all([
+    supabase.from("tool_logos").select("tool, logo_url"),
+    supabase.from("fluency_tools").select("name, try_url").eq("published", true),
+  ]);
+
+  const toolTryUrls = buildToolTryUrlMap(fluencyToolRows ?? []);
 
   return (
     <ActivityViewClient
@@ -110,6 +116,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
       activitySteps={(activitySteps ?? []) as any}
       progress={progress as any}
       toolLogos={rowsToToolLogoMap(toolLogoRows ?? [])}
+      toolTryUrls={toolTryUrls}
     />
   );
 }

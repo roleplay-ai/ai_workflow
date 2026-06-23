@@ -86,3 +86,43 @@ export function buildDashboardToolFilters(
 export function normalizeToolList(tools: string[]): string[] {
   return [...new Set(tools.map(normalizeToolSlug).filter(Boolean))];
 }
+
+export type FluencyToolLink = { name: string; try_url: string | null };
+
+/** Map normalized tool slug → try URL from fluency_tools catalog. */
+export function buildToolTryUrlMap(tools: FluencyToolLink[]): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const t of tools) {
+    const slug = normalizeToolSlug(t.name);
+    const url = t.try_url?.trim();
+    if (slug && url && !map[slug]) map[slug] = url;
+  }
+  return map;
+}
+
+/** First activity tool that has a resolved try URL. */
+export function resolveActivityToolUrl(
+  activityTools: string[],
+  tryUrlMap: Record<string, string>,
+): { slug: string; url: string; label: string } | null {
+  for (const slug of activityTools) {
+    const url = tryUrlMap[slug];
+    if (url) return { slug, url, label: formatToolLabel(slug) };
+  }
+  return null;
+}
+
+/** Activity overview open link: custom try_link first, else fluency_tools catalog. */
+export function resolveActivityOpenLink(
+  tryLink: string | null | undefined,
+  activityTools: string[],
+  tryUrlMap: Record<string, string>,
+): { url: string; label: string } | null {
+  const custom = tryLink?.trim();
+  const toolLink = resolveActivityToolUrl(activityTools, tryUrlMap);
+  if (custom) {
+    return { url: custom, label: toolLink?.label ?? "Tool" };
+  }
+  if (!toolLink) return null;
+  return { url: toolLink.url, label: toolLink.label };
+}
