@@ -170,7 +170,7 @@ function useGridColumns(): number {
   useEffect(() => {
     function update() {
       const w = window.innerWidth;
-      setCols(w <= 680 ? 2 : w <= 900 ? 2 : w <= 1120 ? 3 : w <= 1500 ? 4 : 5);
+      setCols(w <= 680 ? 2 : w <= 900 ? 2 : w <= 1120 ? 3 : w < 1680 ? 4 : 5);
     }
     update();
     window.addEventListener("resize", update);
@@ -984,27 +984,20 @@ export default function DashboardClient({ profile, activities, progress, toolFil
     const t: TabDef[] = [];
     t.push({
       id: "all", label: "All Workflows", icon: "📋", variant: "default",
-      sectionLabel: "Full library",
+      sectionLabel: "Practice Path",
       title: "All Workflows",
       subtitle: "Browse every guided workflow in the library. Use filters to narrow results.",
     });
     t.push({
       id: "new", label: "New", icon: "🔥", variant: "default",
-      sectionLabel: "New this week",
+      sectionLabel: "Practice Path",
       title: "Newly added workflows this week",
       subtitle: "Fresh workflows added for this week's practice.",
     });
-    if (isLoggedIn && pendingActivities.length > 0) {
-      t.push({
-        id: "continue", label: "Continue", icon: "⏩", variant: "default",
-        sectionLabel: "In progress",
-        title: "Continue where you left off",
-        subtitle: `You have ${pendingActivities.length} workflow${pendingActivities.length !== 1 ? "s" : ""} in progress.`,
-      });
-    }
+
     t.push({
-      id: "essentials", label: "Chatbot Essentials", icon: "🤖", variant: "default",
-      sectionLabel: "Core practice",
+      id: "essentials", label: "Start Here", icon: "🤖", variant: "default",
+      sectionLabel: "Practice Path",
       title: "Chatbot Essentials",
       subtitle: "Core workflows for improving AI fluency and everyday practice.",
     });
@@ -1013,11 +1006,19 @@ export default function DashboardClient({ profile, activities, progress, toolFil
       const logo = functionLogos[fn.toLowerCase()];
       t.push({
         id: `fn-${fn}`, label: fn, icon: "⚡", logo, variant: "default",
-        sectionLabel: "Workflow types",
+        sectionLabel: "Practice Path",
         title: `${fn} workflows`,
         subtitle: `${count} workflow${count !== 1 ? "s" : ""} for ${fn}.`,
       });
     });
+    if (isLoggedIn && pendingActivities.length > 0) {
+      t.push({
+        id: "continue", label: "Continue", icon: "⏩", variant: "default",
+        sectionLabel: "Practice Path",
+        title: "Continue where you left off",
+        subtitle: `You have ${pendingActivities.length} workflow${pendingActivities.length !== 1 ? "s" : ""} in progress.`,
+      });
+    }
     return t;
   }, [activities, allFunctions, isLoggedIn, pendingActivities, functionLogos]);
 

@@ -399,17 +399,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
         </div>
         <div className={s.topActions}>
           <div className={s.progressMini}>
-            {steps.map((_, i) => {
-              const done = !isOverview && i < current;
-              const active = !isOverview && i === current;
-              return (
-                <span
-                  key={i}
-                  className={`${s.progressDot} ${active ? s.progressDotActive : done ? s.progressDotDone : s.progressDotPending}`}
-                />
-              );
-            })}
-            <span>{isOverview ? 0 : current + 1}/{steps.length}</span>
+            {isOverview ? 0 : current + 1}/{steps.length}
           </div>
           <a href="/apply" className={s.applyBtn}>← Apply</a>
         </div>
@@ -423,48 +413,47 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
             /* ── OVERVIEW ──────────────────────────── */
             <>
               <div className={s.overviewWrap}>
-                <div className={s.overviewQuickActions}>
-                  {content?.video_url && (
-                    <button type="button" className={s.ghostBtn} onClick={() => setShowVideo(true)}>▶ Video</button>
-                  )}
-                  <button type="button" className={s.nudgeCta} onClick={() => setActiveDrawer("chat")}>
-                    <span className={s.nudgeIcon}>🤖</span>
-                    <span>Ask Nudgie</span>
-                  </button>
-                </div>
-
                 <div className={s.overviewScroll}>
-                  <div className={s.overviewHero}>
-                    <div className={s.overviewPill}>✨ Workflow Overview</div>
-                    <OverviewTitle title={activity.title} />
-                    {activity.description && (
-                      <div className={s.overviewDesc}>
-                        <MdText text={activity.description} className={s.overviewDescInner} />
-                      </div>
+                  <div className={s.overviewQuickActions}>
+                    {content?.video_url && (
+                      <button type="button" className={s.ghostBtn} onClick={() => setShowVideo(true)}>▶ Video</button>
                     )}
+                    <button type="button" className={s.nudgeCta} onClick={() => setActiveDrawer("chat")}>
+                      <span className={s.nudgeIcon}>🤖</span>
+                      <span>Ask Nudgie</span>
+                    </button>
                   </div>
 
-                  {whatYouGet.length > 0 && (
-                    <>
-                      <div className={s.overviewDivider} />
-                      <div className={s.overviewSectionLabel}>
-                        WHAT YOU&apos;LL WALK AWAY WITH
-                      </div>
-                      <div className={s.overviewItemList}>
-                        {whatYouGet.map((item, i) => (
-                          <div key={i} className={s.overviewItem}>
-                            <div className={`${s.overviewItemIcon} ${[s.overviewItemIcon1, s.overviewItemIcon2, s.overviewItemIcon3][i % 3]}`}>
-                              {item.icon || "✨"}
+                  <div className={s.overviewInner}>
+                    <div className={s.overviewPill}>Workflow overview</div>
+                    <OverviewTitle title={activity.title} />
+                    {activity.description && (
+                      <p className={s.overviewDesc} title={activity.description}>
+                        {activity.description.replace(/\*\*/g, "").replace(/\n+/g, " ").trim()}
+                      </p>
+                    )}
+
+                    {whatYouGet.length > 0 && (
+                      <>
+                        <div className={s.overviewSectionLabel}>
+                          What you&apos;ll walk away with
+                        </div>
+                        <div className={s.overviewItemList}>
+                          {whatYouGet.map((item, i) => (
+                            <div key={i} className={s.overviewItem}>
+                              <div className={s.overviewItemIcon}>
+                                {item.icon || "✨"}
+                              </div>
+                              <div>
+                                <div className={s.overviewItemTitle}>{item.title}</div>
+                                <div className={s.overviewItemDesc}>{item.description}</div>
+                              </div>
                             </div>
-                            <div>
-                              <div className={s.overviewItemTitle}>{item.title}</div>
-                              <div className={s.overviewItemDesc}>{item.description}</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -481,7 +470,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
                   )}
                   <button type="button" onClick={startActivity}
                     className={`${s.overviewBtn} ${s.overviewBtnPrimary}`}>
-                    Let&apos;s start — Step 1 →
+                    Let&apos;s start, Step 1 →
                   </button>
                 </div>
               </div>

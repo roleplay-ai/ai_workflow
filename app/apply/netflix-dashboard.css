@@ -1405,7 +1405,7 @@
   font-family: inherit;
 }
 
-@media (min-width: 1501px) {
+@media (min-width: 1680px) {
   .ndb-root .static-grid {
     grid-template-columns: repeat(5, 1fr);
   }
@@ -2856,7 +2856,8 @@
     font-size: 9px;
     padding: 3px 7px;
     top: 6px;
-    left: 6px;
+    right: 6px;
+    left: auto;
   }
 
   .ndb-root .static-grid-slot .card-view-count {

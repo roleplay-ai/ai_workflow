@@ -185,10 +185,9 @@ export default function ActivityCard({
 
   const inner = (
     <>
-      {activity.is_featured && <span className="new-badge">New</span>}
-
       {/* ── Poster ── */}
       <div className={`card-poster ${theme.posterColor}${activity.thumbnail_url ? " has-thumbnail" : ""}`}>
+        {activity.is_featured && <span className="new-badge">New</span>}
         {activity.thumbnail_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
