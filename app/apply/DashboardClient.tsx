@@ -126,7 +126,7 @@ function ToolFilterDropdown({
         )}
         <span>{displayLabel}</span>
         <span className={`tool-dropdown-chevron${open ? " flipped" : ""}`}>
-          <svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </span>
       </button>
       {open && (
@@ -798,7 +798,7 @@ function HeroSection({
             </div>
           )}
 
-          {allFunctions.length > 0 && (
+          {/* {allFunctions.length > 0 && (
             <div className="hero-filter-block">
               <span className="hero-filter-label">Functions</span>
               <div className="hero-filter-chips">
@@ -823,9 +823,9 @@ function HeroSection({
                 })}
               </div>
             </div>
-          )}
+          )} */}
 
-          <div className="trust-line">Tap a tool or function to filter instantly. Search to narrow the library below.</div>
+          <div className="trust-line">Tap a tool to filter instantly. Search to narrow the library below.</div>
 
           <div className="hero-progress" aria-hidden="true">
             {heroActivities.map((_, i) => (
@@ -942,7 +942,7 @@ function AIMasteryCourseSection({ completedCount, isLoggedIn }: { completedCount
 // ── DashboardClient ──────────────────────────────────────────────────────
 
 export default function DashboardClient({ profile, activities, progress, toolFilters, toolLogos, tagLogos, functionLogos, functionThumbnails, functionDescriptions, isLoggedIn, masteryProgressCount, brief, viewCounts }: Props) {
-  const [selectedTab, setSelectedTab] = useState("new");
+  const [selectedTab, setSelectedTab] = useState("all");
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSignUp, setShowSignUp] = useState(false);
@@ -983,7 +983,13 @@ export default function DashboardClient({ profile, activities, progress, toolFil
   const tabs = useMemo<TabDef[]>(() => {
     const t: TabDef[] = [];
     t.push({
-      id: "new", label: "New", icon: "🔥", variant: "dark",
+      id: "all", label: "All Workflows", icon: "📋", variant: "default",
+      sectionLabel: "Full library",
+      title: "All Workflows",
+      subtitle: "Browse every guided workflow in the library. Use filters to narrow results.",
+    });
+    t.push({
+      id: "new", label: "New", icon: "🔥", variant: "default",
       sectionLabel: "New this week",
       title: "Newly added workflows this week",
       subtitle: "Fresh workflows added for this week's practice.",
@@ -997,7 +1003,7 @@ export default function DashboardClient({ profile, activities, progress, toolFil
       });
     }
     t.push({
-      id: "essentials", label: "Chatbot Essentials", icon: "🤖", variant: "yellow",
+      id: "essentials", label: "Chatbot Essentials", icon: "🤖", variant: "default",
       sectionLabel: "Core practice",
       title: "Chatbot Essentials",
       subtitle: "Core workflows for improving AI fluency and everyday practice.",
@@ -1048,7 +1054,7 @@ export default function DashboardClient({ profile, activities, progress, toolFil
   }
 
   function handleFunctionChange(fn: string | null) {
-    setSelectedTab(fn ? `fn-${fn}` : "new");
+    setSelectedTab(fn ? `fn-${fn}` : "all");
   }
 
   const heroToolOptions = toolFilters;
