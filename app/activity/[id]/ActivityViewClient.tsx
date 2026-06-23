@@ -422,16 +422,8 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
           {isOverview ? (
             /* ── OVERVIEW ──────────────────────────── */
             <>
-              <div className={s.focusHead}>
-                <div>
-                  <div className={s.stepPill}>
-                    <span className={s.stepPillDot} />
-                    Workflow Overview
-                  </div>
-                  <h2 className={s.focusTitle}>{activity.title}</h2>
-                  {activity.description && <p className={s.focusDesc}>{activity.description}</p>}
-                </div>
-                <div className={s.quickActions}>
+              <div className={s.overviewWrap}>
+                <div className={s.overviewQuickActions}>
                   {content?.video_url && (
                     <button type="button" className={s.ghostBtn} onClick={() => setShowVideo(true)}>▶ Video</button>
                   )}
@@ -440,30 +432,40 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
                     <span>Ask Nudgie</span>
                   </button>
                 </div>
-              </div>
 
-              <div className={s.overviewContent}>
-                {whatYouGet.length > 0 && (
-                  <>
-                    <div className={s.overviewSectionLabel}>
-                      WHAT YOU&apos;LL WALK AWAY WITH
-                    </div>
-                    <div className={s.overviewItemList}>
-                      {whatYouGet.map((item, i) => (
-                        <div key={i} className={s.overviewItem}>
-                          <div className={s.overviewItemIcon}>
-                            {item.icon || "✨"}
-                          </div>
-                          <div>
-                            <div className={s.overviewItemTitle}>{item.title}</div>
-                            <div className={s.overviewItemDesc}>{item.description}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
+                <div className={s.overviewScroll}>
+                  <div className={s.overviewHero}>
+                    <div className={s.overviewPill}>✨ Workflow Overview</div>
+                    <OverviewTitle title={activity.title} />
+                    {activity.description && (
+                      <div className={s.overviewDesc}>
+                        <MdText text={activity.description} className={s.overviewDescInner} />
+                      </div>
+                    )}
+                  </div>
 
+                  {whatYouGet.length > 0 && (
+                    <>
+                      <div className={s.overviewDivider} />
+                      <div className={s.overviewSectionLabel}>
+                        WHAT YOU&apos;LL WALK AWAY WITH
+                      </div>
+                      <div className={s.overviewItemList}>
+                        {whatYouGet.map((item, i) => (
+                          <div key={i} className={s.overviewItem}>
+                            <div className={`${s.overviewItemIcon} ${[s.overviewItemIcon1, s.overviewItemIcon2, s.overviewItemIcon3][i % 3]}`}>
+                              {item.icon || "✨"}
+                            </div>
+                            <div>
+                              <div className={s.overviewItemTitle}>{item.title}</div>
+                              <div className={s.overviewItemDesc}>{item.description}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
 
               <div className={s.overviewFooter}>
@@ -783,6 +785,24 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
         </div>
       )}
     </div>
+  );
+}
+
+function OverviewTitle({ title }: { title: string }) {
+  const parts = title.split(/(\*\*[^*]+\*\*)/g);
+  return (
+    <h2 className={s.overviewTitle}>
+      {parts.map((part, i) => {
+        if (part.startsWith("**") && part.endsWith("**")) {
+          return (
+            <span key={i} className={s.overviewTitleAccent}>
+              {part.slice(2, -2)}
+            </span>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </h2>
   );
 }
 

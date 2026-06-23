@@ -262,8 +262,8 @@ export default function ActivityCard({
           )}
         </div>
         <h3 className="card-title">{activity.title}</h3>
+        {activity.description && <p className="card-desc">{activity.description}</p>}
         <TagLogosRow tags={activity.tags ?? []} tagLogos={tagLogos} variant={variant} />
-        {/* <p className="card-desc">{activity.description}</p> */}
       </div>
     </>
   );

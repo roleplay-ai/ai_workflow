@@ -1124,6 +1124,134 @@
   text-decoration: none;
 }
 
+.ndb-root .rail-filter-right {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* ── Tool filter dropdown ─────────────────────────────────────────────── */
+
+.ndb-root .tool-dropdown {
+  position: relative;
+}
+
+.ndb-root .tool-dropdown-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  border-radius: 999px;
+  border: 1.5px solid var(--dark);
+  background: var(--white);
+  padding: 0 14px;
+  font-weight: 900;
+  font-size: 12.5px;
+  font-family: inherit;
+  color: var(--dark);
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 3px 10px rgba(34, 29, 35, 0.05);
+  transition: background 0.18s ease, box-shadow 0.18s ease, color 0.18s ease;
+}
+
+.ndb-root .tool-dropdown-trigger:hover {
+  background: var(--dark);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(34, 29, 35, 0.14);
+}
+
+.ndb-root .tool-dropdown-trigger.is-open {
+  background: var(--dark);
+  color: var(--amber);
+  box-shadow: 0 6px 18px rgba(34, 29, 35, 0.14);
+}
+
+.ndb-root .tool-dropdown-all-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.ndb-root .tool-dropdown-chevron {
+  display: flex;
+  align-items: center;
+  margin-left: 2px;
+  transition: transform 0.2s ease;
+}
+
+.ndb-root .tool-dropdown-chevron.flipped {
+  transform: rotate(180deg);
+}
+
+.ndb-root .tool-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 200px;
+  background: var(--white);
+  border: 1.5px solid var(--dark);
+  border-radius: 18px;
+  padding: 6px;
+  box-shadow: 0 16px 48px rgba(34, 29, 35, 0.18);
+  z-index: 20;
+  animation: toolDropdownIn 0.18s ease;
+}
+
+@keyframes toolDropdownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.ndb-root .tool-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--dark);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s ease;
+}
+
+.ndb-root .tool-dropdown-item:hover {
+  background: rgba(34, 29, 35, 0.06);
+}
+
+.ndb-root .tool-dropdown-item.is-selected {
+  background: var(--dark);
+  color: var(--amber);
+}
+
+.ndb-root .tool-dropdown-item.is-selected:hover {
+  background: var(--dark);
+}
+
+.ndb-root .tool-dropdown-item-icon {
+  font-size: 18px;
+  width: 22px;
+  text-align: center;
+  line-height: 1;
+}
+
+.ndb-root .tool-dropdown-check {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 900;
+}
+
 .ndb-root .rail-window {
   position: relative;
 }
@@ -1229,6 +1357,137 @@
 
 .ndb-root .row-arrow:hover {
   transform: translateY(-50%) scale(1.08);
+}
+
+/* ── Static Grid ─────────────────────────────────────────────────────────── */
+
+.ndb-root .static-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  padding: 24px 0;
+}
+
+.ndb-root .static-grid-slot {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.ndb-root .static-grid-slot .workflow-card {
+  width: 100%;
+  height: 100%;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.ndb-root .static-grid-slot .workflow-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 22px 55px rgba(34, 29, 35, 0.12);
+}
+
+.ndb-root .static-grid-more {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0 0;
+}
+
+.ndb-root .view-more-link {
+  border: 0;
+  background: transparent;
+  color: var(--dark);
+  font-size: 16px;
+  font-weight: 950;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 5px;
+  cursor: pointer;
+  padding: 8px 10px;
+  font-family: inherit;
+}
+
+@media (min-width: 1501px) {
+  .ndb-root .static-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+/* ── Tab bar ─────────────────────────────────────────────────────────────── */
+
+.ndb-root .tab-bar {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 4px 2px 18px;
+  scrollbar-width: none;
+}
+
+.ndb-root .tab-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.ndb-root .tab-chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  border: 1.5px solid var(--dark);
+  background: var(--white);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-weight: 900;
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+  color: var(--dark);
+  box-shadow: 0 3px 10px rgba(34, 29, 35, 0.05);
+  transition: background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease, color 0.18s ease;
+}
+
+.ndb-root .tab-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(34, 29, 35, 0.12);
+  background: var(--dark);
+  color: #fff;
+}
+
+.ndb-root .tab-chip.active {
+  background: var(--dark);
+  color: var(--amber);
+  box-shadow: 0 6px 18px rgba(34, 29, 35, 0.14);
+}
+
+.ndb-root .tab-chip-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  background: rgba(34, 29, 35, 0.06);
+  font-size: 13px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.ndb-root .tab-chip:hover .tab-chip-icon,
+.ndb-root .tab-chip.active .tab-chip-icon {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.ndb-root .tab-chip-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.ndb-root .static-grid-empty {
+  border: 1px dashed var(--border);
+  background: var(--white);
+  border-radius: 24px;
+  padding: 40px;
+  text-align: center;
+  color: var(--muted);
+  font-weight: 800;
 }
 
 /* ── Functions carousel ──────────────────────────────────────────────────── */
@@ -2346,6 +2605,10 @@
   .ndb-root .nf-card {
     min-height: auto;
   }
+
+  .ndb-root .static-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
@@ -2382,6 +2645,10 @@
 
   .ndb-root .brief-news-card-link {
     margin: 0 24px;
+  }
+
+  .ndb-root .static-grid {
+    grid-template-columns: repeat(3, 1fr);
   }
 
   .ndb-root .tool-grid {
@@ -2513,6 +2780,121 @@
     flex-shrink: 0;
     padding: 7px 12px;
     font-size: 12px;
+  }
+
+  .ndb-root .static-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .ndb-root .static-grid-slot .workflow-card {
+    flex-direction: row;
+    border-radius: 16px;
+  }
+
+  .ndb-root .static-grid-slot .card-poster {
+    width: 110px;
+    height: auto;
+    min-height: 130px;
+    flex-shrink: 0;
+    border-radius: 16px 0 0 16px;
+  }
+
+  .ndb-root .static-grid-slot .card-poster.has-thumbnail {
+    height: auto;
+  }
+
+  .ndb-root .static-grid-slot .card-poster::before {
+    inset: 8px;
+    border-radius: 10px;
+  }
+
+  .ndb-root .static-grid-slot .card-body {
+    padding: 10px 12px;
+    min-width: 0;
+    flex: 1;
+    justify-content: center;
+  }
+
+  .ndb-root .static-grid-slot .meta-line {
+    gap: 6px;
+  }
+
+  .ndb-root .static-grid-slot .card-title {
+    font-size: 14px;
+    margin-top: 5px;
+    min-height: unset;
+    max-height: unset;
+    -webkit-line-clamp: 2;
+  }
+
+  .ndb-root .static-grid-slot .card-desc {
+    font-size: 11px;
+    margin-top: 4px;
+    -webkit-line-clamp: 2;
+    line-height: 1.35;
+  }
+
+  .ndb-root .static-grid-slot .card-tag-row {
+    padding-top: 8px;
+  }
+
+  .ndb-root .static-grid-slot .card-tag-logo {
+    width: 20px;
+    height: 20px;
+    border-radius: 5px;
+  }
+
+  .ndb-root .static-grid-slot .card-tag-fallback {
+    width: 20px;
+    height: 20px;
+    border-radius: 5px;
+    font-size: 9px;
+  }
+
+  .ndb-root .static-grid-slot .new-badge {
+    font-size: 9px;
+    padding: 3px 7px;
+    top: 6px;
+    left: 6px;
+  }
+
+  .ndb-root .static-grid-slot .card-view-count {
+    font-size: 9px !important;
+    padding: 2px 5px 2px 4px !important;
+  }
+
+  .ndb-root .rail-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .ndb-root .rail-filter-right {
+    width: 100%;
+  }
+
+  .ndb-root .tool-dropdown {
+    width: 100%;
+  }
+
+  .ndb-root .tool-dropdown-trigger {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .ndb-root .tool-dropdown-menu {
+    left: 0;
+    right: 0;
+  }
+
+  .ndb-root .tab-bar {
+    gap: 8px;
+    padding: 4px 0 14px;
+  }
+
+  .ndb-root .tab-chip {
+    padding: 7px 11px;
+    font-size: 11.5px;
   }
 
   .ndb-root .cards-row {
