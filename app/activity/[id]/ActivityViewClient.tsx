@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, useEffect, useMemo } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import AppNav from "@/components/AppNav";
 import QuizModal from "@/components/QuizModal";
@@ -92,10 +93,12 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
   const [slideOpen, setSlideOpen] = useState(false);
   const [chipsDismissed, setChipsDismissed] = useState(false);
   const [activeDrawer, setActiveDrawer] = useState<"resources" | "chat" | null>(null);
+  const [isStarting, setIsStarting] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
   const initDone = useRef(false);
 
   const isOverview = current === -1;
+  const showOverview = isOverview && !isStarting;
   const step = isOverview ? null : steps[current];
   const slideUrl = step?.slideUrl ?? null;
   const activityTools = normalizeActivityTools(activity.tools);
@@ -104,8 +107,8 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
     ? (steps[0]?.try_asking ?? [])
     : (suggestions.length > 0 ? suggestions : (step?.try_asking ?? []));
   const hasInput = !!input.trim();
-  const prevEnabled = !hasInput && current > 0 && !loading && !stepLoading && !initializing;
-  const nextEnabled = !hasInput && !loading && !stepLoading && !initializing && !showCelebration;
+  const prevEnabled = !hasInput && current > 0 && !loading && !stepLoading && !initializing && !isStarting;
+  const nextEnabled = !hasInput && !loading && !stepLoading && !initializing && !showCelebration && !isStarting;
 
   useEffect(() => {
     chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" });
@@ -224,12 +227,15 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
   };
 
   const startActivity = () => {
+    if (isStarting) return;
+    setIsStarting(true);
     setSuggestions([]);
     setStepLoading(true);
     setLoading(true);
     setTimeout(() => {
       setCurrent(0);
       setMessages(m => [...m, { role: "assistant", content: buildCoachChatMessage(steps[0]) }]);
+      setIsStarting(false);
       setStepLoading(false);
       setLoading(false);
     }, 1500);
@@ -371,7 +377,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
           <div style={{ fontSize: 48, marginBottom: 16 }}>🚧</div>
           <h2 style={{ fontWeight: 900, fontSize: 22, color: "#221D23", marginBottom: 8 }}>{activity.title}</h2>
           <p>Content for this activity hasn&apos;t been uploaded yet. Check back soon.</p>
-          <a href="/apply" style={{ display: "inline-block", marginTop: 24, padding: "10px 24px", borderRadius: 999, background: "#FFCE00", color: "#221D23", fontWeight: 800, textDecoration: "none" }}>← Back to Apply</a>
+          <BackToApplyButton className={s.applyBtnEmpty} />
         </div>
       </div>
     );
@@ -399,9 +405,9 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
         </div>
         <div className={s.topActions}>
           <div className={s.progressMini}>
-            {isOverview ? 0 : current + 1}/{steps.length}
+            {isStarting ? 1 : isOverview ? 0 : current + 1}/{steps.length}
           </div>
-          <a href="/apply" className={s.applyBtn}>← Apply</a>
+          <BackToApplyButton />
         </div>
       </header>
 
@@ -409,7 +415,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
       <main className={s.page}>
         <section className={s.focusCard}>
 
-          {isOverview ? (
+          {showOverview ? (
             /* ── OVERVIEW ──────────────────────────── */
             <>
               <div className={s.overviewWrap}>
@@ -468,7 +474,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
                       Open {openLink.label} ↗
                     </a>
                   )}
-                  <button type="button" onClick={startActivity}
+                  <button type="button" onClick={startActivity} disabled={isStarting}
                     className={`${s.overviewBtn} ${s.overviewBtnPrimary}`}>
                     Let&apos;s start, Step 1 →
                   </button>
@@ -482,9 +488,9 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
                 <div>
                   <div className={s.stepPill}>
                     <span className={s.stepPillDot} />
-                    Step {current + 1} of {steps.length}
+                    Step {(isStarting ? 0 : current) + 1} of {steps.length}
                   </div>
-                  <h2 className={s.focusTitle}>{step?.title}</h2>
+                  <h2 className={s.focusTitle}>{(isStarting ? steps[0] : step)?.title ?? activity.title}</h2>
                 </div>
                 <div className={s.quickActions}>
                   <button type="button" className={s.ghostBtn} onClick={() => setActiveDrawer("resources")}>Resources</button>
@@ -499,7 +505,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
               </div>
 
               <div className={s.content}>
-                {stepLoading ? (
+                {stepLoading || isStarting ? (
                   <StepSkeleton />
                 ) : (
                   <div className={s.workRow}>
@@ -565,7 +571,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
                     placeholder="Stuck? Ask Nudgie…"
                     suppressHydrationWarning
                   />
-                  <button type="button" className={s.sendBtn} onClick={sendInline} disabled={loading}>➤</button>
+                  <button type="button" className={s.sendBtn} onClick={sendInline} disabled={loading || isStarting}>➤</button>
                 </div>
                 <div className={s.footerActions}>
                   <button type="button" className={s.backBtn} onClick={goPrev} disabled={!prevEnabled}>← Back</button>
@@ -774,6 +780,23 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
         </div>
       )}
     </div>
+  );
+}
+
+function BackToApplyButton({ className }: { className?: string }) {
+  const [navigating, setNavigating] = useState(false);
+
+  return (
+    <Link
+      href="/apply"
+      className={`${className ?? s.applyBtn}${navigating ? ` ${s.applyBtnLoading}` : ""}`}
+      onClick={() => setNavigating(true)}
+      aria-busy={navigating}
+    >
+      {navigating && <span className={s.applyBtnSpinner} aria-hidden="true" />}
+      <span aria-hidden="true">←</span>
+      Back
+    </Link>
   );
 }
 

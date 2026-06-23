@@ -54,11 +54,11 @@ export function AppNavBrand() {
         style={{ display: "block", flexShrink: 0, height: 40, width: "auto" }}
       />
       <span style={{
-        fontWeight: 400,
-        fontSize: 15,
+        fontWeight: 500,
+        fontSize: 17,
         letterSpacing: "-0.02em",
         color: "#221D23",
-      }}>Practice Lab</span>
+      }}>AI Practice Lab</span>
     </Link>
   );
 }

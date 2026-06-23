@@ -1744,6 +1744,65 @@
   border-color: #D4CDC1;
 }
 
+.ndb-root .workflow-card.is-navigating {
+  pointer-events: none;
+  cursor: wait;
+}
+
+.ndb-root .workflow-card.is-navigating > .card-poster,
+.ndb-root .workflow-card.is-navigating > .card-body {
+  filter: blur(2.5px);
+  opacity: 0.52;
+  transition: filter 0.18s ease, opacity 0.18s ease;
+}
+
+.ndb-root .workflow-card.is-navigating .new-badge,
+.ndb-root .workflow-card.is-navigating .card-view-count {
+  filter: blur(4px);
+  opacity: 0.3;
+}
+
+.ndb-root .card-nav-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(248, 248, 246, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: inherit;
+}
+
+.ndb-root .workflow-card.dark-card .card-nav-loading,
+.ndb-root .workflow-card.yellow-card .card-nav-loading {
+  background: rgba(34, 29, 35, 0.78);
+}
+
+.ndb-root .card-nav-spinner {
+  width: 42px;
+  height: 42px;
+  border: 3.5px solid rgba(34, 29, 35, 0.1);
+  border-top-color: var(--amber);
+  border-right-color: var(--amber);
+  border-radius: 50%;
+  animation: cardNavSpin 0.65s linear infinite;
+  box-shadow: 0 0 0 5px rgba(255, 206, 0, 0.22);
+}
+
+.ndb-root .workflow-card.dark-card .card-nav-spinner,
+.ndb-root .workflow-card.yellow-card .card-nav-spinner {
+  border-color: rgba(255, 255, 255, 0.14);
+  border-top-color: var(--amber);
+  border-right-color: var(--amber);
+  box-shadow: 0 0 0 5px rgba(255, 206, 0, 0.28);
+}
+
+@keyframes cardNavSpin {
+  to { transform: rotate(360deg); }
+}
+
 .ndb-root .card-poster {
   height: 180px;
   position: relative;

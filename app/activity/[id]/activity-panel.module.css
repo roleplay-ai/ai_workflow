@@ -100,12 +100,51 @@
   text-decoration: none;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  gap: 8px;
   font-family: inherit;
   white-space: nowrap;
   transition: background 0.15s;
 }
 
 .applyBtn:hover {
+  background: #fbbf24;
+}
+
+.applyBtnLoading {
+  pointer-events: none;
+  cursor: wait;
+  opacity: 0.88;
+}
+
+.applyBtnSpinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(34, 29, 35, 0.2);
+  border-top-color: #221d23;
+  border-radius: 50%;
+  animation: applyBtnSpin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+.applyBtnEmpty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 24px;
+  padding: 10px 24px;
+  border-radius: 999px;
+  border: 2px solid #d18b00;
+  background: #ffce00;
+  color: #221d23;
+  font-weight: 800;
+  font-size: 14px;
+  text-decoration: none;
+  font-family: inherit;
+}
+
+.applyBtnEmpty:hover {
   background: #fbbf24;
 }
 
@@ -596,19 +635,19 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  padding: 36px 56px 28px;
+  padding: 14px 56px 24px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .overviewQuickActions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
   flex-shrink: 0;
 }
 
@@ -647,13 +686,13 @@
 
 .overviewPill {
   display: inline-block;
-  padding: 5px 12px;
+  padding: 6px 13px;
   border-radius: 999px;
   background: #fff6cf;
   border: 1px solid #ffe58a;
   color: #a15c00;
   font-weight: 800;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   margin-bottom: 14px;
@@ -661,7 +700,7 @@
 
 .overviewTitle {
   margin: 0;
-  font-size: clamp(24px, 2.9vw, 30px);
+  font-size: clamp(28px, 3.2vw, 36px);
   line-height: 1.15;
   letter-spacing: -0.04em;
   font-weight: 800;
@@ -680,7 +719,7 @@
 .overviewDesc {
   margin: 14px 0 24px;
   max-width: 720px;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.55;
   color: #667085;
   font-weight: 500;
@@ -691,7 +730,7 @@
 }
 
 .overviewDescInner {
-  font-size: 14px !important;
+  font-size: 16px !important;
   line-height: 1.55 !important;
   color: #667085 !important;
   font-weight: 500 !important;
@@ -707,7 +746,7 @@
   color: #94a3b8;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   margin-bottom: 14px;
 }
@@ -738,7 +777,7 @@
 }
 
 .overviewItemTitle {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
   color: #101828;
   margin: 0 0 4px;
@@ -750,7 +789,7 @@
 }
 
 .overviewItemDesc {
-  font-size: 13px;
+  font-size: 15px;
   color: #667085;
   line-height: 1.45;
   font-weight: 500;
@@ -809,6 +848,11 @@
   border: 0;
   background: #2f6fed;
   color: white;
+}
+
+.overviewBtnPrimary:disabled {
+  opacity: 0.72;
+  cursor: wait;
 }
 
 /* ── Drawers ─────────────────────────────────────── */
@@ -1101,6 +1145,10 @@
   100% { background-position: 200% 0; }
 }
 
+@keyframes applyBtnSpin {
+  to { transform: rotate(360deg); }
+}
+
 .skeletonBlock {
   background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%);
   background-size: 200% 100%;
@@ -1179,7 +1227,7 @@
   }
 
   .overviewScroll {
-    padding: 28px 24px 20px;
+    padding: 12px 24px 16px;
   }
 
   .overviewQuickActions {
@@ -1263,15 +1311,15 @@
   }
 
   .overviewScroll {
-    padding: 28px 24px 20px;
+    padding: 12px 24px 16px;
   }
 
   .overviewTitle {
-    font-size: 22px;
+    font-size: 26px;
   }
 
   .overviewDesc {
-    font-size: 13px;
+    font-size: 15px;
   }
 
   .overviewFooter {

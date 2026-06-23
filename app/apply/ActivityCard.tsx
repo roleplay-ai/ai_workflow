@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import Link from "next/link";
 import type { Activity } from "@/lib/supabase/types";
 import { normalizeActivityTools } from "@/lib/tools";
@@ -178,8 +179,9 @@ export default function ActivityCard({
   const tools = selectedTool ? [selectedTool] : normalizeActivityTools(activity.tools);
   const chip = timeLabel(activity);
   const isLocked = !isLoggedIn && !!activity.is_locked;
+  const [navigating, setNavigating] = useState(false);
 
-  const cardClass = `workflow-card${variant === "dark" ? " dark-card" : variant === "yellow" ? " yellow-card" : ""}`;
+  const cardClass = `workflow-card${variant === "dark" ? " dark-card" : variant === "yellow" ? " yellow-card" : ""}${navigating ? " is-navigating" : ""}`;
   const chipBorderColor = variant === "dark" ? "rgba(255,255,255,0.22)" : "#E5E0D8";
   const chipLabelColor = "#221D23"; // RotatingTools always has white bg
 
@@ -264,6 +266,12 @@ export default function ActivityCard({
         {activity.description && <p className="card-desc">{activity.description}</p>}
         <TagLogosRow tags={activity.tags ?? []} tagLogos={tagLogos} variant={variant} />
       </div>
+
+      {navigating && (
+        <div className="card-nav-loading" aria-hidden="true">
+          <span className="card-nav-spinner" />
+        </div>
+      )}
     </>
   );
 
@@ -298,7 +306,13 @@ export default function ActivityCard({
   }
 
   return (
-    <Link href={`/activity/${activity.id}`} className={cardClass} style={focusStyle}>
+    <Link
+      href={`/activity/${activity.id}`}
+      className={cardClass}
+      style={focusStyle}
+      onClick={() => setNavigating(true)}
+      aria-busy={navigating}
+    >
       {inner}
     </Link>
   );
