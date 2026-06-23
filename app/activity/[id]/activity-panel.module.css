@@ -363,6 +363,36 @@
   line-height: 1.4;
 }
 
+.instructionThinking {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.instructionThinkingAvatar {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.instructionThinkingBubble {
+  padding: 10px 14px;
+  border-radius: 14px;
+  border-top-left-radius: 4px;
+  background: #fff6cf;
+  border: 1px solid #ffe58a;
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 620;
+  line-height: 1.45;
+}
+
 /* ── Screen card ─────────────────────────────────── */
 .screenCard {
   border: 1px solid #e4eaf2;
@@ -661,6 +691,7 @@
   display: flex;
   gap: 8px;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .overviewBtn {
@@ -674,6 +705,7 @@
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
+  text-decoration: none;
 }
 
 .overviewBtnGhost {

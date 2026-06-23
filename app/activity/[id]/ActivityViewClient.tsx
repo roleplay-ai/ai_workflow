@@ -7,7 +7,7 @@ import CelebrationModal from "@/components/CelebrationModal";
 import VideoModal from "@/components/VideoModal";
 import RotatingTools from "@/components/RotatingTools";
 import type { ToolLogoMap } from "@/lib/toolLogos";
-import { normalizeActivityTools } from "@/lib/tools";
+import { normalizeActivityTools, resolveActivityOpenLink } from "@/lib/tools";
 import MdText from "@/components/MdText";
 import SlideZoom from "@/components/SlideZoom";
 import type { WorkflowStep, Quiz } from "@/types";
@@ -21,9 +21,10 @@ type Props = {
   activitySteps: ActivityStep[];
   progress: UserProgress | null;
   toolLogos: ToolLogoMap;
+  toolTryUrls: Record<string, string>;
 };
 
-export default function ActivityViewClient({ profile, activity, activitySteps, progress: initProgress, toolLogos }: Props) {
+export default function ActivityViewClient({ profile, activity, activitySteps, progress: initProgress, toolLogos, toolTryUrls }: Props) {
   const supabase = createClient();
   const content = activity.activity_content;
   const whatYouGet = content?.what_you_will_get ?? [];
@@ -98,6 +99,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
   const step = isOverview ? null : steps[current];
   const slideUrl = step?.slideUrl ?? null;
   const activityTools = normalizeActivityTools(activity.tools);
+  const openLink = resolveActivityOpenLink(activity.try_link, activityTools, toolTryUrls);
   const currentChips = isOverview
     ? (steps[0]?.try_asking ?? [])
     : (suggestions.length > 0 ? suggestions : (step?.try_asking ?? []));
@@ -123,7 +125,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sessionId }),
-    }).catch(() => {});
+    }).catch(() => { });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activity.id]);
 
@@ -465,15 +467,15 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
               </div>
 
               <div className={s.overviewFooter}>
-                <span className={s.overviewFooterMeta}>
+                {/* <span className={s.overviewFooterMeta}>
                   {steps.length} steps · about {activity.time_estimate_minutes ?? "?"} minutes
-                </span>
+                </span> */}
                 <div className={s.overviewFooterActions}>
-                  {content?.video_url && (
-                    <button type="button" onClick={() => setShowVideo(true)}
+                  {openLink && (
+                    <a href={openLink.url} target="_blank" rel="noreferrer"
                       className={`${s.overviewBtn} ${s.overviewBtnGhost}`}>
-                      ▶ 2-min overview
-                    </button>
+                      Open {openLink.label} ↗
+                    </a>
                   )}
                   <button type="button" onClick={startActivity}
                     className={`${s.overviewBtn} ${s.overviewBtnPrimary}`}>
@@ -545,7 +547,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
                           <>
                             <SlideZoom src={slideUrl} alt={`Step ${current + 1}`} open={slideOpen} onClose={() => setSlideOpen(false)} />
                             <button type="button" className={s.expandBtn} onClick={() => setSlideOpen(true)} title="Expand">
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" /><line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" /></svg>
                             </button>
                           </>
                         ) : (
@@ -596,33 +598,6 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
           <button type="button" className={s.closeBtn} onClick={() => setActiveDrawer(null)}>×</button>
         </div>
         <div className={s.drawerBody}>
-          {/* Step list */}
-          <div className={s.resourceCard}>
-            <div className={s.resourceCardTitle}>📋 Your Steps</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              {steps.map((st, i) => {
-                const done = !isOverview && i < current;
-                const active = !isOverview && i === current;
-                return (
-                  <button key={i} type="button"
-                    className={`${s.stepItem} ${active ? s.stepItemActive : ""}`}
-                    onClick={() => { goToStep(i + 1); setActiveDrawer(null); }}
-                    disabled={loading || stepLoading || initializing}>
-                    <div className={s.stepNum} style={{
-                      background: done ? "#23ce6b" : active ? "#2f6fed" : "#f1f5f9",
-                      color: done || active ? "white" : "#94A3B8",
-                    }}>
-                      {done ? "✓" : i + 1}
-                    </div>
-                    <span style={{ fontSize: 13, fontWeight: active ? 700 : 500, color: done ? "#16A34A" : active ? "#101828" : "#667085", lineHeight: 1.3, flex: 1 }}>
-                      {st.title}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
           {/* Goals */}
           <div className={s.resourceCard}>
             <div className={s.resourceCardTitle}>🎯 Goals</div>
@@ -697,6 +672,33 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
               <p style={{ margin: 0, fontSize: 14, color: "#667085" }}>No prompts yet.</p>
             )}
           </div>
+
+          {/* Step list */}
+          <div className={s.resourceCard}>
+            <div className={s.resourceCardTitle}>📋 Your Steps</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {steps.map((st, i) => {
+                const done = !isOverview && i < current;
+                const active = !isOverview && i === current;
+                return (
+                  <button key={i} type="button"
+                    className={`${s.stepItem} ${active ? s.stepItemActive : ""}`}
+                    onClick={() => { goToStep(i + 1); setActiveDrawer(null); }}
+                    disabled={loading || stepLoading || initializing}>
+                    <div className={s.stepNum} style={{
+                      background: done ? "#23ce6b" : active ? "#2f6fed" : "#f1f5f9",
+                      color: done || active ? "white" : "#94A3B8",
+                    }}>
+                      {done ? "✓" : i + 1}
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: active ? 700 : 500, color: done ? "#16A34A" : active ? "#101828" : "#667085", lineHeight: 1.3, flex: 1 }}>
+                      {st.title}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </aside>
 
@@ -738,7 +740,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
                 </span>
                 <button type="button" onClick={() => setChipsDismissed(true)}
                   style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #e4eaf2", background: "white", color: "#94A3B8", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, fontFamily: "inherit" }}>
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                 </button>
               </div>
               {currentChips.map((chip, i) => (
@@ -762,7 +764,7 @@ export default function ActivityViewClient({ profile, activity, activitySteps, p
                 suppressHydrationWarning
               />
               <button type="button" className={s.chatSendBtn} onClick={sendMessage} disabled={!hasInput || loading}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
               </button>
             </div>
           </div>
@@ -788,17 +790,10 @@ function StepSkeleton() {
   return (
     <div className={s.workRow}>
       <aside className={s.instructionCard}>
-        <div className={s.skeletonBlock} style={{ width: 80, height: 16, marginBottom: 14 }} />
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {[0, 1, 2].map(i => (
-            <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 11 }}>
-              <div className={s.skeletonCircle} style={{ width: 26, height: 26 }} />
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
-                <div className={s.skeletonBlock} style={{ width: "100%", height: 14 }} />
-                <div className={s.skeletonBlock} style={{ width: i === 2 ? "55%" : "80%", height: 14 }} />
-              </div>
-            </div>
-          ))}
+        <div className={s.label}>What to do</div>
+        <div className={s.instructionThinking}>
+          <span className={s.instructionThinkingAvatar}>🤖</span>
+          <div className={s.instructionThinkingBubble}>Thinking…</div>
         </div>
       </aside>
       <section className={s.screenCard}>

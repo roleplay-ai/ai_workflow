@@ -69,6 +69,7 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
 
   // Info — multi-select state (arrays)
   const [infoToolsArr,  setInfoToolsArr]  = useState<string[]>(normalizeToolList(activity.tools ?? []));
+  const [infoTryLink,   setInfoTryLink]   = useState<string>(activity.try_link ?? "");
   const [infoTagsArr,       setInfoTagsArr]       = useState<string[]>(activity.tags ?? []);
   const [infoFunctionsArr,  setInfoFunctionsArr]  = useState<string[]>(activity.functions ?? []);
   const [infoCategoryArr,   setInfoCategoryArr]   = useState<string[]>(activity.category ? [activity.category] : []);
@@ -240,6 +241,7 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
       functions:              infoFunctionsArr,
       published:              infoPublished,
       position:               infoPosition,
+      try_link:               infoTryLink.trim() || null,
     }).eq("id", activity.id);
 
     // Thumbnail & banner saved separately — best-effort, silent if columns don't exist yet
@@ -822,6 +824,21 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
                 onUpdateImage={handleUpdateToolImage}
                 placeholder="Select tools (Claude, ChatGPT, Gemini…)"
               />
+
+              {/* Try link — overrides tool catalog URL on activity overview */}
+              <div>
+                <label style={lbl}>Try Link</label>
+                <p style={{ margin: "3px 0 10px", fontSize: 12, color: "#9E9897", lineHeight: 1.4 }}>
+                  Optional URL for the &quot;Open tool&quot; button on the activity overview. Leave blank to use the linked tool&apos;s default URL from the catalog.
+                </p>
+                <input
+                  type="url"
+                  value={infoTryLink}
+                  onChange={e => setInfoTryLink(e.target.value)}
+                  placeholder="https://chatgpt.com/"
+                  style={{ ...inp, marginTop: 0 }}
+                />
+              </div>
 
               {/* Tags multi-select */}
               <MultiSelect
