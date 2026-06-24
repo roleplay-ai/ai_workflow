@@ -66,7 +66,7 @@ export default function AIMasteryClient({ completedModules: initial, userName, i
 
       <div className="aim-course-shell">
       {/* Progress bar */}
-      <div style={{
+      <div className="aim-progress-bar" style={{
         flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "0 36px", height: 44, background: "#fff", borderBottom: "1px solid #E8DFD2",
         gap: 16,
@@ -79,7 +79,7 @@ export default function AIMasteryClient({ completedModules: initial, userName, i
           <span style={{ fontSize: 13, fontWeight: 700, color: "#221D23", whiteSpace: "nowrap" }}>
             {completed.length} / {TOTAL_MODULES}
           </span>
-          <div style={{ width: 96, height: 8, background: "#E8DFD2", borderRadius: 999, overflow: "hidden" }}>
+          <div className="aim-progress-track" style={{ width: 96, height: 8, background: "#E8DFD2", borderRadius: 999, overflow: "hidden" }}>
             <div style={{
               width: `${pct}%`, height: "100%", background: "#FFCE00",
               borderRadius: 999, transition: "width .4s ease",
