@@ -405,10 +405,10 @@ export default function AIMasteryPreview({ isLoggedIn = false, userName = null, 
     <>
       <AppNav activePage="learn" isLoggedIn={isLoggedIn} userName={userName} />
 
-      <main style={{ width: PAGE_CONTENT_WIDTH, margin: "34px auto 0" }}>
+      <main className="aim-main" style={{ width: PAGE_CONTENT_WIDTH, margin: "34px auto 0" }}>
 
         {/* ── Hero ── */}
-        <section className="aim-hero" style={{
+        <section className="aim-hero aim-hero-grid" style={{
           position: "relative", display: "grid", gridTemplateColumns: "1fr .98fr",
           gap: 34, padding: 44, border: "1px solid #E9E4DC", borderRadius: 28,
           overflow: "hidden", background: "#fff", boxShadow: "0 1px 0 rgba(34,29,35,.04)",
@@ -464,7 +464,7 @@ export default function AIMasteryPreview({ isLoggedIn = false, userName = null, 
           </div>
 
           {/* Laptop mockup + pricing card */}
-          <div style={{ position: "relative", zIndex: 1, display: "grid", alignContent: "center" }}>
+          <div className="aim-hero-mockup" style={{ position: "relative", zIndex: 1, display: "grid", alignContent: "center" }}>
             <LaptopMockup />
 
             {/* Pricing card — top-right overlay */}
@@ -508,7 +508,7 @@ export default function AIMasteryPreview({ isLoggedIn = false, userName = null, 
         </section>
 
         {/* ── Course Journey ── */}
-        <section style={{ marginTop: 72 }} id="journey">
+        <section className="aim-journey-section" style={{ marginTop: 72 }} id="journey">
           <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 22, marginBottom: 28 }}>
             <div className="aim-section-head">
               <div className="aim-section-accent" />
@@ -525,7 +525,7 @@ export default function AIMasteryPreview({ isLoggedIn = false, userName = null, 
           {/* Journey */}
           <div style={{ position: "relative", display: "grid", gap: 22 }}>
             {/* Vertical connector */}
-            <div style={{ position: "absolute", left: 29, top: 20, bottom: 20, width: 2, background: "#E5DDD3", zIndex: 0 }} />
+            <div className="aim-journey-connector" style={{ position: "absolute", left: 29, top: 20, bottom: 20, width: 2, background: "#E5DDD3", zIndex: 0 }} />
 
             {COURSE_PARTS.map((part, partIdx) => {
               const unlockedCount = part.modules.filter(m => UNLOCKED_IDS.has(m.id)).length;
@@ -533,9 +533,9 @@ export default function AIMasteryPreview({ isLoggedIn = false, userName = null, 
               const isExpanded = expandedParts.has(partIdx);
 
               return (
-                <article key={part.number} style={{ position: "relative", display: "grid", gridTemplateColumns: "60px 1fr", gap: 18 }}>
+                <article key={part.number} className="aim-journey-article" style={{ position: "relative", display: "grid", gridTemplateColumns: "60px 1fr", gap: 18 }}>
                   {/* Node */}
-                  <div style={{ position: "relative", zIndex: 2, width: 60, display: "flex", justifyContent: "center" }}>
+                  <div className="aim-journey-node-col" style={{ position: "relative", zIndex: 2, width: 60, display: "flex", justifyContent: "center" }}>
                     <span className="aim-journey-node">{String(partIdx + 1).padStart(2, "0")}</span>
                   </div>
 
@@ -562,7 +562,7 @@ export default function AIMasteryPreview({ isLoggedIn = false, userName = null, 
                           </h3>
                         </div>
                       </div>
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end", flexShrink: 0, alignItems: "center" }}>
+                      <div className="aim-journey-badges" style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end", flexShrink: 0, alignItems: "center" }}>
                         <span className="aim-journey-badge">
                           {part.modules.length} lesson{part.modules.length !== 1 ? "s" : ""}
                         </span>
@@ -587,6 +587,7 @@ export default function AIMasteryPreview({ isLoggedIn = false, userName = null, 
                               key={mod.id}
                               role="button"
                               tabIndex={0}
+                              className="aim-module-row"
                               onClick={() => {
                                 if (isUnlocked) setSelectedModuleId(mod.id);
                                 else if (isLoggedIn) setShowAccessPopup(true);
@@ -643,7 +644,7 @@ export default function AIMasteryPreview({ isLoggedIn = false, userName = null, 
         </section>
 
         {/* ── CTA banner ── */}
-        <section className="aim-cta-banner" style={{
+        <section className="aim-cta-banner aim-cta-grid" style={{
           margin: "42px 0 88px", position: "relative", overflow: "hidden", minHeight: 255,
           display: "grid", gridTemplateColumns: "1.2fr .8fr", borderRadius: 26,
           background: "radial-gradient(circle at 82% 30%,rgba(255,206,0,.20),transparent 26%),radial-gradient(circle at 54% 80%,rgba(98,60,234,.20),transparent 32%),#221D23",
