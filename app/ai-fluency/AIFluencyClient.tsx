@@ -82,6 +82,117 @@ const TOOL_GUIDE_COLORS = [
   { bg: "#ECFFF4", border: "#C8F3DA", accent: "#23CE6B" },
 ];
 
+const HERO_MINI_CARDS = [
+  {
+    icon: "📰",
+    title: "News without noise",
+    description: "Only the updates that affect work, tools, and adoption.",
+  },
+  {
+    icon: "▶",
+    title: "Short launch explainers",
+    description: "Quick videos on what changed and why it matters.",
+  },
+  {
+    icon: "?",
+    title: "Workplace AI questions",
+    description: "Our perspective on common AI questions employees ask.",
+  },
+];
+
+const WORK_QUESTIONS = [
+  {
+    question: "Is this an AI bubble?",
+    short: "It may be a financial bubble in some places, but that does not mean AI capability is hype.",
+    bullets: [
+      "There are signs of overvaluation around infrastructure and startups.",
+      "The capability story is separate because people are getting daily value from real work.",
+      "For employees, the useful question is whether AI improves their actual tasks.",
+    ],
+  },
+  {
+    question: "Will AI take over the world?",
+    short: "The risk deserves attention, but workplace decisions should focus on near-term capability and governance.",
+    bullets: [
+      "The immediate risks are blind trust, data leakage, bad automation, and unclear accountability.",
+      "Most AI still needs human goals, tools, constraints, and review.",
+      "Companies need practical guardrails, not panic or hype.",
+    ],
+  },
+  {
+    question: "Will AI replace jobs?",
+    short: "AI will replace tasks first. Jobs change when enough tasks inside a role are automated or redesigned.",
+    bullets: [
+      "Writing, research, analysis, coding, and coordination are already changing.",
+      "Roles with repeatable digital work will shift faster.",
+      "Human judgment, trust, relationships, and context will matter more.",
+    ],
+  },
+  {
+    question: "What skills will matter more?",
+    short: "Structured thinking, precise expression, domain judgment, and review quality will matter more.",
+    bullets: [
+      "People need to break work into clear steps.",
+      "They need to give AI context, examples, constraints, and quality standards.",
+      "They need judgment to detect weak outputs and confident mistakes.",
+    ],
+  },
+  {
+    question: "Are AI agents ready for real work?",
+    short: "Agents are useful for narrow workflows, but risky when goals are vague or judgment is high.",
+    bullets: [
+      "They work best with clear steps, tools, permissions, and success criteria.",
+      "They struggle when business intent is hidden or policies are complex.",
+      "Start with supervised workflows before background automation.",
+    ],
+  },
+  {
+    question: "Should companies allow employees to use AI?",
+    short: "Yes, but with boundaries. Blocking AI usually pushes usage into unmanaged tools.",
+    bullets: [
+      "Employees will use AI when it saves time.",
+      "The control point is approved tools, data rules, and use-case guidance.",
+      "Companies should define what is allowed, reviewed, and prohibited.",
+    ],
+  },
+  {
+    question: "Is prompt engineering still important?",
+    short: "Yes, but it is now less about tricks and more about clear work design.",
+    bullets: [
+      "Better models reduce the need for complicated prompting.",
+      "Good prompts still need context, examples, constraints, and quality standards.",
+      "The skill is converting messy work into clear instruction.",
+    ],
+  },
+  {
+    question: "Why do AI workshops lose momentum?",
+    short: "Most workshops create awareness, but they do not create repeated practice inside real work.",
+    bullets: [
+      "Employees leave without mapped use cases for their role.",
+      "There is no follow-up system to push practice or remove friction.",
+      "Capability improves through repeated application, not demos alone.",
+    ],
+  },
+  {
+    question: "How should companies build AI fluency?",
+    short: "Start with role-specific workflows, a safe practice space, and measurement of actual application.",
+    bullets: [
+      "Generic AI training helps awareness, but not behavior change.",
+      "Employees need workflow examples for their actual work.",
+      "Companies should measure practice, completion, improvement, and repeat usage.",
+    ],
+  },
+  {
+    question: "What should not be automated with AI?",
+    short: "Do not automate work where trust, ethics, sensitive data, or final accountability cannot be delegated safely.",
+    bullets: [
+      "Use AI to prepare, analyze, draft, and check.",
+      "Keep high-stakes decisions with accountable humans.",
+      "Do not automate empathy-heavy communication without human review.",
+    ],
+  },
+];
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 // ── Tools section (filterable + paginated) ────────────────────────────────────
@@ -243,6 +354,78 @@ function ToolsSection({ tools, onOpenTool }: { tools: FluencyTool[]; onOpenTool:
   );
 }
 
+// ── AI at Work questions ──────────────────────────────────────────────────────
+
+function WorkQuestionsSection() {
+  const questionRefs = useRef<(HTMLDetailsElement | null)[]>([]);
+
+  function handleToggle(index: number) {
+    const current = questionRefs.current[index];
+    if (!current?.open) return;
+    questionRefs.current.forEach((el, i) => {
+      if (el && i !== index) el.open = false;
+    });
+  }
+
+  return (
+    <section className="aif-questions-section" id="questions">
+      <div style={{
+        display: "flex", alignItems: "flex-end", justifyContent: "space-between",
+        gap: 22, marginBottom: 24,
+      }}>
+        <div style={{ position: "relative", paddingLeft: 22 }}>
+          <div style={{
+            position: "absolute", left: 0, top: 4, width: 7, height: 58,
+            borderRadius: 999, background: "#FFCE00", border: "1px solid rgba(34,29,35,.18)",
+          }} />
+          <span style={{
+            display: "inline-flex", padding: "7px 10px", borderRadius: 999, background: "#221D23",
+            color: "#fff", fontSize: 10, fontWeight: 950, textTransform: "uppercase",
+            letterSpacing: ".10em", marginBottom: 8,
+          }}>Perspective</span>
+          <h2 className="aif-section-title">AI at Work: Questions</h2>
+          <p style={{ margin: "8px 0 0", color: "#6B6670", fontSize: 14, fontWeight: 650, lineHeight: 1.45, maxWidth: 760 }}>
+            Practical takes on adoption, automation, and work redesign. Click any question to expand.
+          </p>
+        </div>
+      </div>
+
+      <div className="aif-question-grid">
+        {WORK_QUESTIONS.map((item, index) => (
+          <details
+            key={item.question}
+            className="aif-question"
+            ref={(el) => { questionRefs.current[index] = el; }}
+            onToggle={() => handleToggle(index)}
+          >
+            <summary>
+              <span className="aif-question-num">{index + 1}</span>
+              <span>{item.question}</span>
+              <span className="aif-question-chev">+</span>
+            </summary>
+            <div className="aif-question-answer">
+              <p className="aif-question-short">{item.short}</p>
+              <ul>
+                {item.bullets.map((bullet) => (
+                  <li key={bullet}>{bullet}</li>
+                ))}
+              </ul>
+            </div>
+          </details>
+        ))}
+      </div>
+
+      <div className="aif-questions-cta">
+        <div>
+          <h3>Use updates for awareness. Use workflows for practice.</h3>
+          <p>The AI Updates page should inform users. The Workflows page should drive action.</p>
+        </div>
+        <Link href="/apply" className="aif-hero-btn">Go to Workflows →</Link>
+      </div>
+    </section>
+  );
+}
+
 // ── Carousel wrapper ──────────────────────────────────────────────────────────
 
 function Carousel({
@@ -382,12 +565,44 @@ export default function AIFluencyClient({
           </div>
 
           <div className="aif-hero-right">
-            {brief ? (
-              <BriefNewsCard items={brief.fluency_brief_items} />
-            ) : (
-              <BriefNewsCard items={[]} />
-            )}
+            <div className="aif-hero-stack">
+              {HERO_MINI_CARDS.map((card) => (
+                <div key={card.title} className="aif-hero-mini">
+                  <div className="aif-hero-icon">{card.icon}</div>
+                  <div>
+                    <h3>{card.title}</h3>
+                    <p>{card.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
+        </section>
+
+        {/* ── Latest AI News ── */}
+        <section id="latest" style={{ marginTop: 70 }}>
+          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 22, marginBottom: 22 }}>
+            <div style={{ position: "relative", paddingLeft: 22 }}>
+              <div style={{
+                position: "absolute", left: 0, top: 4, width: 7, height: 58,
+                borderRadius: 999, background: "#FFCE00", border: "1px solid rgba(34,29,35,.18)",
+              }} />
+              <span style={{
+                display: "inline-flex", padding: "7px 10px", borderRadius: 999, background: "#221D23",
+                color: "#fff", fontSize: 10, fontWeight: 950, textTransform: "uppercase",
+                letterSpacing: ".10em", marginBottom: 8,
+              }}>News</span>
+              <h2 className="aif-section-title">Latest AI News</h2>
+              <p style={{ margin: "8px 0 0", color: "#6B6670", fontSize: 14, fontWeight: 650, lineHeight: 1.45 }}>
+                Short, useful updates for people applying AI at work.
+              </p>
+            </div>
+          </div>
+
+          <BriefNewsCard
+            items={brief?.fluency_brief_items ?? []}
+            publishedDate={brief?.published_date}
+          />
         </section>
 
         {/* ── AI Foundations (module cards) ── */}
@@ -548,60 +763,8 @@ export default function AIFluencyClient({
           ) : null}
         </section>
 
-        {/* ── AI at Work POV banner ── */}
-        <section className="aif-pov-grid" style={{
-          margin: "42px 0 96px", position: "relative", overflow: "hidden", minHeight: 275,
-          display: "grid", gridTemplateColumns: "1.35fr .65fr", borderRadius: 26,
-          background: "radial-gradient(circle at 82% 30%,rgba(255,206,0,.20),transparent 26%),radial-gradient(circle at 54% 80%,rgba(98,60,234,.20),transparent 32%),#221D23",
-          color: "#fff", boxShadow: "0 28px 65px rgba(34,29,35,.14)", borderLeft: "8px solid #FFCE00",
-        }}>
-          <div style={{ padding: "36px 34px" }}>
-            <div className="aif-pov-kicker">Thinking guide</div>
-
-            <h2>AI at Work: The Real Questions</h2>
-
-            <p className="aif-pov-desc">
-              A clear guide to the messy questions behind AI adoption, automation,
-              capability building, and work redesign.
-            </p>
-
-            <Link href="/explore/perspective/ai-at-work" className="aif-btn-primary" style={{
-              display: "inline-flex", alignItems: "center", justifyContent: "center",
-              padding: "13px 20px", borderRadius: 999, background: "#FFCE00",
-              color: "#221D23", border: "1px solid rgba(34,29,35,.10)",
-              fontWeight: 700, textDecoration: "none", fontSize: 14,
-            }}>Explore the guide →</Link>
-          </div>
-
-          {/* Orbit visual */}
-          <div className="aif-pov-visual" style={{ display: "grid", placeItems: "center", minHeight: 260 }}>
-            <div style={{ position: "relative", width: 200, height: 200, border: "1px dashed rgba(255,255,255,.22)", borderRadius: "50%" }}>
-              <div className="aif-pov-orbit-core" style={{
-                position: "absolute", inset: 44, borderRadius: 24, background: "#FFCE00",
-                border: "3px solid #000", color: "#221D23", display: "grid",
-                placeItems: "center", textAlign: "center",
-                transform: "rotate(-5deg)",
-              }}>
-                <div>
-                  <span>AI</span>
-                  <small>AT WORK</small>
-                </div>
-              </div>
-              {[
-                { label: "Jobs", cls: { top: -7, left: 78 } },
-                { label: "Risk", cls: { right: -22, top: 72 } },
-                { label: "Agents", cls: { bottom: 11, right: 27 } },
-                { label: "Skills", cls: { left: -28, bottom: 46 } },
-              ].map(n => (
-                <span key={n.label} className="aif-pov-orbit-label" style={{
-                  position: "absolute", ...n.cls, padding: "8px 10px", borderRadius: 999,
-                  background: "#fff", color: "#221D23",
-                  border: "1px solid rgba(34,29,35,.18)",
-                }}>{n.label}</span>
-              ))}
-            </div>
-          </div>
-        </section>
+        {/* ── AI at Work questions ── */}
+        <WorkQuestionsSection />
 
       </main>
 
