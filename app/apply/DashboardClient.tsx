@@ -478,6 +478,8 @@ function WorkflowsToolChip({
   );
 }
 
+type WorkflowTab = "new" | "essentials" | "continue" | null;
+
 function WorkflowsFilterBar({
   selectedTab,
   onTabChange,
@@ -485,17 +487,19 @@ function WorkflowsFilterBar({
   selectedTool,
   onToolChange,
   toolLogos,
+  showContinue,
 }: {
-  selectedTab: "new" | "essentials" | null;
-  onTabChange: (tab: "new" | "essentials" | null) => void;
+  selectedTab: WorkflowTab;
+  onTabChange: (tab: WorkflowTab) => void;
   toolOptions: string[];
   selectedTool: string | null;
   onToolChange: (tool: string | null) => void;
   toolLogos: ToolLogoMap;
+  showContinue: boolean;
 }) {
-  const quickTabs = [
-    { id: "new" as const, label: "New", icon: "🔥" },
-    { id: "essentials" as const, label: "Start Here", icon: "🤖" },
+  const quickTabs: { id: Exclude<WorkflowTab, null>; label: string; icon: string }[] = [
+    { id: "new", label: "New", icon: "🔥" },
+    { id: "essentials", label: "Start Here", icon: "🤖" },
   ];
 
   return (
@@ -520,6 +524,16 @@ function WorkflowsFilterBar({
           icon={<ToolIcon tool={tool} size={28} logos={toolLogos} insetScale={0.88} />}
         />
       ))}
+      {showContinue && (
+        <button
+          type="button"
+          className={`tab-chip${selectedTab === "continue" ? " active" : ""}`}
+          onClick={() => onTabChange(selectedTab === "continue" ? null : "continue")}
+        >
+          <span className="tab-chip-icon">⏩</span>
+          Continue
+        </button>
+      )}
     </div>
   );
 }
@@ -725,63 +739,22 @@ function StaticGrid({
   );
 }
 
-// ── Hero filter chip ──────────────────────────────────────────────────────
-
-function HeroExpandChip({
-  label,
-  icon,
-  selected,
-  onClick,
-}: {
-  label: string;
-  icon: React.ReactNode;
-  selected: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      className={`hero-filter-chip${selected ? " is-active" : ""}`}
-      onClick={onClick}
-      aria-pressed={selected}
-      title={label}
-    >
-      <span className="hero-filter-chip-icon">{icon}</span>
-      <span className="hero-filter-chip-label">{label}</span>
-    </button>
-  );
-}
-
 // ── HeroSection ───────────────────────────────────────────────────────────
 
 function HeroSection({
   heroActivities,
-  allFunctions,
-  heroToolOptions,
-  selectedTool,
-  selectedFunction,
   searchQuery,
-  onToolChange,
-  onFunctionChange,
   onSearch,
   toolLogos,
-  functionLogos,
   tagLogos,
   isLoggedIn,
   onSignUpRequired,
   viewCounts,
 }: {
   heroActivities: Activity[];
-  allFunctions: string[];
-  heroToolOptions: string[];
-  selectedTool: string | null;
-  selectedFunction: string | null;
   searchQuery: string;
-  onToolChange: (tool: string | null) => void;
-  onFunctionChange: (fn: string | null) => void;
   onSearch: (query: string) => void;
   toolLogos: ToolLogoMap;
-  functionLogos: Record<string, string>;
   tagLogos: Record<string, string>;
   isLoggedIn: boolean;
   onSignUpRequired: () => void;
@@ -790,11 +763,6 @@ function HeroSection({
   const [activeIdx, setActiveIdx] = useState(0);
   const [searchInput, setSearchInput] = useState(searchQuery);
   const showcaseRef = useRef<HTMLDivElement>(null);
-
-  const toolOptions = useMemo(
-    () => heroToolOptions.filter(t => t !== "all"),
-    [heroToolOptions],
-  );
 
   useEffect(() => {
     setSearchInput(searchQuery);
@@ -842,51 +810,7 @@ function HeroSection({
             </button>
           </div>
 
-          {toolOptions.length > 0 && (
-            <div className="hero-filter-block">
-              <span className="hero-filter-label">Tools</span>
-              <div className="hero-filter-chips">
-                {toolOptions.map(tool => (
-                  <HeroExpandChip
-                    key={tool}
-                    label={formatToolLabel(tool)}
-                    selected={selectedTool === tool}
-                    onClick={() => onToolChange(selectedTool === tool ? null : tool)}
-                    icon={<ToolIcon tool={tool} size={28} logos={toolLogos} insetScale={0.88} />}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* {allFunctions.length > 0 && (
-            <div className="hero-filter-block">
-              <span className="hero-filter-label">Functions</span>
-              <div className="hero-filter-chips">
-                {allFunctions.map(fn => {
-                  const logo = functionLogos[fn.toLowerCase()];
-                  return (
-                    <HeroExpandChip
-                      key={fn}
-                      label={fn}
-                      selected={selectedFunction === fn}
-                      onClick={() => onFunctionChange(selectedFunction === fn ? null : fn)}
-                      icon={logo ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={logo} alt="" className="hero-filter-fn-img" />
-                      ) : (
-                        <span className="hero-filter-fn-fallback" style={{ background: fnColor(fn) }}>
-                          {fn.slice(0, 1).toUpperCase()}
-                        </span>
-                      )}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          )} */}
-
-          <div className="trust-line">Tap a tool to filter instantly. Search to narrow the library below.</div>
+          <div className="trust-line">Search to narrow the library below.</div>
 
           <div className="hero-progress" aria-hidden="true">
             {heroActivities.map((_, i) => (
@@ -1031,7 +955,7 @@ function AIMasteryCourseSection({ completedCount, isLoggedIn }: { completedCount
 // ── DashboardClient ──────────────────────────────────────────────────────
 
 export default function DashboardClient({ profile, activities, progress, toolFilters, toolLogos, tagLogos, functionLogos, functionThumbnails, functionDescriptions, isLoggedIn, masteryProgressCount, modules, completedModuleIds, viewCounts }: Props) {
-  const [selectedTab, setSelectedTab] = useState<"new" | "essentials" | null>(null);
+  const [selectedTab, setSelectedTab] = useState<WorkflowTab>(null);
   const [selectedFunction, setSelectedFunction] = useState<string | null>(null);
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -1064,15 +988,6 @@ export default function DashboardClient({ profile, activities, progress, toolFil
     setCompletedIds(ids => ids.includes(moduleId) ? ids : [...ids, moduleId]);
   }
 
-  const allFunctions = useMemo(() => {
-    const map = new Map<string, number>();
-    activities.forEach(a => (a.functions ?? []).forEach(fn => {
-      const k = fn.trim();
-      if (k) map.set(k, (map.get(k) ?? 0) + 1);
-    }));
-    return [...map.entries()].sort((a, b) => b[1] - a[1]).map(([n]) => n);
-  }, [activities]);
-
   const heroActivities = useMemo(() => {
     const slotted = activities
       .filter(a => a.hero_position != null)
@@ -1086,6 +1001,12 @@ export default function DashboardClient({ profile, activities, progress, toolFil
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     return [...featured, ...rest].slice(0, 3);
   }, [activities]);
+
+  const pendingActivities = useMemo(() => {
+    if (!isLoggedIn || progress.length === 0) return [];
+    const ids = new Set(progress.filter(p => p.status === "in_progress").map(p => p.activity_id));
+    return activities.filter(a => ids.has(a.id));
+  }, [activities, progress, isLoggedIn]);
 
   const showActivities = selectedFunction !== null || selectedTab !== null || searchQuery.trim().length > 0;
 
@@ -1121,12 +1042,19 @@ export default function DashboardClient({ profile, activities, progress, toolFil
         subtitle: "Core workflows for improving AI fluency and everyday practice.",
       };
     }
+    if (selectedTab === "continue") {
+      return {
+        sectionLabel: "Practice Path",
+        title: "Continue where you left off",
+        subtitle: `${pendingActivities.length} workflow${pendingActivities.length !== 1 ? "s" : ""} in progress.`,
+      };
+    }
     return {
       sectionLabel: "Workflow types",
       title: "Browse by Outcome",
       subtitle: "Pick a workflow type to see all guided activities for that function.",
     };
-  }, [activities, selectedFunction, selectedTab, searchQuery]);
+  }, [activities, selectedFunction, selectedTab, searchQuery, pendingActivities.length]);
 
   const tabActivities = useMemo(() => {
     if (!showActivities) return [];
@@ -1142,11 +1070,13 @@ export default function DashboardClient({ profile, activities, progress, toolFil
       base = activities.filter(a => a.is_featured);
     } else if (selectedTab === "essentials") {
       base = activities.filter(a => a.is_mastery);
+    } else if (selectedTab === "continue") {
+      base = pendingActivities;
     } else {
       base = activities;
     }
     return filterActivitiesBySelection(base, null, selectedTool, searchQuery);
-  }, [showActivities, activities, selectedFunction, selectedTab, selectedTool, searchQuery]);
+  }, [showActivities, activities, pendingActivities, selectedFunction, selectedTab, selectedTool, searchQuery]);
 
   const cols = useGridColumns();
   const [extraRows, setExtraRows] = useState(0);
@@ -1164,7 +1094,7 @@ export default function DashboardClient({ profile, activities, progress, toolFil
     }
   }
 
-  function handleTabChange(tab: "new" | "essentials" | null) {
+  function handleTabChange(tab: WorkflowTab) {
     setSelectedTab(tab);
     setSelectedFunction(null);
   }
@@ -1177,11 +1107,6 @@ export default function DashboardClient({ profile, activities, progress, toolFil
   function handleBackToFunctions() {
     setSelectedFunction(null);
     setSearchQuery("");
-  }
-
-  function handleFunctionChange(fn: string | null) {
-    if (fn) handleFunctionSelect(fn);
-    else handleBackToFunctions();
   }
 
   const heroToolOptions = toolFilters;
@@ -1202,16 +1127,9 @@ export default function DashboardClient({ profile, activities, progress, toolFil
         {/* ── Hero ── */}
         <HeroSection
           heroActivities={heroActivities}
-          allFunctions={allFunctions}
-          heroToolOptions={heroToolOptions}
-          selectedTool={selectedTool}
-          selectedFunction={selectedFunction}
           searchQuery={searchQuery}
-          onToolChange={setSelectedTool}
-          onFunctionChange={handleFunctionChange}
           onSearch={handleSearch}
           toolLogos={toolLogos}
-          functionLogos={functionLogos}
           tagLogos={tagLogos}
           isLoggedIn={isLoggedIn}
           onSignUpRequired={() => setShowSignUp(true)}
@@ -1241,6 +1159,7 @@ export default function DashboardClient({ profile, activities, progress, toolFil
               selectedTool={selectedTool}
               onToolChange={setSelectedTool}
               toolLogos={toolLogos}
+              showContinue={isLoggedIn && pendingActivities.length > 0}
             />
 
             {showActivities ? (
