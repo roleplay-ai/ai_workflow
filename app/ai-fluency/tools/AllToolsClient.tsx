@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import AppNav from "@/components/AppNav";
+import { AI_UPDATES_PAGE_NAME } from "@/lib/site";
 import ToolModal, { type ToolModalTool } from "../ToolModal";
 import SiteFooter from "@/components/SiteFooter";
 
@@ -39,7 +40,7 @@ export default function AllToolsClient({ tools, userName, isAdmin }: Props) {
               fontSize: 13, fontWeight: 750, color: "#6B6670", textDecoration: "none",
             }}
           >
-            ← Back to Know
+            ← Back to {AI_UPDATES_PAGE_NAME}
           </a>
 
           <div style={{ position: "relative", paddingLeft: 22 }}>

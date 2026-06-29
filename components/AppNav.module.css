@@ -1,4 +1,137 @@
-/* ── AppNav mobile responsive ─────────────────────────────── */
+/* ── AppNav header ─────────────────────────────────────────── */
+
+.header {
+  height: 68px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.96);
+  border-bottom: 1px solid #E9E4DC;
+  backdrop-filter: blur(18px);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 0 36px;
+  gap: 16px;
+  letter-spacing: normal;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  white-space: nowrap;
+  justify-self: start;
+}
+
+.brandLogo {
+  display: block;
+  flex-shrink: 0;
+  height: 40px;
+  width: auto;
+}
+
+.brandText {
+  font-weight: 500;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+  color: #221D23;
+}
+
+.navWrap {
+  justify-self: center;
+}
+
+.navTrack {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid #E9E4DC;
+  background: #fff;
+}
+
+.navLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #746F78;
+  text-decoration: none;
+  transition: color 0.15s ease, background 0.15s ease;
+  white-space: nowrap;
+}
+
+.navLink:hover {
+  color: #221D23;
+}
+
+.navLinkActive {
+  composes: navLink;
+  background: #221D23;
+  color: #FFCE00;
+}
+
+.navLinkActive:hover {
+  color: #FFCE00;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-self: end;
+}
+
+.btnOutline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 800;
+  background: #fff;
+  border: 1px solid #E9E4DC;
+  color: #221D23;
+  text-decoration: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.btnOutline:hover {
+  border-color: #D0C7BA;
+  background: #FAFAF8;
+}
+
+.btnPrimary {
+  composes: btnOutline;
+  background: #221D23;
+  color: #fff;
+  border-color: #221D23;
+}
+
+.btnPrimary:hover {
+  background: #2E2830;
+  border-color: #2E2830;
+  color: #fff;
+}
+
+.userName {
+  font-size: 14px;
+  font-weight: 700;
+  color: #746F78;
+}
+
+.desktopOnly {
+  display: contents;
+}
 
 .hamburger {
   display: none;
@@ -13,6 +146,7 @@
   flex-shrink: 0;
   color: #221D23;
   padding: 0;
+  justify-self: end;
 }
 
 .mobileOverlay {
@@ -36,32 +170,43 @@
   padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.10);
   animation: navSlideDown 0.2s ease;
+}
+
+.mobileNavTrack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 18px;
+  border: 1px solid #E9E4DC;
+  background: #fff;
 }
 
 .mobileNavLink {
   display: flex;
   align-items: center;
   padding: 14px 16px;
-  border-radius: 12px;
+  border-radius: 14px;
   font-size: 16px;
   font-weight: 700;
   color: #746F78;
   text-decoration: none;
-  transition: background 0.15s;
+  transition: background 0.15s, color 0.15s;
   font-family: inherit;
 }
 
 .mobileNavLink:hover {
   background: #F8F8F6;
+  color: #221D23;
 }
 
 .mobileNavLinkActive {
   composes: mobileNavLink;
-  color: #221D23;
-  background: #FFF7CD;
+  color: #FFCE00;
+  background: #221D23;
 }
 
 .mobileActions {
@@ -74,27 +219,19 @@
 }
 
 .mobileActionBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  composes: btnOutline;
+  width: 100%;
   padding: 12px 16px;
-  border-radius: 12px;
   font-size: 14px;
-  font-weight: 800;
-  text-decoration: none;
   text-align: center;
-  cursor: pointer;
-  font-family: inherit;
-  border: 1px solid #E9E4DC;
-  background: white;
-  color: #221D23;
 }
 
 .mobileActionBtnPrimary {
-  composes: mobileActionBtn;
-  background: #221D23;
-  color: #fff;
-  border-color: #221D23;
+  composes: btnPrimary;
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 14px;
+  text-align: center;
 }
 
 @keyframes navSlideDown {
@@ -111,12 +248,14 @@
 
 @media (max-width: 768px) {
   .header {
-    height: 56px !important;
-    padding: 0 16px !important;
+    height: 56px;
+    padding: 0 16px;
+    grid-template-columns: 1fr auto;
   }
 
-  .desktopOnly {
-    display: none !important;
+  .navWrap,
+  .actions {
+    display: none;
   }
 
   .hamburger {

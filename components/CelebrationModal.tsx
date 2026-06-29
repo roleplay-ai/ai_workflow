@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { WORKFLOWS_PAGE_NAME } from "@/lib/site";
 
 type Props = {
   activityTitle: string;
@@ -85,9 +86,9 @@ export default function CelebrationModal({ activityTitle, points, onContinue }: 
           {loading ? (
             <>
               <div className="card-spinner" style={{ width: 18, height: 18, borderWidth: 2.5, borderColor: "rgba(34,29,35,.2)", borderTopColor: "#221D23" }} />
-              Going to Apply…
+              Going to {WORKFLOWS_PAGE_NAME}…
             </>
-          ) : "Back to Apply"}
+          ) : `Back to ${WORKFLOWS_PAGE_NAME}`}
         </button>
       </div>
     </div>

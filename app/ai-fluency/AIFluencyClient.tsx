@@ -327,14 +327,13 @@ export default function AIFluencyClient({
     if (mod.is_locked) return;
     recordFluencyView("module", mod.id);
 
-    // If the module has uploaded HTML content, show it in the HTML popup
+    setLoadingId(mod.id);
+
     if (mod.html_path) {
       setHtmlModule(mod);
       return;
     }
 
-    // Otherwise fall back to the structured screen player
-    setLoadingId(mod.id);
     try {
       const res = await fetch(`/api/fluency/module/${mod.id}`);
       const data = await res.json() as ModuleData;
@@ -342,6 +341,11 @@ export default function AIFluencyClient({
     } finally {
       setLoadingId(null);
     }
+  }
+
+  function handleHtmlModuleClose() {
+    setHtmlModule(null);
+    setLoadingId(null);
   }
 
   function handleComplete(moduleId: string) {
@@ -609,7 +613,8 @@ export default function AIFluencyClient({
           moduleId={htmlModule.id}
           moduleTitle={htmlModule.title}
           moduleEmoji={htmlModule.emoji}
-          onClose={() => setHtmlModule(null)}
+          onClose={handleHtmlModuleClose}
+          onReady={() => setLoadingId(null)}
         />
       )}
 

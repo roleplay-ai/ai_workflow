@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { APP_FONT } from "@/lib/fonts";
 
 type Props = {
@@ -7,9 +8,32 @@ type Props = {
   moduleTitle: string;
   moduleEmoji: string;
   onClose: () => void;
+  onReady?: () => void;
 };
 
-export default function ModuleHtmlModal({ moduleId, moduleTitle, moduleEmoji, onClose }: Props) {
+export default function ModuleHtmlModal({ moduleId, moduleTitle, moduleEmoji, onClose, onReady }: Props) {
+  const [iframeLoaded, setIframeLoaded] = useState(false);
+
+  useEffect(() => {
+    setIframeLoaded(false);
+  }, [moduleId]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      if (!iframeLoaded) {
+        setIframeLoaded(true);
+        onReady?.();
+      }
+    }, 15000);
+    return () => window.clearTimeout(timeout);
+  }, [moduleId, iframeLoaded, onReady]);
+
+  function handleIframeReady() {
+    if (iframeLoaded) return;
+    setIframeLoaded(true);
+    onReady?.();
+  }
+
   return (
     <div
       onClick={onClose}
@@ -31,7 +55,6 @@ export default function ModuleHtmlModal({ moduleId, moduleTitle, moduleEmoji, on
           fontFamily: APP_FONT,
         }}
       >
-        {/* Header */}
         <div style={{
           display: "flex", alignItems: "center", gap: 12,
           padding: "16px 22px", borderBottom: "1px solid #E9E4DC", flexShrink: 0,
@@ -52,13 +75,21 @@ export default function ModuleHtmlModal({ moduleId, moduleTitle, moduleEmoji, on
           >×</button>
         </div>
 
-        {/* Rendered HTML */}
-        <iframe
-          src={`/api/fluency/module/${moduleId}/html`}
-          style={{ flex: 1, border: "none", width: "100%" }}
-          sandbox="allow-scripts allow-same-origin allow-popups"
-          title={moduleTitle}
-        />
+        <div style={{ flex: 1, position: "relative", minHeight: 0, background: "#fff" }}>
+          {!iframeLoaded && (
+            <div className="aif-module-html-loading" aria-live="polite" aria-busy="true">
+              <span className="aif-module-html-spinner" />
+              <span className="aif-module-html-loading-text">Loading topic…</span>
+            </div>
+          )}
+          <iframe
+            src={`/api/fluency/module/${moduleId}/html`}
+            style={{ flex: 1, border: "none", width: "100%", height: "100%", display: "block" }}
+            sandbox="allow-scripts allow-same-origin allow-popups"
+            title={moduleTitle}
+            onLoad={handleIframeReady}
+          />
+        </div>
       </div>
     </div>
   );

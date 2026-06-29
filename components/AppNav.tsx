@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+import { AI_UPDATES_PAGE_NAME, WORKFLOWS_PAGE_NAME } from "@/lib/site";
 import { APP_FONT } from "@/lib/fonts";
 import styles from "./AppNav.module.css";
 
@@ -20,9 +21,9 @@ export const APP_NAV_HEADER_STYLE: React.CSSProperties = {
   background: "rgba(255,255,255,0.96)",
   borderBottom: "1px solid #E9E4DC",
   backdropFilter: "blur(18px)",
-  display: "flex",
+  display: "grid",
+  gridTemplateColumns: "1fr auto 1fr",
   alignItems: "center",
-  justifyContent: "space-between",
   padding: "0 36px",
   gap: 16,
   fontFamily: APP_NAV_FONT,
@@ -39,43 +40,38 @@ export const APP_NAV_BRAND_STYLE: React.CSSProperties = {
 };
 
 export const APP_NAV_LINKS: { label: string; href: string; page: AppPage }[] = [
-  { label: "Apply", href: "/apply", page: "apply" },
+  { label: WORKFLOWS_PAGE_NAME, href: "/apply", page: "apply" },
   { label: "Learn", href: "/learn", page: "learn" },
-  { label: "Know", href: "/know", page: "know" },
+  { label: AI_UPDATES_PAGE_NAME, href: "/know", page: "know" },
 ];
 
 export function AppNavBrand() {
   return (
-    <Link href="/apply" style={APP_NAV_BRAND_STYLE}>
+    <Link href="/apply" className={styles.brand} style={APP_NAV_BRAND_STYLE}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/Nudgeable-black.png"
         alt="Nudgeable"
-        style={{ display: "block", flexShrink: 0, height: 40, width: "auto" }}
+        className={styles.brandLogo}
       />
-      <span style={{
-        fontWeight: 500,
-        fontSize: 17,
-        letterSpacing: "-0.02em",
-        color: "#221D23",
-      }}>AI Practice Lab</span>
+      <span className={styles.brandText}>AI Practice Lab</span>
     </Link>
   );
 }
 
 export function AppNavLinks({ activePage }: { activePage?: AppPage }) {
   return (
-    <nav style={{ display: "flex", gap: 26, fontSize: 14, fontWeight: 700 }}>
+    <nav className={styles.navTrack} aria-label="Main navigation">
       {APP_NAV_LINKS.map(({ label, href, page }) => {
         const active = activePage != null && page === activePage;
         return (
-          <Link key={page} href={href} style={{
-            color: active ? "#221D23" : "#746F78",
-            textDecoration: "none",
-            paddingBottom: 4,
-            borderBottom: active ? "2.5px solid #FFCE00" : "2.5px solid transparent",
-            transition: "color .15s",
-          }}>{label}</Link>
+          <Link
+            key={page}
+            href={href}
+            className={active ? styles.navLinkActive : styles.navLink}
+          >
+            {label}
+          </Link>
         );
       })}
     </nav>
@@ -104,42 +100,29 @@ export default function AppNav({ activePage, userName, isAdmin, isLoggedIn }: Pr
 
   return (
     <>
-      <header className={styles.header} style={APP_NAV_HEADER_STYLE}>
+      <header className={styles.header} style={{ fontFamily: APP_NAV_FONT }}>
         <AppNavBrand />
-        <div className={styles.desktopOnly}>
+
+        <div className={styles.navWrap}>
           <AppNavLinks activePage={activePage} />
         </div>
 
-        {/* Desktop actions */}
-        <div className={styles.desktopOnly} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div className={styles.actions}>
           {showSignedIn ? (
             <>
-              <span style={{ fontSize: 14, fontWeight: 700, color: "#746F78" }}>
-                {userName?.split(" ")[0]}
-              </span>
+              <span className={styles.userName}>{userName?.split(" ")[0]}</span>
               {isAdmin && (
-                <Link href="/admin" style={{
-                  borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 900,
-                  background: "transparent", border: "1px solid #E9E4DC",
-                  color: "#221D23", textDecoration: "none",
-                }}>Admin</Link>
+                <Link href="/admin" className={styles.btnOutline}>Admin</Link>
               )}
-              <button onClick={handleSignOut} style={{
-                borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 900,
-                background: "transparent", border: "1px solid #E9E4DC",
-                color: "#221D23", cursor: "pointer",
-              }}>Sign out</button>
+              <button type="button" onClick={handleSignOut} className={styles.btnOutline}>
+                Sign out
+              </button>
             </>
           ) : (
-            <Link href="/login" style={{
-              borderRadius: 999, padding: "9px 18px", fontSize: 13, fontWeight: 900,
-              background: "#221D23", color: "#fff",
-              border: "1px solid #221D23", textDecoration: "none",
-            }}>Sign in</Link>
+            <Link href="/login" className={styles.btnPrimary}>Sign in</Link>
           )}
         </div>
 
-        {/* Mobile hamburger */}
         <button
           className={styles.hamburger}
           onClick={() => setMobileOpen(v => !v)}
@@ -153,29 +136,42 @@ export default function AppNav({ activePage, userName, isAdmin, isLoggedIn }: Pr
         </button>
       </header>
 
-      {/* Mobile menu overlay */}
       {mobileOpen && (
         <div className={styles.mobileOverlay}>
           <div className={styles.mobileBackdrop} onClick={() => setMobileOpen(false)} />
           <div className={styles.mobilePanel}>
-            {APP_NAV_LINKS.map(({ label, href, page }) => (
-              <Link
-                key={page}
-                href={href}
-                className={activePage === page ? styles.mobileNavLinkActive : styles.mobileNavLink}
-                onClick={() => setMobileOpen(false)}
-              >{label}</Link>
-            ))}
+            <div className={styles.mobileNavTrack}>
+              {APP_NAV_LINKS.map(({ label, href, page }) => (
+                <Link
+                  key={page}
+                  href={href}
+                  className={activePage === page ? styles.mobileNavLinkActive : styles.mobileNavLink}
+                  onClick={() => setMobileOpen(false)}
+                >
+                  {label}
+                </Link>
+              ))}
+            </div>
             <div className={styles.mobileActions}>
               {showSignedIn ? (
                 <>
                   {isAdmin && (
-                    <Link href="/admin" className={styles.mobileActionBtn} onClick={() => setMobileOpen(false)}>Admin</Link>
+                    <Link href="/admin" className={styles.mobileActionBtn} onClick={() => setMobileOpen(false)}>
+                      Admin
+                    </Link>
                   )}
-                  <button onClick={() => { setMobileOpen(false); handleSignOut(); }} className={styles.mobileActionBtn}>Sign out</button>
+                  <button
+                    type="button"
+                    onClick={() => { setMobileOpen(false); handleSignOut(); }}
+                    className={styles.mobileActionBtn}
+                  >
+                    Sign out
+                  </button>
                 </>
               ) : (
-                <Link href="/login" className={styles.mobileActionBtnPrimary} onClick={() => setMobileOpen(false)}>Sign in</Link>
+                <Link href="/login" className={styles.mobileActionBtnPrimary} onClick={() => setMobileOpen(false)}>
+                  Sign in
+                </Link>
               )}
             </div>
           </div>
