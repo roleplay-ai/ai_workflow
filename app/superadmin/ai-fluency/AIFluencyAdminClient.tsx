@@ -2,8 +2,6 @@
 import { useState, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import Topbar from "@/components/Topbar";
-import type { Profile } from "@/lib/supabase/types";
 import { probeVideoDurationFromFile, formatFileSize } from "@/lib/videoDuration";
 import { resumableUpload } from "@/lib/resumableUpload";
 
@@ -32,7 +30,6 @@ type Brief = { id: string; title: string; published_date: string; is_active: boo
 type BriefEdit = { title: string; published_date: string };
 
 type Props = {
-  profile: Profile & { companies: null };
   modules: FluencyModule[];
   videos: Video[];
   tools: Tool[];
@@ -1201,20 +1198,11 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "brief",  label: "Brief" },
 ];
 
-export default function AIFluencyAdminClient({ profile, modules, videos, tools, briefs }: Props) {
+export default function AIFluencyAdminClient({ modules, videos, tools, briefs }: Props) {
   const [tab, setTab] = useState<Tab>("modules");
-  const supabase = createClient();
-
-  async function handleSignOut() {
-    await supabase.auth.signOut();
-    window.location.href = "/login";
-  }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: "Roboto, ui-sans-serif, system-ui, sans-serif" }}>
-      <Topbar profile={profile} role="superadmin" onSignOut={handleSignOut} />
-
-      <main style={{ width: "min(1280px,calc(100% - 72px))", margin: "0 auto", padding: "28px 0 60px" }}>
+    <div>
 
         {/* Page header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
@@ -1243,7 +1231,6 @@ export default function AIFluencyAdminClient({ profile, modules, videos, tools, 
         {tab === "videos" && <VideosTab initVideos={videos} />}
         {tab === "tools"  && <ToolsTab  initTools={tools}  />}
         {tab === "brief"  && <BriefTab  initBriefs={briefs} />}
-      </main>
     </div>
   );
 }

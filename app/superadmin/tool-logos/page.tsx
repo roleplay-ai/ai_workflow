@@ -19,10 +19,6 @@ export default async function ToolLogosPage() {
   if (profileError || !profile) redirect("/login");
   if (profile.role !== "superadmin") redirect("/apply");
 
-  const { data: company } = profile.company_id
-    ? await supabase.from("companies").select("name").eq("id", profile.company_id).single()
-    : { data: null };
-
   const [{ data: toolLogoRows }, { data: tags }, { data: functions }] = await Promise.all([
     supabase.from("tool_logos").select("tool, logo_url"),
     supabase.from("activity_tags").select("id, name, icon_url").order("name"),
@@ -31,7 +27,6 @@ export default async function ToolLogosPage() {
 
   return (
     <ToolLogosPageClient
-      profile={{ ...profile, companies: company } as any}
       toolLogos={rowsToToolLogoMap(toolLogoRows ?? [])}
       tags={tags ?? []}
       functions={functions ?? []}

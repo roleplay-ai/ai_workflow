@@ -23,5 +23,5 @@ export default async function AIMasteryAccessPage() {
     .eq("aimastery_requested", true)
     .order("created_at", { ascending: false });
 
-  return <AIMasteryAccessClient profile={profile as any} users={users ?? []} />;
+  return <AIMasteryAccessClient users={users ?? []} />;
 }

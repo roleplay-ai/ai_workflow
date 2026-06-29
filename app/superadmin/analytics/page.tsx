@@ -2,7 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { AI_UPDATES_PAGE_NAME, WORKFLOWS_PAGE_NAME } from "@/lib/site";
-import TopbarWrapper from "./TopbarWrapper";
 export const dynamic = "force-dynamic";
 
 const card: React.CSSProperties = {
@@ -24,10 +23,6 @@ export default async function AnalyticsHubPage() {
 
   if (!profile || profile.role !== "superadmin") redirect("/apply");
 
-  const { data: company } = profile.company_id
-    ? await supabase.from("companies").select("name").eq("id", profile.company_id).single()
-    : { data: null };
-
   const [
     { count: applyViews },
     { count: knowViews },
@@ -39,10 +34,7 @@ export default async function AnalyticsHubPage() {
   ]);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: "Roboto, ui-sans-serif, system-ui, sans-serif" }}>
-      <TopbarWrapper profile={{ ...profile, companies: company } as any} />
-
-      <main style={{ width: "min(900px,calc(100% - 48px))", margin: "0 auto", padding: "40px 0 80px" }}>
+    <div>
         <div style={{ marginBottom: 32 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
             <Link href="/superadmin" style={{ color: "#9B9490", textDecoration: "none", fontSize: 13, fontWeight: 600 }}>Superadmin</Link>
@@ -113,7 +105,6 @@ export default async function AnalyticsHubPage() {
         <div style={{ marginTop: 24, padding: "16px 20px", background: "white", border: "1px solid #E8E6DC", borderRadius: 14, fontSize: 13, color: "#6B6B6B", lineHeight: 1.6 }}>
           <strong style={{ color: "#221D23" }}>About seed data:</strong> The database was seeded with 50–100 random anonymous views per published activity and video to populate view counters. On each analytics page, toggle <strong>Exclude seed data</strong> (logged-in users only) or set a <strong>date range</strong> starting from when real users began using the platform to see true engagement figures.
         </div>
-      </main>
     </div>
   );
 }

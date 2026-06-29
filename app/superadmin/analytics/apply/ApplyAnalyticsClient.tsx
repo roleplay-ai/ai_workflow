@@ -2,8 +2,6 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { AI_UPDATES_PAGE_NAME, WORKFLOWS_PAGE_NAME } from "@/lib/site";
-import Topbar from "@/components/Topbar";
-import type { Profile } from "@/lib/supabase/types";
 
 type ActivityRow = { id: string; title: string; category: string; published: boolean };
 type ViewRow = {
@@ -13,8 +11,6 @@ type ViewRow = {
 };
 type ProgressRow = { id: string; user_id: string; activity_id: string; status: string; quiz_score: number | null; completed_at: string | null; updated_at: string };
 type ProfileRow = { id: string; email: string | null; full_name: string | null };
-
-type Props = { profile: Profile & { companies: { name: string } | null } };
 
 const card: React.CSSProperties = {
   background: "white", border: "1px solid #E8E6DC", borderRadius: 18,
@@ -107,7 +103,7 @@ function buildDayRange(dayCount: number): string[] {
   return days;
 }
 
-export default function ApplyAnalyticsClient({ profile }: Props) {
+export default function ApplyAnalyticsClient() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [realOnly, setRealOnly] = useState(true);
@@ -200,17 +196,8 @@ export default function ApplyAnalyticsClient({ profile }: Props) {
       .map(([ip, count]) => ({ ip, count }));
   }, [views]);
 
-  async function handleSignOut() {
-    const { createClient } = await import("@/lib/supabase/client");
-    await createClient().auth.signOut();
-    window.location.href = "/login";
-  }
-
   return (
-    <div style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: "Roboto, ui-sans-serif, system-ui, sans-serif" }}>
-      <Topbar profile={profile} role="superadmin" onSignOut={handleSignOut} />
-
-      <main style={{ width: "min(1400px,calc(100% - 48px))", margin: "0 auto", padding: "28px 0 60px" }}>
+    <div>
 
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
@@ -431,7 +418,6 @@ export default function ApplyAnalyticsClient({ profile }: Props) {
           )}
 
         </div>
-      </main>
     </div>
   );
 }

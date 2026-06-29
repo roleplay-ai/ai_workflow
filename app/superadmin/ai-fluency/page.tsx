@@ -43,7 +43,6 @@ export default async function AIFluencyAdminPage() {
 
   return (
     <AIFluencyAdminClient
-      profile={profile as any}
       modules={(modules ?? []) as any}
       videos={videos as any ?? []}
       tools={tools as any ?? []}

@@ -2,8 +2,6 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { AI_UPDATES_PAGE_NAME, WORKFLOWS_PAGE_NAME } from "@/lib/site";
-import Topbar from "@/components/Topbar";
-import type { Profile } from "@/lib/supabase/types";
 
 type ViewRow = {
   id: string; entity_type: string; entity_id: string;
@@ -16,7 +14,6 @@ type VideoRow    = { id: string; title: string; is_published: boolean };
 type DeepDiveRow = { id: string; title: string; published: boolean };
 type ToolRow     = { id: string; name: string };
 
-type Props = { profile: Profile & { companies: { name: string } | null } };
 
 const card: React.CSSProperties = {
   background: "white", border: "1px solid #E8E6DC", borderRadius: 18,
@@ -123,7 +120,7 @@ function buildDayRange(dayCount: number): string[] {
   return days;
 }
 
-export default function KnowAnalyticsClient({ profile }: Props) {
+export default function KnowAnalyticsClient() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [realOnly, setRealOnly] = useState(true);
@@ -229,17 +226,8 @@ export default function KnowAnalyticsClient({ profile }: Props) {
       .map(([ip, count]) => ({ ip, count }));
   }, [filteredViews]);
 
-  async function handleSignOut() {
-    const { createClient } = await import("@/lib/supabase/client");
-    await createClient().auth.signOut();
-    window.location.href = "/login";
-  }
-
   return (
-    <div style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: "Roboto, ui-sans-serif, system-ui, sans-serif" }}>
-      <Topbar profile={profile} role="superadmin" onSignOut={handleSignOut} />
-
-      <main style={{ width: "min(1400px,calc(100% - 48px))", margin: "0 auto", padding: "28px 0 60px" }}>
+    <div>
 
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
@@ -454,7 +442,6 @@ export default function KnowAnalyticsClient({ profile }: Props) {
           )}
         </div>
 
-      </main>
     </div>
   );
 }

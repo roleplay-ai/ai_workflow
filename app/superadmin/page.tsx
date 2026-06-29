@@ -26,10 +26,6 @@ export default async function SuperadminPage() {
 
   if (profile.role !== "superadmin") redirect("/apply");
 
-  const { data: company } = profile.company_id
-    ? await supabase.from("companies").select("name").eq("id", profile.company_id).single()
-    : { data: null };
-
   const [
     { data: companies },
     { data: activities },
@@ -53,11 +49,8 @@ export default async function SuperadminPage() {
     (activities ?? []).map(a => a.tools ?? []),
   );
 
-  const fullProfile = { ...profile, companies: company };
-
   return (
     <SuperadminClient
-      profile={fullProfile as any}
       companies={companies ?? []}
       activities={activities as any ?? []}
       allAssignments={allAssignments ?? []}

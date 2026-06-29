@@ -2,9 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Topbar from "@/components/Topbar";
-import { createClient } from "@/lib/supabase/client";
-import type { Profile } from "@/lib/supabase/types";
 
 type UserRow = {
   id: string;
@@ -17,21 +14,14 @@ type UserRow = {
 };
 
 type Props = {
-  profile: Profile;
   users: UserRow[];
 };
 
-export default function AIMasteryAccessClient({ profile, users: initUsers }: Props) {
+export default function AIMasteryAccessClient({ users: initUsers }: Props) {
   const [users, setUsers]             = useState<UserRow[]>(initUsers);
   const [toggling, setToggling]       = useState<string | null>(null);
   const [search, setSearch]           = useState("");
   const [filter, setFilter]           = useState<"all" | "approved" | "pending">("all");
-  const supabase = createClient();
-
-  async function handleSignOut() {
-    await supabase.auth.signOut();
-    window.location.href = "/login";
-  }
 
   async function toggleAccess(userId: string, approved: boolean) {
     setToggling(userId);
@@ -62,10 +52,7 @@ export default function AIMasteryAccessClient({ profile, users: initUsers }: Pro
   const pendingCount  = users.length - approvedCount;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: "Roboto, ui-sans-serif, system-ui, sans-serif" }}>
-      <Topbar profile={profile as any} role="superadmin" onSignOut={handleSignOut} />
-
-      <main style={{ width: "min(960px, calc(100% - 40px))", margin: "0 auto", padding: "32px 0 60px" }}>
+    <div>
 
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
@@ -210,7 +197,6 @@ export default function AIMasteryAccessClient({ profile, users: initUsers }: Pro
             </tbody>
           </table>
         </div>
-      </main>
     </div>
   );
 }

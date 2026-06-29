@@ -18,10 +18,6 @@ export default async function FunctionsPage() {
   if (profileError || !profile) redirect("/login");
   if (profile.role !== "superadmin") redirect("/apply");
 
-  const { data: company } = profile.company_id
-    ? await supabase.from("companies").select("name").eq("id", profile.company_id).single()
-    : { data: null };
-
   const { data: functions } = await supabase
     .from("activity_functions")
     .select("id, name, description, icon_url, thumbnail_url, created_at")
@@ -29,7 +25,6 @@ export default async function FunctionsPage() {
 
   return (
     <FunctionsManageClient
-      profile={{ ...profile, companies: company } as any}
       functions={(functions ?? []) as any}
     />
   );
