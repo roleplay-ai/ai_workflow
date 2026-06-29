@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { AI_UPDATES_PAGE_NAME, WORKFLOWS_PAGE_NAME } from "@/lib/site";
 import TopbarWrapper from "./TopbarWrapper";
 export const dynamic = "force-dynamic";
 
@@ -50,7 +51,7 @@ export default async function AnalyticsHubPage() {
           </div>
           <h1 style={{ margin: 0, fontSize: 30, fontWeight: 900, letterSpacing: "-.05em" }}>Analytics</h1>
           <p style={{ margin: "6px 0 0", color: "#6B6B6B", fontSize: 14 }}>
-            See who clicked on what across Apply and Know sections.
+            See who clicked on what across {WORKFLOWS_PAGE_NAME} and {AI_UPDATES_PAGE_NAME} sections.
           </p>
         </div>
 
@@ -62,7 +63,7 @@ export default async function AnalyticsHubPage() {
                 ✦
               </div>
               <div>
-                <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: "-.04em", color: "#221D23" }}>Apply</div>
+                <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: "-.04em", color: "#221D23" }}>{WORKFLOWS_PAGE_NAME}</div>
                 <div style={{ fontSize: 12.5, color: "#9B9490", fontWeight: 600 }}>Activity engagement</div>
               </div>
             </div>
@@ -77,7 +78,7 @@ export default async function AnalyticsHubPage() {
               </div>
             </div>
             <div style={{ marginTop: 16, fontSize: 13, fontWeight: 700, color: "#FFCE00", background: "#221D23", borderRadius: 999, padding: "8px 16px", display: "inline-block" }}>
-              View Apply Analytics →
+              View {WORKFLOWS_PAGE_NAME} Analytics →
             </div>
           </Link>
 
@@ -88,7 +89,7 @@ export default async function AnalyticsHubPage() {
                 🧠
               </div>
               <div>
-                <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: "-.04em", color: "#221D23" }}>Know</div>
+                <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: "-.04em", color: "#221D23" }}>{AI_UPDATES_PAGE_NAME}</div>
                 <div style={{ fontSize: 12.5, color: "#9B9490", fontWeight: 600 }}>Fluency content engagement</div>
               </div>
             </div>
@@ -103,7 +104,7 @@ export default async function AnalyticsHubPage() {
               </div>
             </div>
             <div style={{ marginTop: 16, fontSize: 13, fontWeight: 700, color: "white", background: "#5030C0", borderRadius: 999, padding: "8px 16px", display: "inline-block" }}>
-              View Know Analytics →
+              View {AI_UPDATES_PAGE_NAME} Analytics →
             </div>
           </Link>
         </div>

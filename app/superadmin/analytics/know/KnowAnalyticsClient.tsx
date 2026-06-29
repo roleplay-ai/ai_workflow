@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { AI_UPDATES_PAGE_NAME, WORKFLOWS_PAGE_NAME } from "@/lib/site";
 import Topbar from "@/components/Topbar";
 import type { Profile } from "@/lib/supabase/types";
 
@@ -248,13 +249,13 @@ export default function KnowAnalyticsClient({ profile }: Props) {
               <span style={{ color: "#D0CCC6" }}>/</span>
               <Link href="/superadmin/analytics" style={{ color: "#9B9490", textDecoration: "none", fontSize: 13, fontWeight: 600 }}>Analytics</Link>
               <span style={{ color: "#D0CCC6" }}>/</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "#221D23" }}>Know</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#221D23" }}>{AI_UPDATES_PAGE_NAME}</span>
             </div>
-            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 900, letterSpacing: "-.05em" }}>Know Analytics</h1>
+            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 900, letterSpacing: "-.05em" }}>{AI_UPDATES_PAGE_NAME} Analytics</h1>
             <p style={{ margin: "4px 0 0", color: "#6B6B6B", fontSize: 13 }}>Fluency content views — tracked by user ID and IP for logged-in and anonymous visitors</p>
           </div>
           <Link href="/superadmin/analytics/apply" style={{ ...btnGhost, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>
-            Switch → Apply
+            Switch → {WORKFLOWS_PAGE_NAME}
           </Link>
         </div>
 

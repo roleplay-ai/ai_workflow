@@ -56,7 +56,8 @@ export default async function DashboardPage() {
     { data: toolLogoRows },
     { data: tagRows },
     { data: functionRows },
-    { data: briefs },
+    { data: modules },
+    { data: progressRows },
     { data: viewRows },
   ] = await Promise.all([
     supabase
@@ -68,13 +69,17 @@ export default async function DashboardPage() {
     supabase.from("activity_tags").select("name, icon_url"),
     supabase.from("activity_functions").select("name, icon_url, thumbnail_url, description"),
     supabase
-      .from("fluency_briefs")
-      .select("*, fluency_brief_items(*)")
-      .eq("is_active", true)
-      .order("published_date", { ascending: false })
-      .limit(1),
+      .from("fluency_modules")
+      .select("id, title, emoji, description, concepts, sort_order, is_locked, next_module_hint, html_path")
+      .eq("published", true)
+      .order("sort_order"),
+    user
+      ? supabase.from("fluency_module_progress").select("module_id").eq("user_id", user.id)
+      : Promise.resolve({ data: [] as { module_id: string }[] }),
     supabase.from("activity_view_counts").select("activity_id, count"),
   ]);
+
+  const completedModuleIds = (progressRows ?? []).map((r: { module_id: string }) => r.module_id);
 
   // Build a count map: activityId → number of views
   const viewCounts: Record<string, number> = {};
@@ -117,7 +122,8 @@ export default async function DashboardPage() {
       toolFilters={toolFilters}
       isLoggedIn={!!user}
       masteryProgressCount={masteryProgressCount}
-      brief={(briefs?.[0] ?? null) as any}
+      modules={(modules ?? []) as any}
+      completedModuleIds={completedModuleIds}
       viewCounts={viewCounts}
     />
   );

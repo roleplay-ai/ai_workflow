@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import AppNav from "@/components/AppNav";
+import { AI_UPDATES_PAGE_NAME } from "@/lib/site";
 import ViewCountBadge from "@/components/ViewCountBadge";
 import { recordFluencyView } from "@/lib/fluencyViews";
 import VideoModal, { type ApplyVideo as ModalApplyVideo } from "../VideoModal";
@@ -76,7 +77,7 @@ export default function AllVideosClient({ videos, isLoggedIn, userName, isAdmin,
               fontSize: 13, fontWeight: 750, color: "#6B6670", textDecoration: "none",
             }}
           >
-            ← Back to Know
+            ← Back to {AI_UPDATES_PAGE_NAME}
           </a>
 
           <div style={{ position: "relative", paddingLeft: 22 }}>
@@ -87,7 +88,7 @@ export default function AllVideosClient({ videos, isLoggedIn, userName, isAdmin,
             <span style={{
               fontSize: 12, fontWeight: 800, letterSpacing: ".1em",
               textTransform: "uppercase", color: "#FF4B1F",
-            }}>Apply</span>
+            }}>{AI_UPDATES_PAGE_NAME}</span>
             <h1 className="aif-page-title">All Videos</h1>
             <p style={{ margin: "8px 0 0", color: "#6B6670", fontSize: 14, fontWeight: 650, lineHeight: 1.45 }}>
               Short demos of AI features across the tools you use every day.

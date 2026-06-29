@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AI_UPDATES_PAGE_NAME, WORKFLOWS_PAGE_NAME } from "@/lib/site";
 import styles from "./SiteFooter.module.css";
 
 export default function SiteFooter() {
@@ -27,9 +28,9 @@ export default function SiteFooter() {
           <div className={styles.linkgroup}>
             <h3>Practice Lab</h3>
             <div className={styles.linklist}>
-              <Link href="/apply">Workflows</Link>
+              <Link href="/apply">{WORKFLOWS_PAGE_NAME}</Link>
               <Link href="/learn">Course</Link>
-              <Link href="/know">Stay Current</Link>
+              <Link href="/know">{AI_UPDATES_PAGE_NAME}</Link>
             </div>
           </div>
 

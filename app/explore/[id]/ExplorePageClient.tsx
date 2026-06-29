@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { WORKFLOWS_PAGE_NAME } from "@/lib/site";
 
 type Props = {
   title: string;
@@ -68,7 +69,7 @@ export default function ExplorePageClient({ title, pageUrl }: Props) {
                 Loading…
               </>
             ) : (
-              "← Apply"
+              `← ${WORKFLOWS_PAGE_NAME}`
             )}
           </button>
         </div>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import AppNav from "@/components/AppNav";
+import { AI_UPDATES_PAGE_NAME } from "@/lib/site";
 import { recordFluencyView } from "@/lib/fluencyViews";
 import ModulePlayer, { type ModuleData } from "../ModulePlayer";
 import ModuleHtmlModal from "../ModuleHtmlModal";
@@ -56,7 +57,7 @@ export default function FoundationsClient({ modules, completedModuleIds, userNam
               display: "inline-flex", alignItems: "center", gap: 5, marginBottom: 18,
               fontSize: 13, fontWeight: 750, color: "#6B6670", textDecoration: "none",
             }}
-          >← Back to Know</a>
+          >← Back to {AI_UPDATES_PAGE_NAME}</a>
 
           <div style={{ position: "relative", paddingLeft: 22 }}>
             <div style={{

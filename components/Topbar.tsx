@@ -2,7 +2,8 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import type { Profile } from "@/lib/supabase/types";
-import { AppNavBrand, AppNavLinks, APP_NAV_HEADER_STYLE, type AppPage } from "@/components/AppNav";
+import { AppNavBrand, AppNavLinks, type AppPage } from "@/components/AppNav";
+import navStyles from "@/components/AppNav.module.css";
 
 type Props = {
   profile: (Profile & { companies?: { name: string } | null }) | null;
@@ -32,36 +33,21 @@ export default function Topbar({ profile, role, activePage, onSignOut }: Props) 
   }, []);
 
   return (
-    <header style={APP_NAV_HEADER_STYLE}>
+    <header className={navStyles.header}>
       <AppNavBrand />
-      <AppNavLinks activePage={activePage} />
+      <div className={navStyles.navWrap}>
+        <AppNavLinks activePage={activePage} />
+      </div>
 
-      {/* Actions */}
-      <nav style={{ display: "flex", gap: 10, alignItems: "center", marginLeft: "auto" }}>
+      <nav className={navStyles.actions}>
         {(role === "admin" || role === "superadmin") && (
-          <Link href="/admin" style={{
-            borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 900,
-            background: "transparent", border: "1px solid #E9E4DC",
-            color: "#221D23", textDecoration: "none",
-          }}>Admin</Link>
+          <Link href="/admin" className={navStyles.btnOutline}>Admin</Link>
         )}
         {role === "superadmin" && (
           <>
-            <Link href="/superadmin" style={{
-              borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 900,
-              background: "transparent", border: "1px solid #E9E4DC",
-              color: "#221D23", textDecoration: "none",
-            }}>Superadmin</Link>
-            <Link href="/superadmin/analytics" style={{
-              borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 900,
-              background: "rgba(255,206,0,.1)", border: "1px solid #FFCE00",
-              color: "#221D23", textDecoration: "none",
-            }}>Analytics</Link>
-            <Link href="/superadmin/tool-logos" style={{
-              borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 900,
-              background: "transparent", border: "1px solid #E9E4DC",
-              color: "#221D23", textDecoration: "none",
-            }}>Tool logos</Link>
+            <Link href="/superadmin" className={navStyles.btnOutline}>Superadmin</Link>
+            <Link href="/superadmin/analytics" className={navStyles.btnOutline}>Analytics</Link>
+            <Link href="/superadmin/tool-logos" className={navStyles.btnOutline}>Tool logos</Link>
           </>
         )}
 
