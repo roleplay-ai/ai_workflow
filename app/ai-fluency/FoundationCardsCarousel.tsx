@@ -34,7 +34,8 @@ export default function FoundationCardsCarousel({ modules, completedIds, loading
               module={mod}
               themeIndex={i}
               done={completedIds.includes(mod.id)}
-              disabled={mod.is_locked || loadingId === mod.id}
+              loading={loadingId === mod.id}
+              disabled={mod.is_locked}
               onClick={() => onModuleClick(mod)}
             />
           ))}

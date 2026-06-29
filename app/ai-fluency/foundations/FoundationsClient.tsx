@@ -25,12 +25,13 @@ export default function FoundationsClient({ modules, completedModuleIds, userNam
     if (mod.is_locked) return;
     recordFluencyView("module", mod.id);
 
+    setLoadingId(mod.id);
+
     if (mod.html_path) {
       setHtmlModule(mod);
       return;
     }
 
-    setLoadingId(mod.id);
     try {
       const res = await fetch(`/api/fluency/module/${mod.id}`);
       const data = await res.json() as ModuleData;
@@ -38,6 +39,11 @@ export default function FoundationsClient({ modules, completedModuleIds, userNam
     } finally {
       setLoadingId(null);
     }
+  }
+
+  function handleHtmlModuleClose() {
+    setHtmlModule(null);
+    setLoadingId(null);
   }
 
   function handleComplete(moduleId: string) {
@@ -106,7 +112,8 @@ export default function FoundationsClient({ modules, completedModuleIds, userNam
               module={mod}
               themeIndex={i}
               done={completedIds.includes(mod.id)}
-              disabled={mod.is_locked || loadingId === mod.id}
+              loading={loadingId === mod.id}
+              disabled={mod.is_locked}
               onClick={() => handleModuleClick(mod)}
             />
           ))}
@@ -118,7 +125,8 @@ export default function FoundationsClient({ modules, completedModuleIds, userNam
           moduleId={htmlModule.id}
           moduleTitle={htmlModule.title}
           moduleEmoji={htmlModule.emoji}
-          onClose={() => setHtmlModule(null)}
+          onClose={handleHtmlModuleClose}
+          onReady={() => setLoadingId(null)}
         />
       )}
 

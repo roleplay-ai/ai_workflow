@@ -26,10 +26,11 @@ type Props = {
   themeIndex?: number;
   onClick: () => void;
   disabled?: boolean;
+  loading?: boolean;
   done?: boolean;
 };
 
-export default function FoundationModuleCard({ module, themeIndex = 0, onClick, disabled, done }: Props) {
+export default function FoundationModuleCard({ module, themeIndex = 0, onClick, disabled, loading, done }: Props) {
   const sub = moduleSubtitle(module);
   const theme = getFoundationCardTheme(module.title, themeIndex);
 
@@ -37,9 +38,10 @@ export default function FoundationModuleCard({ module, themeIndex = 0, onClick, 
     <div className="aif-foundation-card-slot">
       <button
         type="button"
-        className="aif-foundation-card"
+        className={`aif-foundation-card${loading ? " is-loading" : ""}`}
         onClick={onClick}
-        disabled={disabled}
+        disabled={disabled || loading}
+        aria-busy={loading}
         aria-label={`Learn about ${module.title}`}
         style={{
           ["--aif-foundation-soft" as string]: theme.soft,
@@ -56,8 +58,13 @@ export default function FoundationModuleCard({ module, themeIndex = 0, onClick, 
         <div className="aif-foundation-card-topic">{module.title}</div>
         <div className="aif-foundation-card-sub">{sub || "\u00A0"}</div>
         <span className="aif-foundation-card-cta">
-          {done ? "Done ✓" : "Learn →"}
+          {loading ? "Loading…" : done ? "Done ✓" : "Learn →"}
         </span>
+        {loading && (
+          <div className="aif-foundation-card-loading" aria-hidden="true">
+            <span className="aif-foundation-card-spinner" />
+          </div>
+        )}
       </button>
     </div>
   );

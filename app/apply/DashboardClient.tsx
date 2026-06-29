@@ -382,7 +382,7 @@ function FunctionCard({
       </div>
       <div className="card-body function-card-body">
         <div className="meta-line">
-          <span className="time-chip" style={{ marginLeft: 0 }}>{countLabel}</span>
+          <span className="function-card-count">{countLabel}</span>
         </div>
         <h3 className="card-title">{name}</h3>
         {description && <p className="card-desc">{description}</p>}
@@ -969,12 +969,13 @@ export default function DashboardClient({ profile, activities, progress, toolFil
     if (mod.is_locked) return;
     recordFluencyView("module", mod.id);
 
+    setLoadingId(mod.id);
+
     if (mod.html_path) {
       setHtmlModule(mod);
       return;
     }
 
-    setLoadingId(mod.id);
     try {
       const res = await fetch(`/api/fluency/module/${mod.id}`);
       const data = await res.json() as ModuleData;
@@ -982,6 +983,11 @@ export default function DashboardClient({ profile, activities, progress, toolFil
     } finally {
       setLoadingId(null);
     }
+  }
+
+  function handleHtmlModuleClose() {
+    setHtmlModule(null);
+    setLoadingId(null);
   }
 
   function handleModuleComplete(moduleId: string) {
@@ -1220,7 +1226,8 @@ export default function DashboardClient({ profile, activities, progress, toolFil
           moduleId={htmlModule.id}
           moduleTitle={htmlModule.title}
           moduleEmoji={htmlModule.emoji}
-          onClose={() => setHtmlModule(null)}
+          onClose={handleHtmlModuleClose}
+          onReady={() => setLoadingId(null)}
         />
       )}
 
