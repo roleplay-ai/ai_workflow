@@ -3,13 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import Topbar from "@/components/Topbar";
-import type { Profile, ActivityFunction } from "@/lib/supabase/types";
+import type { ActivityFunction } from "@/lib/supabase/types";
 
 type FnRow = Pick<ActivityFunction, "id" | "name" | "description" | "icon_url" | "thumbnail_url" | "created_at">;
 
 type Props = {
-  profile: Profile & { companies: { name: string } | null };
   functions: FnRow[];
 };
 
@@ -25,7 +23,7 @@ const btnDanger: React.CSSProperties = {
   ...btn, borderColor: "rgba(239,68,68,.3)", color: "#DC2626", background: "rgba(239,68,68,.05)",
 };
 
-export default function FunctionsManageClient({ profile, functions: initFunctions }: Props) {
+export default function FunctionsManageClient({ functions: initFunctions }: Props) {
   const supabase = createClient();
   const [functions, setFunctions]   = useState<FnRow[]>(initFunctions);
   const [uploading, setUploading]   = useState<string | null>(null);
@@ -38,11 +36,6 @@ export default function FunctionsManageClient({ profile, functions: initFunction
     Object.fromEntries(initFunctions.map(f => [f.id, f.description ?? ""]))
   );
   const [savingDesc, setSavingDesc] = useState<string | null>(null);
-
-  async function handleSignOut() {
-    await supabase.auth.signOut();
-    window.location.href = "/login";
-  }
 
   function toast(text: string, ok = true) {
     setMessage({ text, ok });
@@ -144,10 +137,7 @@ export default function FunctionsManageClient({ profile, functions: initFunction
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: "Roboto, ui-sans-serif, system-ui, sans-serif" }}>
-      <Topbar profile={profile} role="superadmin" onSignOut={handleSignOut} />
-
-      <main style={{ width: "min(1280px,calc(100% - 72px))", margin: "0 auto", padding: "28px 0 80px" }}>
+    <div>
 
         {/* Header */}
         <div style={{ marginBottom: 28 }}>
@@ -384,7 +374,6 @@ export default function FunctionsManageClient({ profile, functions: initFunction
             <div style={{ fontSize: 13, marginTop: 4 }}>Click &ldquo;+ New Function&rdquo; to create your first one.</div>
           </div>
         )}
-      </main>
     </div>
   );
 }

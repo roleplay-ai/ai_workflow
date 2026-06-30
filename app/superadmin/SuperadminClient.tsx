@@ -3,7 +3,7 @@ import { Fragment, useState } from "react";
 import Link from "next/link";
 import { AI_UPDATES_PAGE_NAME } from "@/lib/site";
 import { createClient } from "@/lib/supabase/client";
-import Topbar from "@/components/Topbar";
+
 import ToolDeepDivesManager from "@/components/ToolDeepDivesManager";
 import type { Profile, Company, Activity, ActivityTag, ToolDeepDive } from "@/lib/supabase/types";
 import { DEFAULT_TOOLS, formatToolLabel, normalizeActivityTools } from "@/lib/tools";
@@ -37,7 +37,6 @@ function hasThumbnail(act: ActivityRow): boolean {
 }
 
 type Props = {
-  profile: Profile & { companies: { name: string } | null };
   companies: Pick<Company, "id" | "name" | "domain">[];
   activities: ActivityRow[];
   allAssignments: { activity_id: string; company_id: string }[];
@@ -48,7 +47,7 @@ type Props = {
 
 const CATEGORIES = ["chat", "build", "automate"];
 
-export default function SuperadminClient({ profile, companies, activities: initActivities, allAssignments: initAssignments, tags: initTags, availableTools, deepDives }: Props) {
+export default function SuperadminClient({ companies, activities: initActivities, allAssignments: initAssignments, tags: initTags, availableTools, deepDives }: Props) {
   const [activities,   setActivities]   = useState(initActivities);
   const [assignments,  setAssignments]  = useState(initAssignments);
   const [tags,         setTags]         = useState(initTags);
@@ -64,11 +63,6 @@ export default function SuperadminClient({ profile, companies, activities: initA
   const [tool,     setTool]     = useState<string>(availableTools[0] ?? DEFAULT_TOOLS[0]);
   const [category, setCategory] = useState("chat");
   const [creating, setCreating] = useState(false);
-
-  async function handleSignOut() {
-    await supabase.auth.signOut();
-    window.location.href = "/login";
-  }
 
   async function createActivity(e: React.FormEvent) {
     e.preventDefault();
@@ -190,21 +184,13 @@ export default function SuperadminClient({ profile, companies, activities: initA
   }[cat] ?? { bg: "#F0EEE8", color: "#6B6B6B" });
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: "Roboto, ui-sans-serif, system-ui, sans-serif" }}>
-      <Topbar profile={profile} role="superadmin" onSignOut={handleSignOut} />
-
-      <main style={{ width: "min(1680px,calc(100% - 40px))", margin: "0 auto", padding: "28px 0 60px" }}>
+    <div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
           <div>
             <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, letterSpacing: "-.04em" }}>Activities</h1>
             <p style={{ margin: "3px 0 0", color: "#6B6B6B", fontSize: 13 }}>{activities.length} total · create, edit content, assign to companies</p>
           </div>
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-            <Link href="/superadmin/functions" style={{ ...btnGhost, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Manage functions</Link>
-            <Link href="/superadmin/tool-logos" style={{ ...btnGhost, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Manage tools</Link>
-            <Link href="/superadmin/ai-fluency" style={{ ...btnGhost, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>{AI_UPDATES_PAGE_NAME}</Link>
-            <Link href="/superadmin/aimastery-access" style={{ ...btnGhost, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>AI Mastery Access</Link>
-            <Link href="/superadmin/analytics" style={{ ...btnGhost, textDecoration: "none", display: "inline-flex", alignItems: "center", borderColor: "#FFCE00", background: "rgba(255,206,0,.08)", fontWeight: 900 }}>Analytics</Link>
             <button onClick={() => setShowForm(v => !v)} style={btnAmber}>+ New Activity</button>
           </div>
         </div>
@@ -479,7 +465,6 @@ export default function SuperadminClient({ profile, companies, activities: initA
         )}
 
         <ToolDeepDivesManager initialItems={deepDives} availableTools={availableTools} />
-      </main>
     </div>
   );
 }

@@ -2,14 +2,12 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import Topbar from "@/components/Topbar";
 import MultiSelect, { type SelectOption } from "@/components/MultiSelect";
-import type { Profile, Activity, ActivityContent, ActivityStep, PromptTemplate, DownloadFile, WhatYouGetItem } from "@/lib/supabase/types";
+import type { Activity, ActivityContent, ActivityStep, PromptTemplate, DownloadFile, WhatYouGetItem } from "@/lib/supabase/types";
 import { formatToolLabel, normalizeToolList, normalizeToolSlug, sortToolSlugs } from "@/lib/tools";
 import { mergeToolSelectOptions, rowsToToolLogoMap, type ToolLogoMap } from "@/lib/toolLogos";
 
 type Props = {
-  profile: Profile & { companies: { name: string } | null };
   activity: Activity & { activity_content: ActivityContent | null };
   activitySteps: ActivityStep[];
   toolOptions: SelectOption[];
@@ -39,7 +37,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "downloads", label: "📥 Downloads"},
 ];
 
-export default function ActivityEditClient({ profile, activity, activitySteps: initSteps, toolOptions: initToolOpts, toolLogos: initToolLogos, tagOptions: initTagOpts, functionOptions: initFunctionOpts, categories: initCategories }: Props) {
+export default function ActivityEditClient({ activity, activitySteps: initSteps, toolOptions: initToolOpts, toolLogos: initToolLogos, tagOptions: initTagOpts, functionOptions: initFunctionOpts, categories: initCategories }: Props) {
   const supabase   = createClient();
   const content    = activity.activity_content;
   const [tab, setTab] = useState<Tab>("info");
@@ -447,11 +445,6 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
     setExpandedIds(prev => { const next = new Set(prev); next.delete(stepId); return next; });
   }
 
-  async function handleSignOut() {
-    await supabase.auth.signOut();
-    window.location.href = "/login";
-  }
-
   // ── PDF → slides ─────────────────────────────────────────────────────────
   async function convertPdf() {
     if (!pdfFile) return;
@@ -642,10 +635,7 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F8F8F6", fontFamily: "Roboto, ui-sans-serif, system-ui, sans-serif" }}>
-      <Topbar profile={profile} role="superadmin" onSignOut={handleSignOut} />
-
-      <main style={{ width: "min(960px,calc(100% - 48px))", margin: "0 auto", padding: "26px 0 60px" }}>
+    <div>
         {/* Breadcrumb */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18, fontSize: 13, color: "#6B6B6B" }}>
           <Link href="/superadmin" style={{ color: "#6B6B6B", textDecoration: "none" }}>Superadmin</Link>
@@ -1373,7 +1363,6 @@ export default function ActivityEditClient({ profile, activity, activitySteps: i
             </div>
           )}
         </div>
-      </main>
     </div>
   );
 }
