@@ -12,13 +12,11 @@ export default async function AIFluencyPage() {
 
   const [
     { data: briefs },
-    { data: modules },
     { data: videos },
     { data: tools },
     { data: toolGuides },
     { data: deepDives },
     { data: toolLogoRows },
-    { data: progressRows },
     { data: viewRows },
   ] = await Promise.all([
     supabase
@@ -27,11 +25,6 @@ export default async function AIFluencyPage() {
       .eq("is_active", true)
       .order("published_date", { ascending: false })
       .limit(1),
-    supabase
-      .from("fluency_modules")
-      .select("id, title, emoji, description, concepts, sort_order, is_locked, next_module_hint, html_path")
-      .eq("published", true)
-      .order("sort_order"),
     supabase
       .from("apply_videos")
       .select("id, title, description, video_url, thumbnail_url, duration, order_index, is_locked, group_name, category_tag, is_featured")
@@ -55,9 +48,6 @@ export default async function AIFluencyPage() {
       .eq("published", true)
       .order("position"),
     supabase.from("tool_logos").select("tool, logo_url"),
-    user
-      ? supabase.from("fluency_module_progress").select("module_id").eq("user_id", user.id)
-      : Promise.resolve({ data: [] as { module_id: string }[] }),
     supabase.from("fluency_view_counts").select("entity_id, count").eq("entity_type", "video"),
   ]);
 
@@ -72,18 +62,14 @@ export default async function AIFluencyPage() {
     if (row.tool && row.logo_url) toolLogos[row.tool as string] = row.logo_url as string;
   }
 
-  const completedModuleIds = (progressRows ?? []).map((r: any) => r.module_id as string);
-
   return (
     <AIFluencyClient
       brief={(briefs?.[0] ?? null) as any}
-      modules={(modules ?? []) as any}
       videos={(videos ?? []) as any}
       tools={(tools ?? []) as any}
       toolGuides={(toolGuides ?? []) as any}
       deepDives={(deepDives ?? []) as any}
       toolLogos={toolLogos}
-      completedModuleIds={completedModuleIds}
       isLoggedIn={!!user}
       userName={(profile as any)?.full_name ?? null}
       isAdmin={(profile as any)?.role === "superadmin"}

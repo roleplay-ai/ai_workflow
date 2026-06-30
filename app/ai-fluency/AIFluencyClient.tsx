@@ -9,12 +9,8 @@ import { resolveToolLogoUrl, type ToolLogoMap } from "@/lib/toolLogos";
 import ViewCountBadge from "@/components/ViewCountBadge";
 import { recordFluencyView, PAGE_IDS } from "@/lib/fluencyViews";
 import type { ToolDeepDive } from "@/lib/supabase/types";
-import ModulePlayer, { type ModuleData } from "./ModulePlayer";
-import ModuleHtmlModal from "./ModuleHtmlModal";
 import VideoModal from "./VideoModal";
 import ToolModal, { type ToolModalTool } from "./ToolModal";
-import type { FoundationModule } from "./FoundationModuleCard";
-import FoundationCardsCarousel from "./FoundationCardsCarousel";
 import ToolGuideCard, { type ToolGuide, resolveGuideToolSlug } from "./ToolGuideCard";
 import { normalizeToolSlug } from "@/lib/tools";
 import SiteFooter from "@/components/SiteFooter";
@@ -33,13 +29,11 @@ type ApplyVideo = {
 type FluencyTool = ToolModalTool;
 type Props = {
   brief: Brief | null;
-  modules: FoundationModule[];
   videos: ApplyVideo[];
   tools: FluencyTool[];
   toolGuides: ToolGuide[];
   deepDives: ToolDeepDive[];
   toolLogos: ToolLogoMap;
-  completedModuleIds: string[];
   isLoggedIn: boolean;
   userName?: string | null;
   isAdmin?: boolean;
@@ -488,13 +482,9 @@ function Carousel({
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function AIFluencyClient({
-  brief, modules, videos, tools, toolGuides, deepDives, toolLogos, completedModuleIds,
+  brief, videos, tools, toolGuides, deepDives, toolLogos,
   isLoggedIn, userName, isAdmin, viewCounts = {},
 }: Props) {
-  const [completedIds, setCompletedIds] = useState<string[]>(completedModuleIds);
-  const [openModule, setOpenModule] = useState<ModuleData | null>(null);
-  const [htmlModule, setHtmlModule] = useState<FoundationModule | null>(null);
-  const [loadingId, setLoadingId] = useState<string | null>(null);
   const [selectedTool, setSelectedTool] = useState<FluencyTool | null>(null);
 
   useEffect(() => {
@@ -504,35 +494,6 @@ export default function AIFluencyClient({
   function openToolDetails(tool: FluencyTool) {
     recordFluencyView("tool", tool.id);
     setSelectedTool(tool);
-  }
-
-  async function handleModuleClick(mod: FoundationModule) {
-    if (mod.is_locked) return;
-    recordFluencyView("module", mod.id);
-
-    setLoadingId(mod.id);
-
-    if (mod.html_path) {
-      setHtmlModule(mod);
-      return;
-    }
-
-    try {
-      const res = await fetch(`/api/fluency/module/${mod.id}`);
-      const data = await res.json() as ModuleData;
-      setOpenModule(data);
-    } finally {
-      setLoadingId(null);
-    }
-  }
-
-  function handleHtmlModuleClose() {
-    setHtmlModule(null);
-    setLoadingId(null);
-  }
-
-  function handleComplete(moduleId: string) {
-    setCompletedIds(ids => ids.includes(moduleId) ? ids : [...ids, moduleId]);
   }
 
   const deepDiveByTool = new Map(
@@ -604,42 +565,6 @@ export default function AIFluencyClient({
             publishedDate={brief?.published_date}
           />
         </section>
-
-        {/* ── AI Foundations (module cards) ── */}
-        {modules.length > 0 && (
-          <section style={{ marginTop: 70 }}>
-            <div style={{
-              display: "flex", alignItems: "flex-end", justifyContent: "space-between",
-              gap: 22, marginBottom: 22,
-            }}>
-              <div style={{ position: "relative", paddingLeft: 22 }}>
-                <div style={{
-                  position: "absolute", left: 0, top: 4, width: 7, height: 58,
-                  borderRadius: 999, background: "#FFCE00", border: "1px solid rgba(34,29,35,.18)",
-                }} />
-                <span style={{
-                  display: "inline-flex", padding: "7px 10px", borderRadius: 999, background: "#221D23",
-                  color: "#fff", fontSize: 10, fontWeight: 950, textTransform: "uppercase",
-                  letterSpacing: ".10em", marginBottom: 8,
-                }}>Learn</span>
-                <h2 className="aif-section-title">AI Foundations</h2>
-                <p style={{ margin: "8px 0 0", color: "#6B6670", fontSize: 14, fontWeight: 650, lineHeight: 1.45 }}>
-                  Short explainers that build practical AI fluency.
-                </p>
-              </div>
-              <a href="/know/foundations" style={{ fontSize: 13, fontWeight: 700, color: "#623CEA", whiteSpace: "nowrap", textDecoration: "none" }}>
-                See all topics →
-              </a>
-            </div>
-
-            <FoundationCardsCarousel
-              modules={modules}
-              completedIds={completedIds}
-              loadingId={loadingId}
-              onModuleClick={handleModuleClick}
-            />
-          </section>
-        )}
 
         {/* ── Videos ── */}
         <section id="videos" style={{ marginTop: 70 }}>
@@ -769,27 +694,6 @@ export default function AIFluencyClient({
       </main>
 
       <SiteFooter />
-
-      {/* ── Module HTML popup ── */}
-      {htmlModule && (
-        <ModuleHtmlModal
-          moduleId={htmlModule.id}
-          moduleTitle={htmlModule.title}
-          moduleEmoji={htmlModule.emoji}
-          onClose={handleHtmlModuleClose}
-          onReady={() => setLoadingId(null)}
-        />
-      )}
-
-      {/* ── Module player modal ── */}
-      {openModule && (
-        <ModulePlayer
-          module={openModule}
-          isCompleted={completedIds.includes(openModule.id)}
-          onClose={() => setOpenModule(null)}
-          onComplete={handleComplete}
-        />
-      )}
 
       {/* ── Tool details modal ── */}
       {selectedTool && (
