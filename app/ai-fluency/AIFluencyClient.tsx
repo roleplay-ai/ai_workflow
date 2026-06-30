@@ -96,93 +96,83 @@ const HERO_MINI_CARDS = [
 
 const WORK_QUESTIONS = [
   {
+    emoji: "🫧",
     question: "Is this an AI bubble?",
-    short: "It may be a financial bubble in some places, but that does not mean AI capability is hype.",
+    short: "It might be a financial bubble, but that doesn't mean AI capability is hype.",
     bullets: [
-      "There are signs of overvaluation around infrastructure and startups.",
-      "The capability story is separate because people are getting daily value from real work.",
-      "For employees, the useful question is whether AI improves their actual tasks.",
+      "There are real signals of a financial bubble: companies without products getting billion-dollar valuations, circular funding between hyperscalers, AI labs and chipmakers, and data center investments that may take decades to recover.",
+      "The capability story is different. Since early 2026, Claude's revenue moved from $8B to $30B in two months, and users consistently report significant value from daily use.",
+      "For most people, whether it's a financial bubble is irrelevant unless you've invested in AI companies as a VC. Focus on what the technology can do for your work.",
     ],
   },
   {
+    emoji: "🤖",
     question: "Will AI take over the world?",
-    short: "The risk deserves attention, but workplace decisions should focus on near-term capability and governance.",
+    short: "We're competing with a technology we don't fully understand — but the 10-year risk is low.",
     bullets: [
-      "The immediate risks are blind trust, data leakage, bad automation, and unclear accountability.",
-      "Most AI still needs human goals, tools, constraints, and review.",
-      "Companies need practical guardrails, not panic or hype.",
+      "For the first time, we are building something that could become more intelligent than us and we don't fully understand how it works. AI already outperforms the average human on many tasks.",
+      "Senior AI scientists are divided on how far scaling will continue to improve intelligence. History shows humans tend to come together against existential threats, as we did with nuclear weapons and COVID.",
+      "Due to infrastructure limitations — data center capacity, device constraints, and training data availability — the risk of AI taking over is very low in the next 10 years. Beyond that, it's genuinely uncertain.",
     ],
   },
   {
-    question: "Will AI replace jobs?",
-    short: "AI will replace tasks first. Jobs change when enough tasks inside a role are automated or redesigned.",
+    emoji: "💼",
+    question: "Will everyone lose their jobs?",
+    short: "Jobs are collections of tasks. The question is which part of your job is hardest.",
     bullets: [
-      "Writing, research, analysis, coding, and coordination are already changing.",
-      "Roles with repeatable digital work will shift faster.",
-      "Human judgment, trust, relationships, and context will matter more.",
+      "If a job is essentially one repeatable task (like basic customer query resolution) and there's enough training data available, that job can be fully automated.",
+      "Most jobs are complex bundles of tasks. You don't pay McKinsey for 70 slides — you pay for customer interviews, insight generation, and perspectives you hadn't considered. If the hardest part of your job can't be done by AI, you're relatively safe.",
+      "If you work in coding or design, adopt AI and aim to be in the top 1% of your field — you're competing with machines. For other roles, track how much of your work AI can do today, and if you see a trend, adapt early.",
     ],
   },
   {
-    question: "What skills will matter more?",
-    short: "Structured thinking, precise expression, domain judgment, and review quality will matter more.",
+    emoji: "🎯",
+    question: "Where can I apply GenAI?",
+    short: "The key question: do you need 100% accuracy, or can you live with uncertainty?",
     bullets: [
-      "People need to break work into clear steps.",
-      "They need to give AI context, examples, constraints, and quality standards.",
-      "They need judgment to detect weak outputs and confident mistakes.",
+      "GenAI is predictive, not deterministic. Use it comfortably for content generation — text, voice, image, video, and code — where some variability is acceptable.",
+      "For data analytics, GenAI can write the code that analyses your data, which works well. But feeding large raw datasets directly into context windows has limits. Know the boundaries.",
+      "Avoid GenAI where a standard software rule applies: if input X always needs output Y, use regular code. Do not use it in aviation, banking, or healthcare systems where accuracy is non-negotiable.",
     ],
   },
   {
-    question: "Are AI agents ready for real work?",
-    short: "Agents are useful for narrow workflows, but risky when goals are vague or judgment is high.",
+    emoji: "🔮",
+    question: "How will the workplace change with AI?",
+    short: "Agents are coming, but humans stay in the loop for anything critical.",
     bullets: [
-      "They work best with clear steps, tools, permissions, and success criteria.",
-      "They struggle when business intent is hidden or policies are complex.",
-      "Start with supervised workflows before background automation.",
+      "AI agents are increasingly capable but not fully predictable. For any critical business process, expect human-in-the-loop to remain the norm for the foreseeable future.",
+      "Most transactional work will shift to machines. Humans will spend more time on relationship-building, selling, and judgment-heavy decisions.",
+      "Middle management will face the most pressure. AI can delegate tasks, track progress, and coach more consistently than most managers. The number of middle management roles will likely shrink.",
     ],
   },
   {
-    question: "Should companies allow employees to use AI?",
-    short: "Yes, but with boundaries. Blocking AI usually pushes usage into unmanaged tools.",
+    emoji: "🏭",
+    question: "How can AI be applied in manufacturing?",
+    short: "Think of AI as three new superpowers: Eyes, Voice, and Brain.",
     bullets: [
-      "Employees will use AI when it saves time.",
-      "The control point is approved tools, data rules, and use-case guidance.",
-      "Companies should define what is allowed, reviewed, and prohibited.",
+      "Give your team an extra pair of Eyes, a Voice, and a Brain. With those three, what becomes possible on your shop floor?",
+      "Use computer vision for first-pass quality checks — AI flags issues, human approves. Faster throughput, fewer misses.",
+      "AI can help supervisors with shift planning, work allocation, and on-the-job capability building. Workers can ask AI directly when something breaks down rather than waiting for an expert.",
     ],
   },
   {
-    question: "Is prompt engineering still important?",
-    short: "Yes, but it is now less about tricks and more about clear work design.",
+    emoji: "📈",
+    question: "How do we measure the impact of GenAI?",
+    short: "Two numbers: costs down or revenues up. Pick one and track it.",
     bullets: [
-      "Better models reduce the need for complicated prompting.",
-      "Good prompts still need context, examples, constraints, and quality standards.",
-      "The skill is converting messy work into clear instruction.",
+      "Every GenAI initiative must tie to either lower costs or higher revenues. There is no other credible measure of impact.",
+      "If your people can do more work with AI, decide upfront: will you hire fewer people (cost reduction) or give them more ambitious targets (revenue growth)? You can't claim both by default.",
+      "Always check whether your spend on tokens is proportionate to the returns from the project. Start every AI initiative with a clear, measurable goal.",
     ],
   },
   {
-    question: "Why do AI workshops lose momentum?",
-    short: "Most workshops create awareness, but they do not create repeated practice inside real work.",
+    emoji: "🏆",
+    question: "Which is the best AI chatbot?",
+    short: "There is no single best. The right question is: best for which task?",
     bullets: [
-      "Employees leave without mapped use cases for their role.",
-      "There is no follow-up system to push practice or remove friction.",
-      "Capability improves through repeated application, not demos alone.",
-    ],
-  },
-  {
-    question: "How should companies build AI fluency?",
-    short: "Start with role-specific workflows, a safe practice space, and measurement of actual application.",
-    bullets: [
-      "Generic AI training helps awareness, but not behavior change.",
-      "Employees need workflow examples for their actual work.",
-      "Companies should measure practice, completion, improvement, and repeat usage.",
-    ],
-  },
-  {
-    question: "What should not be automated with AI?",
-    short: "Do not automate work where trust, ethics, sensitive data, or final accountability cannot be delegated safely.",
-    bullets: [
-      "Use AI to prepare, analyze, draft, and check.",
-      "Keep high-stakes decisions with accountable humans.",
-      "Do not automate empathy-heavy communication without human review.",
+      "Rankings change every few months as labs release new models. The better question is: which tool is best for the task you need, and which can you afford to use consistently?",
+      "Claude is currently the strongest for knowledge work. Gemini and ChatGPT lead for image generation. Claude Code is exceptional for coding but can hit token limits quickly on large projects.",
+      "Pick any one paid subscription from the top three — Claude, Gemini, or ChatGPT — and use it daily. You'll learn more from practice than from benchmarks. Paid tiers unlock meaningfully better features.",
     ],
   },
 ];
@@ -393,7 +383,7 @@ function WorkQuestionsSection() {
             onToggle={() => handleToggle(index)}
           >
             <summary>
-              <span className="aif-question-num">{index + 1}</span>
+              <span className="aif-question-num">{item.emoji}</span>
               <span>{item.question}</span>
               <span className="aif-question-chev">+</span>
             </summary>
